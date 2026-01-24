@@ -1,0 +1,369 @@
+/* Kroki Universal Diagram Generator - Styles */
+
+/* Base styles */
+body {
+    background-color: #f8fafc;
+    color: #334155;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Monaco Editor */
+.monaco-editor-container {
+    height: 100%;
+    width: 100%;
+}
+
+/* Custom error decoration for Monaco */
+.errorLineDecoration {
+    background: rgba(239, 68, 68, 0.15);
+    border-left: 3px solid #ef4444;
+}
+
+.errorLineGutter {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Interactive SVG Preview */
+.interactive-svg-container svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.interactive-svg-container text {
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.interactive-svg-container text:hover {
+    filter: brightness(0.7);
+}
+
+.interactive-svg-container .svg-highlight {
+    outline: 2px solid #4f46e5;
+    outline-offset: 2px;
+}
+
+.interactive-svg-container g[id],
+.interactive-svg-container rect,
+.interactive-svg-container ellipse,
+.interactive-svg-container polygon,
+.interactive-svg-container path {
+    cursor: pointer;
+}
+
+.interactive-svg-container g[id]:hover > rect,
+.interactive-svg-container g[id]:hover > ellipse,
+.interactive-svg-container g[id]:hover > polygon {
+    filter: brightness(0.95);
+}
+
+/* Context Menu */
+.context-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 180px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    padding: 4px 0;
+    animation: contextMenuFadeIn 0.15s ease;
+}
+
+@keyframes contextMenuFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.context-menu-item:hover {
+    background: #f1f5f9;
+}
+
+.context-menu-item i {
+    width: 20px;
+    color: #6b7280;
+    font-size: 11px;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 4px 0;
+}
+
+.context-menu-header {
+    padding: 6px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* BPMN-JS Overrides */
+.bjs-container {
+    border: 1px solid #e2e8f0;
+    background-color: #ffffff;
+    height: 100%;
+    width: 100%;
+    position: relative;
+}
+
+.djs-palette {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+}
+
+/* Loading Spinner */
+.loader {
+    border: 3px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 3px solid #4f46e5;
+    width: 24px;
+    height: 24px;
+    -webkit-animation: spin 1s linear infinite;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Mermaid Visual Editor Styles */
+.mermaid-editor-panel {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.mermaid-editor-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mermaid-editor-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.mermaid-editor-panel::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 3px;
+}
+
+/* Editable item hover state */
+.editable-item {
+    transition: background-color 0.15s ease;
+}
+
+.editable-item:hover {
+    background-color: #f1f5f9;
+}
+
+/* Score badge colors for Journey editor */
+.score-badge-1 { background-color: #fee2e2; color: #991b1b; }
+.score-badge-2 { background-color: #ffedd5; color: #9a3412; }
+.score-badge-3 { background-color: #fef9c3; color: #854d0e; }
+.score-badge-4 { background-color: #dcfce7; color: #166534; }
+.score-badge-5 { background-color: #d1fae5; color: #065f46; }
+
+/* Timeline section styles */
+.timeline-section {
+    border-left: 3px solid #4f46e5;
+    margin-left: 8px;
+    padding-left: 12px;
+}
+
+.timeline-period {
+    border-left: 2px solid #818cf8;
+    margin-left: 8px;
+    padding-left: 8px;
+}
+
+/* Gantt task row */
+.gantt-task-row {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.gantt-task-row:last-child {
+    border-bottom: none;
+}
+
+/* Pie chart slice colors */
+.pie-slice-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+
+/* Mindmap node indent */
+.mindmap-node {
+    padding-left: calc(var(--depth, 0) * 16px);
+}
+
+/* Modal overlay */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-height: 90vh;
+    overflow: hidden;
+    animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Template card hover */
+.template-card {
+    transition: all 0.2s ease;
+}
+
+.template-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Toolbar button group */
+.toolbar-btn-group {
+    display: flex;
+    gap: 2px;
+}
+
+.toolbar-btn-group .toolbar-btn:first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.toolbar-btn-group .toolbar-btn:last-child {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.toolbar-btn-group .toolbar-btn:not(:first-child):not(:last-child) {
+    border-radius: 0;
+}
+
+/* File drop zone */
+.drop-zone {
+    transition: all 0.2s ease;
+}
+
+.drop-zone.drag-over {
+    border-color: #4f46e5;
+    background-color: #eef2ff;
+}
+
+/* Snippet toolbar */
+.snippet-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.snippet-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    font-size: 11px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.snippet-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.snippet-btn i {
+    margin-right: 4px;
+    font-size: 10px;
+    color: #6b7280;
+}
+
+/* Split view resizer */
+.split-resizer {
+    width: 4px;
+    background: #e2e8f0;
+    cursor: col-resize;
+    transition: background 0.15s ease;
+}
+
+.split-resizer:hover {
+    background: #4f46e5;
+}
+
+/* Inline edit input */
+.inline-edit-input {
+    background: white;
+    border: 1px solid #4f46e5;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: inherit;
+    font-family: inherit;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* Toast notification */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background: #1e293b;
+    color: white;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: slideInRight 0.3s ease;
+    z-index: 100;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.toast.success {
+    background: #059669;
+}
+
+.toast.error {
+    background: #dc2626;
+}
+
+.toast.warning {
+    background: #d97706;
+}

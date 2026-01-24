@@ -1,0 +1,2238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kroki Universal Diagram Generator</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX (must load before Monaco) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Pako for Zlib Compression -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- React Flow CSS -->
+    <link href="https://unpkg.com/@xyflow/react@12/dist/style.css" rel="stylesheet">
+
+    <!-- Dagre for auto-layout -->
+    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#1e293b', 900: '#0f172a' }
+                    },
+                    fontFamily: {
+                        mono: ['"Fira Code"', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="h-screen flex flex-col text-sm">
+    <div id="root" class="h-full"></div>
+
+    <!-- Mermaid AST Library (ES Module) -->
+    <script type="module">
+        import * as MermaidAST from 'https://esm.sh/jsr/@emily/mermaid-ast@0.8';
+        window.MermaidAST = MermaidAST;
+        window.MermaidASTLoaded = true;
+        window.dispatchEvent(new Event('mermaid-ast-loaded'));
+    </script>
+
+    <!-- Error Diagnostics Module (ES Module) -->
+    <script type="module">
+        import { 
+            parseError, 
+            setSourceCode,
+            toMonacoMarker, 
+            toMonacoCodeAction,
+            getFixSuggestions, 
+            getErrorExplanation,
+            errorLogger 
+        } from './js/error-diagnostics/index.js';
+        
+        // Expose error diagnostics globally for Babel script
+        window.ErrorDiagnostics = {
+            parseError,
+            setSourceCode,
+            toMonacoMarker,
+            toMonacoCodeAction,
+            getFixSuggestions,
+            getErrorExplanation,
+            errorLogger
+        };
+        window.ErrorDiagnosticsLoaded = true;
+        window.dispatchEvent(new Event('error-diagnostics-loaded'));
+    </script>
+
+    <!-- Main Application (uses Babel for JSX) -->
+    <script type="text/babel">
+        const { useState, useEffect, useRef, forwardRef, useImperativeHandle, useLayoutEffect, useCallback } = React;
+
+        // =====================================================
+        // CONFIGURATION (from js/config.js)
+        // =====================================================
+        const KROKI_BASE_URL = 'https://kroki.io';
+        
+        const DIAGRAM_TYPES = {
+            bpmn: { label: 'BPMN', extensions: ['.bpmn', '.xml'], monacoLang: 'xml', docs: 'https://www.omg.org/spec/BPMN/2.0/', hasVisualEditor: true,
+                example: `<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">\n  <bpmn:process id="Process_1" isExecutable="false">\n    <bpmn:startEvent id="StartEvent_1" name="Start"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>\n    <bpmn:task id="Task_1" name="Hello World"><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:task>\n    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1" />\n    <bpmn:endEvent id="EndEvent_1" name="End"><bpmn:incoming>Flow_2</bpmn:incoming></bpmn:endEvent>\n    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="EndEvent_1" />\n  </bpmn:process>\n</bpmn:definitions>` },
+            mermaid: { label: 'Mermaid', extensions: ['.mmd', '.mermaid'], monacoLang: 'mermaid', docs: 'https://mermaid.js.org/intro/', hasVisualEditor: true,
+                example: `flowchart TD\n    A[Start] --> B{Is it working?}\n    B -- Yes --> C[Great!]\n    B -- No --> D[Debug]\n    D --> B` },
+            plantuml: { label: 'PlantUML', extensions: ['.puml', '.plantuml', '.wsd'], monacoLang: 'plantuml', docs: 'https://plantuml.com/',
+                example: `@startuml\nAlice -> Bob: Authentication Request\nBob --> Alice: Authentication Response\n@enduml` },
+            excalidraw: { label: 'Excalidraw', extensions: ['.excalidraw', '.json'], monacoLang: 'json', docs: 'https://docs.excalidraw.com/' },
+            c4plantuml: { label: 'C4 Model', extensions: ['.c4', '.puml'], monacoLang: 'plantuml', docs: 'https://github.com/plantuml-stdlib/C4-PlantUML' },
+            ditaa: { label: 'Ditaa', extensions: ['.ditaa', '.txt'], monacoLang: 'plaintext', docs: 'http://ditaa.sourceforge.net/' },
+            blockdiag: { label: 'BlockDiag', extensions: ['.diag'], monacoLang: 'python', docs: 'http://blockdiag.com/en/' },
+            graphviz: { label: 'GraphViz', extensions: ['.dot', '.gv'], monacoLang: 'plaintext', docs: 'https://graphviz.org/documentation/' },
+            nomnoml: { label: 'Nomnoml', extensions: ['.nomnoml'], monacoLang: 'plaintext', docs: 'https://nomnoml.com/' },
+            structurizr: { label: 'Structurizr', extensions: ['.dsl', '.json'], monacoLang: 'json', docs: 'https://structurizr.com/dsl' },
+            vega: { label: 'Vega', extensions: ['.vega', '.json'], monacoLang: 'json', docs: 'https://vega.github.io/vega/docs/' },
+            vegalite: { label: 'Vega-Lite', extensions: ['.vl', '.json'], monacoLang: 'json', docs: 'https://vega.github.io/vega-lite/docs/' },
+            wavedrom: { label: 'Wavedrom', extensions: ['.json5', '.json'], monacoLang: 'json', docs: 'https://wavedrom.com/tutorial.html' },
+        };
+
+        const PLANTUML_SNIPPETS = {
+            'Sequence Diagram': [
+                { label: 'Participant', icon: 'fa-user', code: 'participant "Name" as P\n' },
+                { label: 'Actor', icon: 'fa-user-circle', code: 'actor "Name" as A\n' },
+                { label: 'Message', icon: 'fa-arrow-right', code: 'A -> B: Message\n' },
+                { label: 'Response', icon: 'fa-arrow-left', code: 'B --> A: Response\n' },
+                { label: 'Note', icon: 'fa-sticky-note', code: 'note right: Note text\n' },
+                { label: 'Loop', icon: 'fa-redo', code: 'loop N times\n  A -> B: action\nend\n' },
+            ],
+            'Class Diagram': [
+                { label: 'Class', icon: 'fa-cube', code: 'class ClassName {\n  +publicMethod()\n  -privateField\n}\n' },
+                { label: 'Interface', icon: 'fa-puzzle-piece', code: 'interface InterfaceName {\n  +method()\n}\n' },
+                { label: 'Extends', icon: 'fa-level-up-alt', code: 'ChildClass --|> ParentClass\n' },
+                { label: 'Implements', icon: 'fa-check', code: 'Class ..|> Interface\n' },
+            ],
+            'default': [
+                { label: 'Participant', icon: 'fa-user', code: 'participant "Name" as P\n' },
+                { label: 'Class', icon: 'fa-cube', code: 'class ClassName {\n}\n' },
+                { label: 'Arrow', icon: 'fa-arrow-right', code: 'A -> B: Message\n' },
+                { label: 'Note', icon: 'fa-sticky-note', code: 'note right: Note text\n' },
+            ]
+        };
+
+        const PLANTUML_TEMPLATES = [
+            { id: 'sequence', label: 'Sequence Diagram', icon: 'fa-exchange-alt', description: 'Show interactions between objects',
+                code: `@startuml\ntitle Sequence Diagram\n\nactor User as U\nparticipant "Web App" as W\ndatabase "Database" as D\n\nU -> W: Request\nW -> D: Query\nD --> W: Result\nW --> U: Response\n\n@enduml` },
+            { id: 'class', label: 'Class Diagram', icon: 'fa-cubes', description: 'Show class structure',
+                code: `@startuml\ntitle Class Diagram\n\nabstract class Animal {\n  +name: String\n  +makeSound(): void\n}\n\nclass Dog {\n  +bark(): void\n}\n\nclass Cat {\n  +meow(): void\n}\n\nAnimal <|-- Dog\nAnimal <|-- Cat\n\n@enduml` },
+            { id: 'activity', label: 'Activity Diagram', icon: 'fa-project-diagram', description: 'Show workflow',
+                code: `@startuml\ntitle Activity Diagram\n\nstart\n:Receive Order;\n\nif (In stock?) then (yes)\n  :Process Order;\n  :Ship Order;\nelse (no)\n  :Notify Customer;\nendif\n\nstop\n@enduml` },
+            { id: 'component', label: 'Component Diagram', icon: 'fa-puzzle-piece', description: 'Show architecture',
+                code: `@startuml\ntitle Component Diagram\n\npackage "Frontend" {\n  [Web App]\n}\n\npackage "Backend" {\n  [API Gateway]\n  [Auth Service]\n}\n\ndatabase "PostgreSQL" as DB\n\n[Web App] --> [API Gateway]\n[API Gateway] --> [Auth Service]\n[Auth Service] --> DB\n\n@enduml` },
+        ];
+
+        const MERMAID_SNIPPETS = {
+            'Flowchart': [
+                { label: 'Node', icon: 'fa-square', code: 'A[Node]\n' },
+                { label: 'Decision', icon: 'fa-code-branch', code: 'B{Decision}\n' },
+                { label: 'Arrow', icon: 'fa-arrow-right', code: 'A --> B\n' },
+                { label: 'Text Arrow', icon: 'fa-comment', code: 'A -->|text| B\n' },
+                { label: 'Subgraph', icon: 'fa-object-group', code: 'subgraph Title\n    A --> B\nend\n' },
+                { label: 'Round Node', icon: 'fa-circle', code: 'C(Round)\n' },
+                { label: 'Stadium', icon: 'fa-tape', code: 'D([Stadium])\n' },
+                { label: 'Database', icon: 'fa-database', code: 'E[(Database)]\n' },
+            ],
+            'Sequence Diagram': [
+                { label: 'Participant', icon: 'fa-user', code: 'participant Name\n' },
+                { label: 'Actor', icon: 'fa-user-circle', code: 'actor Name\n' },
+                { label: 'Message', icon: 'fa-arrow-right', code: 'A->>B: Message\n' },
+                { label: 'Response', icon: 'fa-arrow-left', code: 'B-->>A: Response\n' },
+                { label: 'Note', icon: 'fa-sticky-note', code: 'Note over A: Note text\n' },
+                { label: 'Loop', icon: 'fa-redo', code: 'loop Every minute\n    A->>B: check\nend\n' },
+                { label: 'Alt', icon: 'fa-code-branch', code: 'alt condition\n    A->>B: yes\nelse other\n    A->>C: no\nend\n' },
+                { label: 'Activate', icon: 'fa-play', code: 'activate A\ndeactivate A\n' },
+            ],
+            'Class Diagram': [
+                { label: 'Class', icon: 'fa-cube', code: 'class ClassName {\n    +publicMethod()\n    -privateField\n}\n' },
+                { label: 'Interface', icon: 'fa-puzzle-piece', code: 'class InterfaceName {\n    <<interface>>\n    +method()\n}\n' },
+                { label: 'Inheritance', icon: 'fa-level-up-alt', code: 'ChildClass --|> ParentClass\n' },
+                { label: 'Composition', icon: 'fa-link', code: 'ClassA *-- ClassB\n' },
+                { label: 'Aggregation', icon: 'fa-link', code: 'ClassA o-- ClassB\n' },
+                { label: 'Association', icon: 'fa-arrows-alt-h', code: 'ClassA --> ClassB\n' },
+            ],
+            'State Diagram': [
+                { label: 'State', icon: 'fa-circle', code: 'state "State Name" as s1\n' },
+                { label: 'Start', icon: 'fa-play-circle', code: '[*] --> State1\n' },
+                { label: 'End', icon: 'fa-stop-circle', code: 'State1 --> [*]\n' },
+                { label: 'Transition', icon: 'fa-arrow-right', code: 'State1 --> State2: event\n' },
+                { label: 'Composite', icon: 'fa-layer-group', code: 'state Composite {\n    [*] --> Inner\n    Inner --> [*]\n}\n' },
+            ],
+            'Entity Relationship': [
+                { label: 'Entity', icon: 'fa-table', code: 'ENTITY {\n    string name\n    int id PK\n}\n' },
+                { label: 'One-to-Many', icon: 'fa-link', code: 'ENTITY1 ||--o{ ENTITY2 : has\n' },
+                { label: 'One-to-One', icon: 'fa-link', code: 'ENTITY1 ||--|| ENTITY2 : is\n' },
+                { label: 'Many-to-Many', icon: 'fa-link', code: 'ENTITY1 }o--o{ ENTITY2 : relates\n' },
+            ],
+            'Gantt Chart': [
+                { label: 'Section', icon: 'fa-folder', code: 'section Section Name\n' },
+                { label: 'Task', icon: 'fa-tasks', code: 'Task Name :a1, 2024-01-01, 7d\n' },
+                { label: 'Milestone', icon: 'fa-flag', code: 'Milestone :milestone, m1, 2024-01-15, 0d\n' },
+                { label: 'After', icon: 'fa-clock', code: 'Task 2 :after a1, 5d\n' },
+            ],
+            'Pie Chart': [
+                { label: 'Slice', icon: 'fa-chart-pie', code: '"Label" : 30\n' },
+                { label: 'Title', icon: 'fa-heading', code: 'title Chart Title\n' },
+            ],
+            'Timeline': [
+                { label: 'Section', icon: 'fa-folder', code: 'section Section Name\n' },
+                { label: 'Event', icon: 'fa-calendar', code: '2024 : Event description\n' },
+                { label: 'Period', icon: 'fa-clock', code: '2024-2025 : Period event\n' },
+            ],
+            'User Journey': [
+                { label: 'Section', icon: 'fa-folder', code: 'section Section Name\n' },
+                { label: 'Task', icon: 'fa-tasks', code: 'Task Name: 5: Actor1, Actor2\n' },
+            ],
+            'Mindmap': [
+                { label: 'Root', icon: 'fa-brain', code: 'root((Central Topic))\n' },
+                { label: 'Child', icon: 'fa-plus', code: '    Child Node\n' },
+                { label: 'Deep Child', icon: 'fa-plus', code: '        Deeper Node\n' },
+            ],
+            'Git Graph': [
+                { label: 'Commit', icon: 'fa-circle', code: 'commit\n' },
+                { label: 'Branch', icon: 'fa-code-branch', code: 'branch develop\n' },
+                { label: 'Checkout', icon: 'fa-check', code: 'checkout main\n' },
+                { label: 'Merge', icon: 'fa-code-merge', code: 'merge develop\n' },
+            ],
+            'default': [
+                { label: 'Node', icon: 'fa-square', code: 'A[Node]\n' },
+                { label: 'Arrow', icon: 'fa-arrow-right', code: 'A --> B\n' },
+                { label: 'Note', icon: 'fa-sticky-note', code: 'Note over A: text\n' },
+                { label: 'Subgraph', icon: 'fa-object-group', code: 'subgraph Title\n    A --> B\nend\n' },
+            ]
+        };
+
+        const MERMAID_TEMPLATES = [
+            { id: 'flowchart', label: 'Flowchart', icon: 'fa-diagram-project', description: 'Flow logic and decision processes',
+                code: `flowchart TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Debug]
+    D --> E{Fixed?}
+    E -->|Yes| C
+    E -->|No| D
+    C --> F[End]` },
+            { id: 'sequence', label: 'Sequence Diagram', icon: 'fa-exchange-alt', description: 'Object interactions over time',
+                code: `sequenceDiagram
+    actor User
+    participant App
+    participant API
+    participant DB
+
+    User->>App: Click button
+    activate App
+    App->>API: GET /data
+    activate API
+    API->>DB: Query
+    DB-->>API: Results
+    API-->>App: JSON response
+    deactivate API
+    App-->>User: Display data
+    deactivate App` },
+            { id: 'class', label: 'Class Diagram', icon: 'fa-cubes', description: 'Class structure and relationships',
+                code: `classDiagram
+    class Animal {
+        +String name
+        +int age
+        +makeSound() void
+    }
+    class Dog {
+        +String breed
+        +bark() void
+    }
+    class Cat {
+        +String color
+        +meow() void
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat` },
+            { id: 'state', label: 'State Diagram', icon: 'fa-circle-notch', description: 'State machine transitions',
+                code: `stateDiagram-v2
+    [*] --> Idle
+    Idle --> Processing: start
+    Processing --> Success: complete
+    Processing --> Error: fail
+    Error --> Idle: retry
+    Success --> [*]` },
+            { id: 'er', label: 'ER Diagram', icon: 'fa-database', description: 'Entity relationships',
+                code: `erDiagram
+    USER ||--o{ ORDER : places
+    USER {
+        int id PK
+        string name
+        string email
+    }
+    ORDER ||--|{ ORDER_ITEM : contains
+    ORDER {
+        int id PK
+        date created
+        string status
+    }
+    PRODUCT ||--o{ ORDER_ITEM : "ordered in"
+    PRODUCT {
+        int id PK
+        string name
+        float price
+    }
+    ORDER_ITEM {
+        int quantity
+    }` },
+            { id: 'gantt', label: 'Gantt Chart', icon: 'fa-tasks', description: 'Project timeline and tasks',
+                code: `gantt
+    title Project Plan
+    dateFormat YYYY-MM-DD
+    
+    section Planning
+    Requirements    :a1, 2024-01-01, 7d
+    Design          :a2, after a1, 5d
+    
+    section Development
+    Backend         :b1, after a2, 14d
+    Frontend        :b2, after a2, 14d
+    
+    section Testing
+    Integration     :c1, after b1, 7d
+    UAT             :c2, after c1, 5d` },
+            { id: 'pie', label: 'Pie Chart', icon: 'fa-chart-pie', description: 'Data distribution',
+                code: `pie showData
+    title Browser Market Share
+    "Chrome" : 65
+    "Safari" : 19
+    "Firefox" : 10
+    "Edge" : 4
+    "Other" : 2` },
+            { id: 'timeline', label: 'Timeline', icon: 'fa-clock', description: 'Chronological events',
+                code: `timeline
+    title Product Evolution
+    section 2020
+        Initial Release : MVP launched
+        : First 100 users
+    section 2021
+        v2.0 : Major redesign
+        : API released
+    section 2022
+        Enterprise : B2B features
+        : 10K users milestone` },
+            { id: 'journey', label: 'User Journey', icon: 'fa-route', description: 'User experience flow',
+                code: `journey
+    title User Onboarding Experience
+    section Discovery
+        Visit website: 5: User
+        Read features: 4: User
+    section Signup
+        Create account: 3: User
+        Verify email: 2: User
+    section First Use
+        Complete tutorial: 4: User
+        Create first item: 5: User` },
+            { id: 'mindmap', label: 'Mindmap', icon: 'fa-brain', description: 'Idea organization',
+                code: `mindmap
+    root((Project))
+        Planning
+            Requirements
+            Timeline
+            Budget
+        Development
+            Frontend
+            Backend
+            Testing
+        Deployment
+            Staging
+            Production` },
+            { id: 'gitgraph', label: 'Git Graph', icon: 'fa-code-branch', description: 'Git branch visualization',
+                code: `gitGraph
+    commit
+    commit
+    branch develop
+    checkout develop
+    commit
+    commit
+    checkout main
+    merge develop
+    commit
+    branch feature
+    checkout feature
+    commit
+    checkout develop
+    merge feature
+    checkout main
+    merge develop` },
+            { id: 'quadrant', label: 'Quadrant Chart', icon: 'fa-th-large', description: 'Priority matrix',
+                code: `quadrantChart
+    title Priority Matrix
+    x-axis Low Effort --> High Effort
+    y-axis Low Impact --> High Impact
+    quadrant-1 Do First
+    quadrant-2 Schedule
+    quadrant-3 Delegate
+    quadrant-4 Eliminate
+    Task A: [0.8, 0.9]
+    Task B: [0.3, 0.8]
+    Task C: [0.7, 0.3]
+    Task D: [0.2, 0.2]` },
+        ];
+
+        // =====================================================
+        // UTILITIES (from js/utils.js)
+        // =====================================================
+        const textToBytes = (text) => new TextEncoder().encode(text);
+
+        const encodeKroki = (source) => {
+            if (!source || !source.trim()) return '';
+            try {
+                const data = textToBytes(source);
+                const compressed = pako.deflate(data, { level: 9 });
+                let binary = '';
+                for (let i = 0; i < compressed.byteLength; i++) binary += String.fromCharCode(compressed[i]);
+                return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            } catch (err) { console.error("Compression error:", err); return null; }
+        };
+
+        const detectTypeFromExtension = (filename) => {
+            const ext = '.' + filename.split('.').pop().toLowerCase();
+            for (const [key, config] of Object.entries(DIAGRAM_TYPES)) {
+                if (config.extensions?.includes(ext)) return key;
+            }
+            return 'bpmn';
+        };
+
+        const detectSpecificModel = (code, type) => {
+            if (!code?.trim()) return 'Empty';
+            const c = code.trim();
+            if (type === 'mermaid') {
+                if (/^\s*sequenceDiagram/m.test(c)) return 'Sequence Diagram';
+                if (/^\s*(graph|flowchart)\s+/m.test(c)) return 'Flowchart';
+                if (/^\s*classDiagram/m.test(c)) return 'Class Diagram';
+                if (/^\s*stateDiagram/m.test(c)) return 'State Diagram';
+                if (/^\s*erDiagram/m.test(c)) return 'Entity Relationship';
+                if (/^\s*gantt/m.test(c)) return 'Gantt Chart';
+                if (/^\s*pie/m.test(c)) return 'Pie Chart';
+                if (/^\s*timeline/m.test(c)) return 'Timeline';
+                if (/^\s*mindmap/m.test(c)) return 'Mindmap';
+                if (/^\s*journey/m.test(c)) return 'User Journey';
+                return 'Mermaid Diagram';
+            }
+            if (type === 'plantuml' || type === 'c4plantuml') {
+                if (/@startmindmap/m.test(c)) return 'Mindmap';
+                if (/@startwbs/m.test(c)) return 'Work Breakdown';
+                if (/@startuml/m.test(c)) {
+                    if (/^\s*(participant|actor|->)/m.test(c)) return 'Sequence Diagram';
+                    if (/^\s*(class|interface)\s+/m.test(c)) return 'Class Diagram';
+                    return 'UML Diagram';
+                }
+            }
+            if (type === 'bpmn') {
+                if (/<(\w+:)?process/i.test(c)) return 'Process Flow';
+            }
+            return DIAGRAM_TYPES[type]?.label || 'Diagram';
+        };
+
+        const extractErrorLine = (errorText) => {
+            if (!errorText) return null;
+            const patterns = [/(?:line|row)\s*(\d+)/i, /:\s*(\d+)\s*:/, /error.*?(\d+):/i];
+            for (const p of patterns) { const m = errorText.match(p); if (m?.[1]) return parseInt(m[1], 10); }
+            return null;
+        };
+
+        // Mermaid token to character mapping
+        const MERMAID_TOKEN_MAP = {
+            'SQE': ']', 'SQS': '[', 'PE': ')', 'PS': '(',
+            'DIAMOND_STOP': '}', 'DIAMOND_START': '{',
+            'DOUBLECIRCLEEND': '))', 'STADIUMEND': '])',
+            'SUBROUTINEEND': ']]', 'CYLINDEREND': ')]',
+            'TAGEND': '>', 'PIPE': '|'
+        };
+
+        // Enhanced error parsing for better diagnostics
+        // Fallback error parser (used if module fails to load)
+        const parseErrorInfoFallback = (errorText, diagramType) => {
+            if (!errorText) return null;
+            
+            const result = {
+                line: null, column: null, endColumn: null,
+                expected: null, found: null, near: null,
+                message: errorText, shortMessage: null, code: null
+            };
+            
+            // Diagram-specific extraction
+            if (diagramType === 'mermaid') {
+                const parseMatch = errorText.match(/Parse error on line (\d+):/i);
+                if (parseMatch) {
+                    result.line = parseInt(parseMatch[1], 10);
+                    const pointerMatch = errorText.match(/\n(-+)\^/);
+                    if (pointerMatch) result.column = pointerMatch[1].length + 1;
+                }
+                const expectMatch = errorText.match(/Expecting\s+([^,]+(?:,\s*'[^']+')*)[\s,]+got\s+['"]?(\w+)['"]?/i);
+                if (expectMatch) {
+                    const firstExp = expectMatch[1].match(/'([^']+)'/);
+                    result.expected = firstExp ? firstExp[1] : expectMatch[1].trim();
+                    result.found = expectMatch[2];
+                }
+                if (/No diagram type detected/i.test(errorText)) {
+                    result.line = 1; result.column = 1;
+                    result.code = 'unknown-diagram';
+                }
+            } else if (diagramType === 'graphviz' || diagramType === 'dot') {
+                const gvMatch = errorText.match(/<stdin>:\s*syntax error in line (\d+)(?: near ['"]([^'"]+)['"])?/i);
+                if (gvMatch) {
+                    result.line = parseInt(gvMatch[1], 10);
+                    if (gvMatch[2]) result.near = gvMatch[2];
+                }
+            } else if (diagramType === 'erd') {
+                const erdMatch = errorText.match(/\(line\s+(\d+),\s*column\s+(\d+)\):\s*unexpected\s+["']([^"']+)["']\s*expecting\s+["']([^"']+)["']/i);
+                if (erdMatch) {
+                    result.line = parseInt(erdMatch[1], 10);
+                    result.column = parseInt(erdMatch[2], 10);
+                    result.found = erdMatch[3];
+                    result.expected = erdMatch[4];
+                }
+            } else if (diagramType === 'nomnoml') {
+                const nomMatch = errorText.match(/at line (\d+) column (\d+),\s*expected\s+["']([^"']+)["']\s*but got\s+(.+?)(?:\n|$)/i);
+                if (nomMatch) {
+                    result.line = parseInt(nomMatch[1], 10);
+                    result.column = parseInt(nomMatch[2], 10);
+                    result.expected = nomMatch[3];
+                    result.found = nomMatch[4].trim();
+                }
+            } else if (diagramType === 'plantuml' || diagramType === 'c4plantuml') {
+                if (/Welcome to PlantUML/i.test(errorText)) {
+                    result.line = 1; result.expected = '@startuml';
+                    result.code = 'plantuml-missing-start';
+                }
+                const pumlMatch = errorText.match(/(?:ERROR|Syntax Error)[:\s]+line\s+(\d+)/i);
+                if (pumlMatch) result.line = parseInt(pumlMatch[1], 10);
+            } else if (diagramType === 'blockdiag' || diagramType === 'seqdiag' || diagramType === 'actdiag' || diagramType === 'nwdiag') {
+                // BlockDiag family: "ParseException: line X, column Y"
+                const bdMatch = errorText.match(/(?:ParseException|SyntaxError).*?line\s+(\d+)(?:,\s*column\s+(\d+))?/i);
+                if (bdMatch) {
+                    result.line = parseInt(bdMatch[1], 10);
+                    if (bdMatch[2]) result.column = parseInt(bdMatch[2], 10);
+                }
+                // Check for missing braces
+                if (/unexpected.*\}|missing.*\{/i.test(errorText)) {
+                    result.code = 'blockdiag-brace';
+                }
+            } else if (diagramType === 'bpmn') {
+                // BPMN XML errors: various formats
+                const xmlMatch = errorText.match(/(?:XMLSyntaxError|SAXParseException).*?line\s*(\d+)(?:.*?column\s*(\d+))?/i);
+                if (xmlMatch) {
+                    result.line = parseInt(xmlMatch[1], 10);
+                    if (xmlMatch[2]) result.column = parseInt(xmlMatch[2], 10);
+                }
+                // Check for unclosed tags
+                const tagMatch = errorText.match(/(?:unclosed|missing).*?<(\w+)/i);
+                if (tagMatch) {
+                    result.expected = `</${tagMatch[1]}>`;
+                    result.code = 'xml-unclosed-tag';
+                }
+                // Invalid XML structure
+                if (/invalid.*xml|not.*well.*formed/i.test(errorText)) {
+                    result.code = 'xml-invalid';
+                }
+            } else if (diagramType === 'structurizr') {
+                // Structurizr DSL errors
+                const structMatch = errorText.match(/(?:error|exception).*?line\s+(\d+)/i);
+                if (structMatch) result.line = parseInt(structMatch[1], 10);
+                if (/workspace.*expected|missing.*workspace/i.test(errorText)) {
+                    result.line = 1;
+                    result.code = 'structurizr-missing-workspace';
+                }
+            } else if (['vega', 'vegalite', 'excalidraw', 'wavedrom'].includes(diagramType)) {
+                // JSON-based diagrams
+                const jsonMatch = errorText.match(/(?:JSON\.parse|SyntaxError).*?(?:position|at)\s+(\d+)/i);
+                if (jsonMatch) {
+                    // Position is character offset, try to estimate line
+                    result.column = parseInt(jsonMatch[1], 10);
+                }
+                // Line:column format
+                const lineColMatch = errorText.match(/line\s+(\d+)(?:,?\s*column\s+(\d+))?/i);
+                if (lineColMatch) {
+                    result.line = parseInt(lineColMatch[1], 10);
+                    if (lineColMatch[2]) result.column = parseInt(lineColMatch[2], 10);
+                }
+                // Common JSON errors
+                if (/unexpected.*token|expected.*[,:\[\]{}]/i.test(errorText)) {
+                    result.code = 'json-syntax';
+                    const expMatch = errorText.match(/expected\s+['"]?([,:\[\]{}])['"]?/i);
+                    if (expMatch) result.expected = expMatch[1];
+                }
+                if (/unexpected.*end/i.test(errorText)) {
+                    result.code = 'json-incomplete';
+                }
+            } else if (diagramType === 'ditaa') {
+                // Ditaa has minimal error messages, usually just "Error"
+                if (/error/i.test(errorText)) {
+                    result.line = 1;
+                    result.code = 'ditaa-error';
+                }
+            }
+            
+            // Generic fallback for line extraction
+            if (!result.line) {
+                const patterns = [
+                    /line\s+(\d+)(?:,?\s*column\s+(\d+))?/i,
+                    /\((\d+)[,:]\s*(\d+)\)/, /(\d+):(\d+):/,
+                    /(?:line|row)\s+(\d+)/i, /:\s*(\d+)\s*:/
+                ];
+                for (const p of patterns) {
+                    const m = errorText.match(p);
+                    if (m) {
+                        result.line = parseInt(m[1], 10);
+                        if (m[2]) result.column = parseInt(m[2], 10);
+                        break;
+                    }
+                }
+            }
+            
+            // Build short message from tokens
+            if (result.expected && result.found) {
+                const expChar = MERMAID_TOKEN_MAP[result.expected] || result.expected;
+                result.shortMessage = `Expected '${expChar}' but found '${result.found}'`;
+            } else if (result.expected) {
+                const expChar = MERMAID_TOKEN_MAP[result.expected] || result.expected;
+                result.shortMessage = `Expected '${expChar}'`;
+            } else if (result.near) {
+                result.shortMessage = `Error near '${result.near}'`;
+            }
+            
+            // Set defaults
+            if (result.line && !result.column) result.column = 1;
+            if (result.column) {
+                result.endColumn = result.found ? result.column + result.found.length : 1000;
+            }
+            
+            // Categorize error code
+            if (!result.code) {
+                const lower = errorText.toLowerCase();
+                if (result.expected === 'SQE' || result.expected === ']' || /expecting.*\]|unclosed.*bracket/i.test(lower)) {
+                    result.code = 'missing-bracket';
+                } else if (result.expected === 'PE' || result.expected === ')' || /expecting.*\)|unclosed.*paren/i.test(lower)) {
+                    result.code = 'missing-paren';
+                } else if (/missing.*@enduml|no.*@enduml/i.test(lower)) {
+                    result.code = 'plantuml-missing-end';
+                } else if (/welcome to plantuml|missing.*@startuml/i.test(lower)) {
+                    result.code = 'plantuml-missing-start';
+                } else if (/no diagram type|unknown.*diagram/i.test(lower)) {
+                    result.code = 'unknown-diagram';
+                } else if (/unexpected.*token|unexpected.*character/i.test(lower)) {
+                    result.code = 'unexpected-token';
+                } else if (/invalid.*arrow|unknown.*link/i.test(lower)) {
+                    result.code = 'invalid-arrow';
+                } else {
+                    result.code = 'syntax-error';
+                }
+            }
+            
+            return result;
+        };
+
+        // Fallback fix suggestions (used if module fails to load)
+        const getFixSuggestionsFallback = (errorText, diagramType, line, extracted = {}) => {
+            if (!errorText) return [];
+            const suggestions = [];
+            const lower = errorText.toLowerCase();
+            
+            // Token-based fixes from extracted info
+            if (extracted.expected) {
+                const char = MERMAID_TOKEN_MAP[extracted.expected] || 
+                    (extracted.expected.length === 1 ? extracted.expected : null);
+                if (char) {
+                    const col = extracted.column || 1000;
+                    suggestions.push({
+                        title: `Add '${char}'`,
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: line, startColumn: col, endLineNumber: line, endColumn: col }, text: char }
+                    });
+                }
+            }
+            
+            // Mermaid fixes
+            if (diagramType === 'mermaid') {
+                if (/no diagram type|unknown.*diagram|parse.*error.*line.*1/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add flowchart declaration',
+                        isPreferred: suggestions.length === 0,
+                        edit: { range: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 }, text: 'flowchart TD\n' }
+                    });
+                }
+            }
+            
+            // PlantUML fixes
+            if (diagramType === 'plantuml' || diagramType === 'c4plantuml') {
+                if (/welcome to plantuml|missing.*@startuml/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add @startuml at beginning',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 }, text: '@startuml\n' }
+                    });
+                }
+                if (/missing.*@enduml/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add @enduml at end',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: 99999, startColumn: 1, endLineNumber: 99999, endColumn: 1 }, text: '\n@enduml' }
+                    });
+                }
+            }
+            
+            // GraphViz fixes
+            if (diagramType === 'graphviz' || diagramType === 'dot') {
+                if (/near.*\}|missing.*\{/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add missing brace',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: line, startColumn: 1000, endLineNumber: line, endColumn: 1000 }, text: '}' }
+                    });
+                }
+                if (/digraph.*expected|graph.*expected/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add digraph declaration',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 }, text: 'digraph G {\n' }
+                    });
+                }
+            }
+            
+            // BlockDiag fixes
+            if (diagramType === 'blockdiag' || diagramType === 'seqdiag' || diagramType === 'actdiag' || diagramType === 'nwdiag') {
+                if (/missing.*\{|unexpected.*\}/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add missing brace',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: line, startColumn: 1000, endLineNumber: line, endColumn: 1000 }, text: '}' }
+                    });
+                }
+                if (/blockdiag.*expected/i.test(lower) || line === 1) {
+                    suggestions.push({
+                        title: 'Add blockdiag declaration',
+                        isPreferred: suggestions.length === 0,
+                        edit: { range: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 }, text: 'blockdiag {\n' }
+                    });
+                }
+            }
+            
+            // BPMN/XML fixes
+            if (diagramType === 'bpmn') {
+                if (/unclosed.*tag|missing.*<\//i.test(lower)) {
+                    const tagMatch = lower.match(/unclosed.*?<(\w+)|missing.*?<\/(\w+)/);
+                    if (tagMatch) {
+                        const tag = tagMatch[1] || tagMatch[2];
+                        suggestions.push({
+                            title: `Add closing </${tag}>`,
+                            isPreferred: true,
+                            edit: { range: { startLineNumber: line, startColumn: 1000, endLineNumber: line, endColumn: 1000 }, text: `</${tag}>` }
+                        });
+                    }
+                }
+                if (/xml.*declaration|missing.*\?xml/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add XML declaration',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 }, text: '<?xml version="1.0" encoding="UTF-8"?>\n' }
+                    });
+                }
+            }
+            
+            // JSON-based diagram fixes (Vega, Vega-Lite, Excalidraw, Wavedrom, Structurizr)
+            if (['vega', 'vegalite', 'excalidraw', 'wavedrom', 'structurizr'].includes(diagramType)) {
+                if (/expected.*,|missing.*,/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add missing comma',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: line, startColumn: extracted.column || 1, endLineNumber: line, endColumn: extracted.column || 1 }, text: ',' }
+                    });
+                }
+                if (/expected.*:|missing.*:/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add missing colon',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: line, startColumn: extracted.column || 1, endLineNumber: line, endColumn: extracted.column || 1 }, text: ':' }
+                    });
+                }
+                if (/expected.*\}|unclosed.*\{/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add closing brace }',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: 99999, startColumn: 1, endLineNumber: 99999, endColumn: 1 }, text: '\n}' }
+                    });
+                }
+                if (/expected.*\]|unclosed.*\[/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add closing bracket ]',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: 99999, startColumn: 1, endLineNumber: 99999, endColumn: 1 }, text: '\n]' }
+                    });
+                }
+            }
+            
+            // Structurizr DSL specific
+            if (diagramType === 'structurizr') {
+                if (/workspace.*expected|missing.*workspace/i.test(lower)) {
+                    suggestions.push({
+                        title: 'Add workspace declaration',
+                        isPreferred: true,
+                        edit: { range: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 }, text: 'workspace {\n    model {\n    }\n    views {\n    }\n}\n' }
+                    });
+                }
+            }
+            
+            return suggestions;
+        };
+
+        // Error explanations database
+        const ERROR_EXPLANATIONS = {
+            'missing-bracket': {
+                title: 'Missing Closing Bracket',
+                description: 'Node labels use brackets. Each opening bracket [ must have a closing ].',
+                example: 'A[Correct label]'
+            },
+            'missing-paren': {
+                title: 'Missing Closing Parenthesis',
+                description: 'Parentheses define rounded nodes. Ensure all ( have matching ).',
+                example: 'A(Rounded node)'
+            },
+            'plantuml-missing-end': {
+                title: 'Missing @enduml',
+                description: 'PlantUML diagrams must end with @enduml.',
+                example: '@startuml\\nAlice -> Bob: Hello\\n@enduml'
+            },
+            'plantuml-missing-start': {
+                title: 'Missing @startuml',
+                description: 'PlantUML diagrams must start with @startuml.',
+                example: '@startuml\\nAlice -> Bob: Hello\\n@enduml'
+            },
+            'unexpected-token': {
+                title: 'Unexpected Token',
+                description: 'The parser encountered an unexpected character or word.',
+                example: 'Check syntax and ensure all statements are complete.'
+            },
+            'invalid-arrow': {
+                title: 'Invalid Arrow Syntax',
+                description: 'Use valid arrow syntax: --> (solid), -.-> (dotted), ==> (thick).',
+                example: 'A --> B\\nB -.-> C'
+            },
+            'unknown-diagram': {
+                title: 'Unknown Diagram Type',
+                description: 'Start with a valid diagram type declaration.',
+                example: 'flowchart TD\\nsequenceDiagram\\nclassDiagram'
+            },
+            'syntax-error': {
+                title: 'Syntax Error',
+                description: 'Check for typos, missing brackets, or invalid keywords.',
+                example: 'Review the line indicated in the error message.'
+            },
+            'json-syntax': {
+                title: 'JSON Syntax Error',
+                description: 'Invalid JSON structure. Check for missing commas, colons, or quotes.',
+                example: '{ "key": "value", "array": [1, 2, 3] }'
+            },
+            'json-incomplete': {
+                title: 'Incomplete JSON',
+                description: 'JSON structure is incomplete. Ensure all braces and brackets are closed.',
+                example: '{ "data": { "nested": true } }'
+            },
+            'xml-unclosed-tag': {
+                title: 'Unclosed XML Tag',
+                description: 'XML tags must be properly closed.',
+                example: '<element>content</element>'
+            },
+            'xml-invalid': {
+                title: 'Invalid XML',
+                description: 'The XML is not well-formed. Check for proper nesting and escaping.',
+                example: '<?xml version="1.0"?>\\n<root>content</root>'
+            },
+            'blockdiag-brace': {
+                title: 'BlockDiag Brace Error',
+                description: 'BlockDiag blocks must have matching braces.',
+                example: 'blockdiag {\\n  A -> B -> C;\\n}'
+            },
+            'structurizr-missing-workspace': {
+                title: 'Missing Workspace',
+                description: 'Structurizr DSL must start with a workspace declaration.',
+                example: 'workspace {\\n  model { }\\n  views { }\\n}'
+            },
+            'ditaa-error': {
+                title: 'Ditaa Error',
+                description: 'Check your ASCII art diagram for invalid characters.',
+                example: '+---+\\n| A |\\n+---+'
+            }
+        };
+
+        const getErrorExplanation = (code) => {
+            return ERROR_EXPLANATIONS[code] || ERROR_EXPLANATIONS['syntax-error'];
+        };
+
+        // Register Monaco error providers
+        let errorProvidersRegistered = false;
+        const registerErrorProviders = () => {
+            if (errorProvidersRegistered || !window.monaco) return;
+            errorProvidersRegistered = true;
+            
+            // Map Monaco languages to diagram types for proper fix suggestions
+            const langToDiagramMap = {
+                'mermaid': 'mermaid',
+                'plantuml': 'plantuml',
+                'xml': 'bpmn',
+                'json': 'json',  // Covers Vega, Vega-Lite, Excalidraw, Wavedrom, Structurizr
+                'python': 'blockdiag',
+                'plaintext': 'graphviz'  // Covers GraphViz, Nomnoml, Ditaa
+            };
+            
+            Object.keys(langToDiagramMap).forEach(lang => {
+                // Code Action Provider for quick fixes
+                monaco.languages.registerCodeActionProvider(lang, {
+                    provideCodeActions: (model, range, context) => {
+                        const actions = [];
+                        // Manually fetch markers at the range (context.markers may be empty)
+                        const allMarkers = monaco.editor.getModelMarkers({ resource: model.uri });
+                        const markers = allMarkers.filter(m =>
+                            m.startLineNumber <= range.endLineNumber &&
+                            m.endLineNumber >= range.startLineNumber
+                        );
+                        
+                        for (const marker of markers) {
+                            // Get actual diagram type from marker source or use mapping
+                            const diagramType = marker.source === 'kroki' && marker.relatedInformation?.[0]?.diagramType 
+                                ? marker.relatedInformation[0].diagramType 
+                                : langToDiagramMap[lang];
+                            // Extract info from marker's relatedInformation
+                            const extracted = marker.relatedInformation?.[0] || {};
+                            const fixes = (window.ErrorDiagnostics?.getFixSuggestions || getFixSuggestionsFallback)(marker.message, diagramType, marker.startLineNumber, extracted);
+                            
+                            for (const fix of fixes) {
+                                if (fix.edit) {
+                                    let editRange = fix.edit.range;
+                                    if (editRange.startLineNumber === 99999) {
+                                        const lineCount = model.getLineCount();
+                                        const lastCol = model.getLineMaxColumn(lineCount);
+                                        editRange = { startLineNumber: lineCount, startColumn: lastCol, endLineNumber: lineCount, endColumn: lastCol };
+                                    }
+                                    
+                                    actions.push({
+                                        title: fix.title,
+                                        kind: 'quickfix',
+                                        diagnostics: [marker],
+                                        isPreferred: fix.isPreferred || false,
+                                        edit: {
+                                            edits: [{
+                                                resource: model.uri,
+                                                textEdit: {
+                                                    range: new monaco.Range(editRange.startLineNumber, editRange.startColumn, editRange.endLineNumber, editRange.endColumn),
+                                                    text: fix.edit.text.replace(/\\n/g, '\n')
+                                                }
+                                            }]
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        return { actions, dispose: () => {} };
+                    }
+                });
+                
+                // Hover Provider for error explanations
+                monaco.languages.registerHoverProvider(lang, {
+                    provideHover: (model, position) => {
+                        const markers = monaco.editor.getModelMarkers({ resource: model.uri });
+                        const relevant = markers.filter(m => 
+                            m.startLineNumber <= position.lineNumber && 
+                            m.endLineNumber >= position.lineNumber
+                        );
+                        
+                        if (relevant.length === 0) return null;
+                        
+                        const marker = relevant[0];
+                        const explanation = (window.ErrorDiagnostics?.getErrorExplanation || getErrorExplanation)(marker.code);
+                        
+                        return {
+                            contents: [
+                                { value: '**' + explanation.title + '**' },
+                                { value: explanation.description },
+                                { value: '```\\n' + explanation.example + '\\n```' }
+                            ],
+                            range: new monaco.Range(marker.startLineNumber, marker.startColumn, marker.endLineNumber, marker.endColumn)
+                        };
+                    }
+                });
+            });
+        };
+
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+            const script = document.createElement('script');
+            script.src = src; script.async = true;
+            let amdDefine = window.define?.amd ? window.define : null;
+            if (amdDefine) window.define = undefined;
+            script.onload = () => { if (amdDefine) window.define = amdDefine; resolve(); };
+            script.onerror = (e) => { if (amdDefine) window.define = amdDefine; reject(e); };
+            document.head.appendChild(script);
+        });
+
+        const loadCSS = (href) => {
+            if (document.querySelector(`link[href="${href}"]`)) return;
+            const link = document.createElement('link');
+            link.rel = 'stylesheet'; link.href = href;
+            document.head.appendChild(link);
+        };
+
+        const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // Mermaid Sync Controller
+        const createMermaidSyncController = () => {
+            let ast = null, changeSource = null, debounceTimer = null;
+            return {
+                parseCode: (code, onSuccess, onError) => {
+                    if (changeSource === 'visual') return;
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        try {
+                            if (!window.MermaidAST) { onError('MermaidAST not loaded'); return; }
+                            ast = window.MermaidAST.parse(code);
+                            onSuccess(ast);
+                        } catch (e) { onError(e.message); }
+                    }, 300);
+                },
+                renderToCode: (updatedAst) => {
+                    changeSource = 'visual'; ast = updatedAst;
+                    try {
+                        const code = window.MermaidAST.render(ast);
+                        setTimeout(() => { changeSource = null; }, 50);
+                        return code;
+                    } catch (e) { setTimeout(() => { changeSource = null; }, 50); return null; }
+                },
+                getAst: () => ast,
+                isLoaded: () => !!window.MermaidAST
+            };
+        };
+
+            // =====================================================
+            // COMPONENTS (Inline for simplicity - can be extracted later)
+            // =====================================================
+
+            // Button Component
+            const Button = ({ onClick, children, variant = "primary", icon, className = "", disabled = false, size = "md", title }) => {
+                const baseClass = "inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+                const sizes = { xs: "px-2 py-1 text-xs", sm: "px-2.5 py-1.5 text-xs", md: "px-4 py-2 text-sm", lg: "px-6 py-3 text-base" };
+                const variants = {
+                    primary: "bg-indigo-600 hover:bg-indigo-700 text-white focus:ring-indigo-500",
+                    secondary: "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-indigo-500",
+                    ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                    danger: "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200",
+                    warning: "bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+                };
+                return (
+                    <button onClick={onClick} disabled={disabled} title={title} className={`${baseClass} ${sizes[size]} ${variants[variant]} ${className}`}>
+                        {icon && <i className={`${icon} ${children ? 'mr-2' : ''}`}></i>}
+                        {children}
+                    </button>
+                );
+            };
+
+            // Status Badge
+            const StatusBadge = ({ type, text }) => {
+                const styles = {
+                    success: "bg-emerald-100 text-emerald-800 border-emerald-200",
+                    warning: "bg-amber-100 text-amber-800 border-amber-200",
+                    info: "bg-blue-100 text-blue-800 border-blue-200",
+                    error: "bg-red-100 text-red-800 border-red-200"
+                };
+                return (
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[type] || styles.info}`}>
+                        {text}
+                    </span>
+                );
+            };
+
+            // Monaco Wrapper (Inline version)
+            const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, theme = "vs-light", height = "100%" }, ref) => {
+                const containerRef = useRef(null);
+                const editorRef = useRef(null);
+                const decorationsRef = useRef([]);
+                const latestValueRef = useRef(value);
+                const [editorReady, setEditorReady] = useState(false);
+
+                useImperativeHandle(ref, () => ({
+                    scrollToLine: (lineNumber) => {
+                        if (editorRef.current) {
+                            editorRef.current.revealLineInCenter(lineNumber);
+                            const newDecorations = [{
+                                range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+                                options: { isWholeLine: true, className: 'errorLineDecoration', linesDecorationsClassName: 'errorLineGutter' }
+                            }];
+                            decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, newDecorations);
+                            editorRef.current.focus();
+                        }
+                    },
+                    setValue: (newValue) => {
+                        if (editorRef.current && newValue !== editorRef.current.getValue()) {
+                            editorRef.current.setValue(newValue);
+                        }
+                    },
+                    insertAtCursor: (text) => {
+                        if (editorRef.current) {
+                            const editor = editorRef.current;
+                            const position = editor.getPosition();
+                            const range = new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column);
+                            editor.executeEdits('insert-snippet', [{ range, text, forceMoveMarkers: true }]);
+                            editor.focus();
+                        }
+                    },
+                    setMarkers: (markers) => {
+                        if (editorRef.current && window.monaco) {
+                            const model = editorRef.current.getModel();
+                            if (model) monaco.editor.setModelMarkers(model, 'diagram-errors', markers);
+                        }
+                    },
+                    clearMarkers: () => {
+                        if (editorRef.current && window.monaco) {
+                            const model = editorRef.current.getModel();
+                            if (model) monaco.editor.setModelMarkers(model, 'diagram-errors', []);
+                        }
+                    }
+                }));
+
+                useEffect(() => { latestValueRef.current = value; }, [value]);
+
+                useEffect(() => {
+                    let editor;
+                    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+                    require(['vs/editor/editor.main'], function() {
+                        if (!containerRef.current) return;
+                        
+                        // Register languages
+                        if (!monaco.languages.getLanguages().some(lang => lang.id === 'plantuml')) {
+                            monaco.languages.register({ id: 'plantuml' });
+                            monaco.languages.setMonarchTokensProvider('plantuml', {
+                                tokenizer: {
+                                    root: [
+                                        [/[@]start\w+/, 'keyword'], [/[@]end\w+/, 'keyword'],
+                                        [/'.*$/, 'comment'], [/"([^"\\]|\\.)*"/, 'string'],
+                                        [/\b(participant|actor|class|interface|state|note|package)\b/, 'keyword'],
+                                        [/--?>|<-?--/, 'operator']
+                                    ]
+                                }
+                            });
+                        }
+                        
+                        if (!monaco.languages.getLanguages().some(lang => lang.id === 'mermaid')) {
+                            monaco.languages.register({ id: 'mermaid' });
+                            monaco.languages.setMonarchTokensProvider('mermaid', {
+                                tokenizer: {
+                                    root: [
+                                        [/%%.*$/, 'comment'], [/"([^"\\]|\\.)*"/, 'string'],
+                                        [/\[[^\]]*\]|\([^)]*\)|\{[^}]*\}/, 'string'],
+                                        [/--?>|<-?--|===?>|-.->?/, 'operator'],
+                                        [/\b(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|mindmap|timeline|journey)\b/, 'keyword'],
+                                        [/\b(participant|actor|class|state|entity|section|subgraph|end)\b/, 'keyword']
+                                    ]
+                                }
+                            });
+                        }
+                        
+                        // Register error providers
+                        registerErrorProviders();
+                        
+                        editor = monaco.editor.create(containerRef.current, {
+                            value: latestValueRef.current || "",
+                            language: language || "xml",
+                            theme, automaticLayout: true,
+                            minimap: { enabled: true, scale: 0.75 },
+                            scrollBeyondLastLine: false, fontSize: 13,
+                            fontFamily: "'Fira Code', 'Monaco', monospace",
+                            lineNumbers: "on", glyphMargin: true, folding: true, renderLineHighlight: "all",
+                            lightbulb: { enabled: true }
+                        });
+                        
+                        editorRef.current = editor;
+                        setEditorReady(true);
+                        
+                        editor.onDidChangeModelContent(() => {
+                            onChange(editor.getValue());
+                            if (decorationsRef.current.length > 0) {
+                                decorationsRef.current = editor.deltaDecorations(decorationsRef.current, []);
+                            }
+                        });
+                        
+                        editor.onDidChangeCursorPosition((e) => {
+                            if (onCursorChange) onCursorChange(e.position.lineNumber, e.position.column);
+                        });
+                    });
+                    return () => { if (editor) editor.dispose(); };
+                }, []);
+
+                useEffect(() => {
+                    if (editorReady && editorRef.current && value !== editorRef.current.getValue()) {
+                        editorRef.current.setValue(value);
+                    }
+                }, [value, editorReady]);
+
+                useEffect(() => {
+                    if (editorRef.current && window.monaco) {
+                        monaco.editor.setModelLanguage(editorRef.current.getModel(), language);
+                    }
+                }, [language]);
+
+                return <div ref={containerRef} className="monaco-editor-container" style={{ height }} />;
+            });
+
+            // BPMN Visual Editor
+            const BpmnVisualEditor = ({ xml, onChange, onError }) => {
+                const containerRef = useRef(null);
+                const modelerRef = useRef(null);
+                const [isReady, setIsReady] = useState(false);
+
+                useEffect(() => {
+                    const initEditor = async () => {
+                        try {
+                            loadCSS('https://unpkg.com/bpmn-js@16.4.0/dist/assets/diagram-js.css');
+                            loadCSS('https://unpkg.com/bpmn-js@16.4.0/dist/assets/bpmn-font/css/bpmn.css');
+                            if (!window.BpmnJS) await loadScript('https://unpkg.com/bpmn-js@16.4.0/dist/bpmn-modeler.production.min.js');
+                            if (!containerRef.current || !window.BpmnJS) return;
+
+                            const modeler = new window.BpmnJS({ container: containerRef.current, keyboard: { bindTo: window } });
+                            modelerRef.current = modeler;
+
+                            modeler.on('commandStack.changed', async () => {
+                                try { const { xml } = await modeler.saveXML({ format: true }); onChange(xml); }
+                                catch (err) { console.error('Error exporting XML', err); }
+                            });
+
+                            setIsReady(true);
+                            if (xml) {
+                                try { await modeler.importXML(xml); }
+                                catch (err) { if (onError) onError(err.message); }
+                            }
+                        } catch (e) {
+                            console.error("Failed to load BPMN JS", e);
+                            if (onError) onError("Failed to load visual editor resources.");
+                        }
+                    };
+                    initEditor();
+                    return () => { if (modelerRef.current) modelerRef.current.destroy(); };
+                }, []);
+
+                useEffect(() => {
+                    if (modelerRef.current && xml && isReady) {
+                        modelerRef.current.saveXML({ format: true }).then((result) => {
+                            if (result.xml !== xml) modelerRef.current.importXML(xml).catch(console.error);
+                        }).catch(() => modelerRef.current.importXML(xml).catch(console.error));
+                    }
+                }, [xml, isReady]);
+
+                return (
+                    <div className="w-full h-full relative">
+                        {!isReady && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-20">
+                                <div className="loader mb-3"></div>
+                                <span className="text-slate-500 text-xs">Loading Editor...</span>
+                            </div>
+                        )}
+                        <div ref={containerRef} className="bjs-container" style={{visibility: isReady ? 'visible' : 'hidden'}} />
+                    </div>
+                );
+            };
+
+            // Simplified Mermaid Visual Editor
+            const MermaidVisualEditor = ({ ast, code, astLoaded, onChange, onCodeChange, onError, detectedModel }) => {
+                const [previewUrl, setPreviewUrl] = useState(null);
+                const [previewLoading, setPreviewLoading] = useState(false);
+                
+                useEffect(() => {
+                    if (!code || !code.trim()) { setPreviewUrl(null); return; }
+                    setPreviewLoading(true);
+                    const fetchPreview = async () => {
+                        try {
+                            const response = await fetch('https://kroki.io/mermaid/svg', {
+                                method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: code
+                            });
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                setPreviewUrl(URL.createObjectURL(blob));
+                            }
+                        } catch (e) { console.error('Preview error:', e); }
+                        setPreviewLoading(false);
+                    };
+                    const timer = setTimeout(fetchPreview, 500);
+                    return () => clearTimeout(timer);
+                }, [code]);
+                
+                if (!astLoaded) {
+                    return (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-50">
+                            <div className="text-center">
+                                <div className="loader mb-3 mx-auto"></div>
+                                <span className="text-slate-500 text-sm">Loading Mermaid Editor...</span>
+                            </div>
+                        </div>
+                    );
+                }
+                
+                // Route to specialized editor based on detected model
+                const editorType = detectedModel || ast?.type || 'generic';
+                
+                // Flowchart Editor
+                if (editorType === 'Flowchart' || editorType === 'flowchart') {
+                    return <MermaidFlowchartEditor ast={ast} code={code} onCodeChange={onCodeChange} previewUrl={previewUrl} previewLoading={previewLoading} />;
+                }
+                
+                // Sequence Diagram Editor  
+                if (editorType === 'Sequence Diagram' || editorType === 'sequence') {
+                    return <MermaidSequenceEditor ast={ast} code={code} onCodeChange={onCodeChange} previewUrl={previewUrl} previewLoading={previewLoading} />;
+                }
+                
+                // Pie Chart Editor
+                if (editorType === 'Pie Chart' || editorType === 'pie') {
+                    return <MermaidPieEditor code={code} onCodeChange={onCodeChange} previewUrl={previewUrl} previewLoading={previewLoading} />;
+                }
+                
+                // Gantt Chart Editor
+                if (editorType === 'Gantt Chart' || editorType === 'gantt') {
+                    return <MermaidGanttEditor code={code} onCodeChange={onCodeChange} previewUrl={previewUrl} previewLoading={previewLoading} />;
+                }
+                
+                // Timeline Editor
+                if (editorType === 'Timeline' || editorType === 'timeline') {
+                    return <MermaidTimelineEditor code={code} onCodeChange={onCodeChange} previewUrl={previewUrl} previewLoading={previewLoading} />;
+                }
+                
+                // User Journey Editor
+                if (editorType === 'User Journey' || editorType === 'journey') {
+                    return <MermaidJourneyEditor code={code} onCodeChange={onCodeChange} previewUrl={previewUrl} previewLoading={previewLoading} />;
+                }
+                
+                // Mindmap Editor
+                if (editorType === 'Mindmap' || editorType === 'mindmap') {
+                    return <MermaidMindmapEditor code={code} onCodeChange={onCodeChange} previewUrl={previewUrl} previewLoading={previewLoading} />;
+                }
+                
+                // Generic/Fallback Editor with preview + AST explorer
+                return (
+                    <div className="w-full h-full flex">
+                        <div className="flex-1 flex flex-col bg-slate-50">
+                            <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center justify-between">
+                                <span className="text-xs font-medium text-slate-600">
+                                    <i className="fas fa-eye mr-1.5"></i>Live Preview
+                                    {ast?.type && <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[10px]">{ast.type}</span>}
+                                </span>
+                                {previewLoading && <span className="text-xs text-slate-400"><i className="fas fa-circle-notch fa-spin mr-1"></i></span>}
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                {previewUrl ? (
+                                    <img src={previewUrl} alt="Diagram" className="max-w-full h-auto bg-white shadow-lg rounded" />
+                                ) : (
+                                    <div className="text-center text-slate-400">
+                                        <i className="fas fa-image text-4xl mb-3 opacity-30"></i>
+                                        <p className="text-sm">Preview will appear here</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="w-72 border-l border-slate-200 bg-white flex flex-col">
+                            <div className="flex-none px-3 py-2 border-b border-slate-200">
+                                <span className="text-xs font-medium text-slate-600"><i className="fas fa-sliders-h mr-1.5"></i>Properties</span>
+                            </div>
+                            <div className="flex-1 overflow-auto p-3">
+                                {ast ? (
+                                    <div className="space-y-3">
+                                        <div className="text-xs">
+                                            <label className="block text-slate-500 mb-1">Diagram Type</label>
+                                            <div className="px-2 py-1.5 bg-slate-100 rounded text-slate-700 font-medium">{ast.type || 'Unknown'}</div>
+                                        </div>
+                                        <div className="text-xs">
+                                            <label className="block text-slate-500 mb-1">Structure</label>
+                                            <div className="bg-slate-50 rounded p-2 max-h-64 overflow-auto">
+                                                <pre className="text-[10px] text-slate-600 whitespace-pre-wrap">
+                                                    {JSON.stringify(ast, (key, value) => value instanceof Map ? Object.fromEntries(value) : value, 2)}
+                                                </pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-slate-400 py-8">
+                                        <i className="fas fa-info-circle text-2xl mb-2 opacity-50"></i>
+                                        <p className="text-xs">Enter valid Mermaid code to see properties</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // PlantUML Toolbar
+            const PlantUmlToolbar = ({ detectedModel, onInsert }) => {
+                const [isExpanded, setIsExpanded] = useState(false);
+                const snippets = PLANTUML_SNIPPETS[detectedModel] || PLANTUML_SNIPPETS['default'];
+                const visibleSnippets = isExpanded ? snippets : snippets.slice(0, 6);
+                const hasMore = snippets.length > 6;
+                
+                return (
+                    <div className="flex-none bg-slate-50 border-b border-slate-200 px-2 py-1.5">
+                        <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-[10px] text-slate-400 uppercase font-semibold mr-1">Insert:</span>
+                            {visibleSnippets.map((snippet, idx) => (
+                                <button key={idx} onClick={() => onInsert(snippet.code)}
+                                    className="inline-flex items-center px-2 py-1 text-[11px] font-medium text-slate-600 bg-white border border-slate-200 rounded hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
+                                    title={`Insert ${snippet.label}`}>
+                                    <i className={`fas ${snippet.icon} mr-1 text-[10px] opacity-60`}></i>{snippet.label}
+                                </button>
+                            ))}
+                            {hasMore && (
+                                <button onClick={() => setIsExpanded(!isExpanded)}
+                                    className="inline-flex items-center px-2 py-1 text-[11px] font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+                                    <i className={`fas ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'} mr-1 text-[10px]`}></i>
+                                    {isExpanded ? 'Less' : `+${snippets.length - 6}`}
+                                </button>
+                            )}
+                            <span className="ml-auto text-[10px] text-slate-400"><i className="fas fa-info-circle mr-1"></i>{detectedModel || 'PlantUML'}</span>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Mermaid Toolbar
+            const MermaidToolbar = ({ detectedModel, onInsert }) => {
+                const [isExpanded, setIsExpanded] = useState(false);
+                const snippets = MERMAID_SNIPPETS[detectedModel] || MERMAID_SNIPPETS['default'];
+                const visibleSnippets = isExpanded ? snippets : snippets.slice(0, 6);
+                const hasMore = snippets.length > 6;
+                
+                return (
+                    <div className="flex-none bg-slate-50 border-b border-slate-200 px-2 py-1.5">
+                        <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-[10px] text-slate-400 uppercase font-semibold mr-1">Insert:</span>
+                            {visibleSnippets.map((snippet, idx) => (
+                                <button key={idx} onClick={() => onInsert(snippet.code)}
+                                    className="inline-flex items-center px-2 py-1 text-[11px] font-medium text-slate-600 bg-white border border-slate-200 rounded hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
+                                    title={`Insert ${snippet.label}`}>
+                                    <i className={`fas ${snippet.icon} mr-1 text-[10px] opacity-60`}></i>{snippet.label}
+                                </button>
+                            ))}
+                            {hasMore && (
+                                <button onClick={() => setIsExpanded(!isExpanded)}
+                                    className="inline-flex items-center px-2 py-1 text-[11px] font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+                                    <i className={`fas ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'} mr-1 text-[10px]`}></i>
+                                    {isExpanded ? 'Less' : `+${snippets.length - 6}`}
+                                </button>
+                            )}
+                            <span className="ml-auto text-[10px] text-slate-400"><i className="fas fa-info-circle mr-1"></i>{detectedModel || 'Mermaid'}</span>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Mermaid Flowchart Editor
+            const MermaidFlowchartEditor = ({ ast, code, onCodeChange, previewUrl, previewLoading }) => {
+                const [nodes, setNodes] = useState([]);
+                const [edges, setEdges] = useState([]);
+                const [editingNode, setEditingNode] = useState(null);
+                const [editValue, setEditValue] = useState('');
+                
+                useEffect(() => {
+                    if (!ast || (ast.type !== 'flowchart' && ast.type !== 'graph')) return;
+                    const extractedNodes = [];
+                    const extractedEdges = [];
+                    
+                    if (ast.nodes) {
+                        if (ast.nodes instanceof Map) {
+                            ast.nodes.forEach((node, id) => {
+                                extractedNodes.push({ id, label: node.text?.text || node.label || id, shape: node.shape || 'rectangle' });
+                            });
+                        } else if (Array.isArray(ast.nodes)) {
+                            ast.nodes.forEach(node => {
+                                extractedNodes.push({ id: node.id, label: node.text?.text || node.label || node.id, shape: node.shape || 'rectangle' });
+                            });
+                        }
+                    }
+                    
+                    if (ast.edges && Array.isArray(ast.edges)) {
+                        ast.edges.forEach((edge, idx) => {
+                            extractedEdges.push({ id: `e-${idx}`, from: edge.from || edge.source, to: edge.to || edge.target, label: edge.text?.text || edge.label || '' });
+                        });
+                    }
+                    setNodes(extractedNodes);
+                    setEdges(extractedEdges);
+                }, [ast]);
+                
+                const handleNodeEdit = (nodeId) => {
+                    const node = nodes.find(n => n.id === nodeId);
+                    if (node) { setEditingNode(nodeId); setEditValue(node.label); }
+                };
+                
+                const handleEditSave = () => {
+                    if (!editingNode || !ast) return;
+                    const node = nodes.find(n => n.id === editingNode);
+                    if (node && node.label !== editValue) {
+                        let newCode = code;
+                        const patterns = [
+                            { old: `${editingNode}[${node.label}]`, new: `${editingNode}[${editValue}]` },
+                            { old: `${editingNode}(${node.label})`, new: `${editingNode}(${editValue})` },
+                            { old: `${editingNode}{${node.label}}`, new: `${editingNode}{${editValue}}` },
+                            { old: `${editingNode}((${node.label}))`, new: `${editingNode}((${editValue}))` },
+                            { old: `${editingNode}([${node.label}])`, new: `${editingNode}([${editValue}])` },
+                        ];
+                        for (const p of patterns) {
+                            if (code.includes(p.old)) { newCode = code.replace(p.old, p.new); break; }
+                        }
+                        if (newCode !== code) onCodeChange(newCode);
+                    }
+                    setEditingNode(null); setEditValue('');
+                };
+                
+                const handleAddNode = () => onCodeChange(code + `\n    Node${nodes.length + 1}[New Node]`);
+                const handleAddEdge = () => nodes.length >= 2 && onCodeChange(code + `\n    ${nodes[0]?.id || 'A'} --> ${nodes[1]?.id || 'B'}`);
+                
+                return (
+                    <div className="w-full h-full flex">
+                        <div className="flex-1 flex flex-col bg-slate-50">
+                            <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-2">
+                                <span className="text-xs font-medium text-slate-600"><i className="fas fa-project-diagram mr-1.5"></i>Flowchart Editor</span>
+                                <button onClick={handleAddNode} className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"><i className="fas fa-plus mr-1"></i>Node</button>
+                                <button onClick={handleAddEdge} className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200" disabled={nodes.length < 2}><i className="fas fa-arrow-right mr-1"></i>Edge</button>
+                                <div className="flex-1"></div>
+                                {previewLoading && <span className="text-xs text-slate-400"><i className="fas fa-circle-notch fa-spin"></i></span>}
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                {previewUrl ? <img src={previewUrl} alt="Flowchart" className="max-w-full h-auto bg-white shadow-lg rounded" /> : <div className="text-center text-slate-400"><i className="fas fa-project-diagram text-4xl mb-3 opacity-30"></i><p className="text-sm">Flowchart preview</p></div>}
+                            </div>
+                        </div>
+                        <div className="w-72 border-l border-slate-200 bg-white flex flex-col">
+                            <div className="flex-none px-3 py-2 border-b border-slate-200"><span className="text-xs font-medium text-slate-600"><i className="fas fa-list mr-1.5"></i>Elements</span></div>
+                            <div className="flex-1 overflow-auto">
+                                <div className="p-2 border-b border-slate-100">
+                                    <div className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Nodes ({nodes.length})</div>
+                                    <div className="space-y-1">
+                                        {nodes.map(node => (
+                                            <div key={node.id} className="p-2 rounded text-xs bg-slate-50 hover:bg-slate-100 cursor-pointer" onDoubleClick={() => handleNodeEdit(node.id)}>
+                                                {editingNode === node.id ? (
+                                                    <div className="flex gap-1">
+                                                        <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleEditSave(); if (e.key === 'Escape') { setEditingNode(null); setEditValue(''); }}} className="flex-1 px-1 py-0.5 text-xs border rounded" autoFocus />
+                                                        <button onClick={handleEditSave} className="text-green-600"><i className="fas fa-check"></i></button>
+                                                        <button onClick={() => { setEditingNode(null); setEditValue(''); }} className="text-slate-400"><i className="fas fa-times"></i></button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-between"><span className="font-medium text-slate-700">{node.label}</span><span className="text-[10px] text-slate-400">{node.id}</span></div>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {nodes.length === 0 && <div className="text-center text-slate-400 py-2 text-xs">No nodes found</div>}
+                                    </div>
+                                </div>
+                                <div className="p-2">
+                                    <div className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Edges ({edges.length})</div>
+                                    <div className="space-y-1">
+                                        {edges.map(edge => (
+                                            <div key={edge.id} className="p-2 rounded text-xs bg-slate-50">
+                                                <div className="flex items-center gap-1.5"><span className="text-slate-600">{edge.from}</span><i className="fas fa-arrow-right text-[8px] text-slate-400"></i><span className="text-slate-600">{edge.to}</span>{edge.label && <span className="text-[10px] text-indigo-500 ml-1">"{edge.label}"</span>}</div>
+                                            </div>
+                                        ))}
+                                        {edges.length === 0 && <div className="text-center text-slate-400 py-2 text-xs">No edges found</div>}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-none p-2 border-t border-slate-100 bg-slate-50"><p className="text-[10px] text-slate-400"><i className="fas fa-info-circle mr-1"></i>Double-click a node to edit its label</p></div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Mermaid Sequence Diagram Editor
+            const MermaidSequenceEditor = ({ ast, code, onCodeChange, previewUrl, previewLoading }) => {
+                const [participants, setParticipants] = useState([]);
+                const [messages, setMessages] = useState([]);
+                
+                useEffect(() => {
+                    if (!ast || ast.type !== 'sequence') return;
+                    const extractedParticipants = [];
+                    const extractedMessages = [];
+                    
+                    if (ast.participants && Array.isArray(ast.participants)) {
+                        ast.participants.forEach(p => extractedParticipants.push({ id: p.id || p.name, label: p.label || p.alias || p.id || p.name }));
+                    }
+                    if (ast.messages && Array.isArray(ast.messages)) {
+                        ast.messages.forEach((msg, idx) => extractedMessages.push({ id: `msg-${idx}`, from: msg.from || msg.actor, to: msg.to || msg.target, text: msg.text || msg.message || '' }));
+                    }
+                    setParticipants(extractedParticipants);
+                    setMessages(extractedMessages);
+                }, [ast]);
+                
+                const handleAddParticipant = () => {
+                    const insertPos = code.indexOf('\n', code.indexOf('sequenceDiagram'));
+                    const newCode = code.slice(0, insertPos) + `\n    participant Actor${participants.length + 1}` + code.slice(insertPos);
+                    onCodeChange(newCode);
+                };
+                const handleAddMessage = () => participants.length >= 2 && onCodeChange(code + `\n    ${participants[0]?.id || 'A'}->>${participants[1]?.id || 'B'}: New message`);
+                
+                return (
+                    <div className="w-full h-full flex">
+                        <div className="flex-1 flex flex-col bg-slate-50">
+                            <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-2">
+                                <span className="text-xs font-medium text-slate-600"><i className="fas fa-exchange-alt mr-1.5"></i>Sequence Diagram Editor</span>
+                                <button onClick={handleAddParticipant} className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"><i className="fas fa-user-plus mr-1"></i>Participant</button>
+                                <button onClick={handleAddMessage} className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200" disabled={participants.length < 2}><i className="fas fa-comment mr-1"></i>Message</button>
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                {previewUrl ? <img src={previewUrl} alt="Sequence Diagram" className="max-w-full h-auto bg-white shadow-lg rounded" /> : <div className="text-center text-slate-400"><i className="fas fa-exchange-alt text-4xl mb-3 opacity-30"></i><p className="text-sm">Sequence diagram preview</p></div>}
+                            </div>
+                        </div>
+                        <div className="w-72 border-l border-slate-200 bg-white flex flex-col">
+                            <div className="flex-none px-3 py-2 border-b border-slate-200"><span className="text-xs font-medium text-slate-600">Elements</span></div>
+                            <div className="flex-1 overflow-auto">
+                                <div className="p-2 border-b border-slate-100">
+                                    <div className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Participants ({participants.length})</div>
+                                    {participants.map(p => <div key={p.id} className="p-2 bg-slate-50 rounded text-xs mb-1"><span className="font-medium">{p.label}</span>{p.id !== p.label && <span className="text-slate-400 ml-1">({p.id})</span>}</div>)}
+                                </div>
+                                <div className="p-2">
+                                    <div className="text-[10px] font-semibold text-slate-400 uppercase mb-2">Messages ({messages.length})</div>
+                                    {messages.map(msg => <div key={msg.id} className="p-2 bg-slate-50 rounded text-xs mb-1"><div className="flex items-center gap-1"><span>{msg.from}</span><i className="fas fa-arrow-right text-[10px] text-slate-400"></i><span>{msg.to}</span></div>{msg.text && <div className="text-slate-500 mt-1">"{msg.text}"</div>}</div>)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Mermaid Pie Chart Editor
+            const MermaidPieEditor = ({ code, onCodeChange, previewUrl, previewLoading }) => {
+                const [slices, setSlices] = useState([]);
+                
+                useEffect(() => {
+                    if (!code) return;
+                    const extractedSlices = [];
+                    code.split('\n').forEach((line, idx) => {
+                        const match = line.trim().match(/^"(.+?)"\s*:\s*([\d.]+)$/);
+                        if (match) extractedSlices.push({ label: match[1], value: parseFloat(match[2]), lineIndex: idx });
+                    });
+                    setSlices(extractedSlices);
+                }, [code]);
+                
+                const handleAddSlice = () => onCodeChange(code.trimEnd() + '\n    "New Slice" : 10');
+                
+                return (
+                    <div className="w-full h-full flex">
+                        <div className="flex-1 flex flex-col bg-slate-50">
+                            <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-2">
+                                <span className="text-xs font-medium text-slate-600"><i className="fas fa-chart-pie mr-1.5"></i>Pie Chart Editor</span>
+                                <button onClick={handleAddSlice} className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"><i className="fas fa-plus mr-1"></i>Slice</button>
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                {previewUrl ? <img src={previewUrl} alt="Pie Chart" className="max-w-full h-auto bg-white shadow-lg rounded" /> : <div className="text-center text-slate-400"><i className="fas fa-chart-pie text-4xl mb-3 opacity-30"></i><p className="text-sm">Pie chart preview</p></div>}
+                            </div>
+                        </div>
+                        <div className="w-72 border-l border-slate-200 bg-white flex flex-col">
+                            <div className="flex-none px-3 py-2 border-b border-slate-200"><span className="text-xs font-medium text-slate-600">Slices ({slices.length})</span></div>
+                            <div className="flex-1 overflow-auto p-2">
+                                {slices.map((slice, idx) => <div key={idx} className="p-2 bg-slate-50 rounded text-xs mb-1 flex justify-between items-center"><span className="font-medium">{slice.label}</span><span className="text-indigo-600">{slice.value}</span></div>)}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Mermaid Gantt Editor
+            const MermaidGanttEditor = ({ code, onCodeChange, previewUrl, previewLoading }) => {
+                const [tasks, setTasks] = useState([]);
+                
+                useEffect(() => {
+                    if (!code) return;
+                    const extractedTasks = [];
+                    let currentSection = null;
+                    code.split('\n').forEach((line, idx) => {
+                        const trimmed = line.trim();
+                        if (!trimmed || trimmed === 'gantt' || trimmed.startsWith('%%')) return;
+                        const sectionMatch = trimmed.match(/^section\s+(.+)$/i);
+                        if (sectionMatch) { currentSection = sectionMatch[1]; return; }
+                        const taskMatch = trimmed.match(/^(.+?)\s*:\s*(.+)$/);
+                        if (taskMatch && !['title', 'dateFormat', 'axisFormat', 'excludes'].includes(taskMatch[1].toLowerCase())) {
+                            extractedTasks.push({ name: taskMatch[1], details: taskMatch[2], section: currentSection, lineIndex: idx });
+                        }
+                    });
+                    setTasks(extractedTasks);
+                }, [code]);
+                
+                const handleAddTask = () => onCodeChange(code.trimEnd() + '\n    New Task : task1, 2024-01-01, 1d');
+                
+                return (
+                    <div className="w-full h-full flex">
+                        <div className="flex-1 flex flex-col bg-slate-50">
+                            <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-2">
+                                <span className="text-xs font-medium text-slate-600"><i className="fas fa-tasks mr-1.5"></i>Gantt Editor</span>
+                                <button onClick={handleAddTask} className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"><i className="fas fa-plus mr-1"></i>Task</button>
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                {previewUrl ? <img src={previewUrl} alt="Gantt Chart" className="max-w-full h-auto bg-white shadow-lg rounded" /> : <div className="text-center text-slate-400"><i className="fas fa-tasks text-4xl mb-3 opacity-30"></i><p className="text-sm">Gantt chart preview</p></div>}
+                            </div>
+                        </div>
+                        <div className="w-72 border-l border-slate-200 bg-white flex flex-col">
+                            <div className="flex-none px-3 py-2 border-b border-slate-200"><span className="text-xs font-medium text-slate-600">Tasks ({tasks.length})</span></div>
+                            <div className="flex-1 overflow-auto p-2">
+                                {tasks.map((task, idx) => <div key={idx} className="p-2 bg-slate-50 rounded text-xs mb-1">{task.section && <div className="text-[10px] text-indigo-500 mb-1">{task.section}</div>}<div className="font-medium">{task.name}</div><div className="text-slate-500 text-[10px]">{task.details}</div></div>)}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Mermaid Timeline Editor
+            const MermaidTimelineEditor = ({ code, onCodeChange, previewUrl, previewLoading }) => {
+                const [sections, setSections] = useState([]);
+                
+                useEffect(() => {
+                    if (!code) return;
+                    const extractedSections = [];
+                    let currentSection = null;
+                    code.split('\n').forEach((line, idx) => {
+                        const trimmed = line.trim();
+                        if (!trimmed || trimmed === 'timeline' || trimmed.startsWith('%%') || trimmed.startsWith('title')) return;
+                        const sectionMatch = trimmed.match(/^section\s+(.+)$/i);
+                        if (sectionMatch) { currentSection = { type: 'section', title: sectionMatch[1], events: [], lineIndex: idx }; extractedSections.push(currentSection); return; }
+                        const periodMatch = trimmed.match(/^(.+?)\s*:\s*(.+)$/);
+                        if (periodMatch) {
+                            const item = { type: 'period', period: periodMatch[1].trim(), events: periodMatch[2].split(':').map(e => e.trim()).filter(e => e), lineIndex: idx };
+                            if (currentSection) currentSection.events.push(item);
+                            else extractedSections.push(item);
+                        }
+                    });
+                    setSections(extractedSections);
+                }, [code]);
+                
+                const handleAddPeriod = () => onCodeChange(code.trimEnd() + '\n    New Period : New Event');
+                const handleAddSection = () => onCodeChange(code.trimEnd() + '\n    section New Section');
+                
+                return (
+                    <div className="w-full h-full flex">
+                        <div className="flex-1 flex flex-col bg-slate-50">
+                            <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-2">
+                                <span className="text-xs font-medium text-slate-600"><i className="fas fa-clock mr-1.5"></i>Timeline Editor</span>
+                                <button onClick={handleAddSection} className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"><i className="fas fa-folder-plus mr-1"></i>Section</button>
+                                <button onClick={handleAddPeriod} className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200"><i className="fas fa-plus mr-1"></i>Period</button>
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                {previewUrl ? <img src={previewUrl} alt="Timeline" className="max-w-full h-auto bg-white shadow-lg rounded" /> : <div className="text-center text-slate-400"><i className="fas fa-clock text-4xl mb-3 opacity-30"></i><p className="text-sm">Timeline preview</p></div>}
+                            </div>
+                        </div>
+                        <div className="w-80 border-l border-slate-200 bg-white flex flex-col">
+                            <div className="flex-none px-3 py-2 border-b border-slate-200"><span className="text-xs font-medium text-slate-600"><i className="fas fa-edit mr-1.5"></i>Timeline Elements</span></div>
+                            <div className="flex-1 overflow-auto p-2">
+                                {sections.length === 0 ? <div className="text-center text-slate-400 py-8"><i className="fas fa-info-circle text-2xl mb-2 opacity-50"></i><p className="text-xs">No timeline elements found</p></div> : (
+                                    <div className="space-y-2">
+                                        {sections.map((item, idx) => (
+                                            <div key={idx} className="p-2 bg-slate-50 rounded text-xs">
+                                                {item.type === 'section' ? (<><div className="font-semibold text-indigo-600 mb-1"><i className="fas fa-folder mr-1"></i>{item.title}</div>{item.events.map((e, i) => <div key={i} className="ml-2 pl-2 border-l-2 border-indigo-200 text-slate-600">{e.period}: {e.events.join(', ')}</div>)}</>) : (<div className="text-slate-700">{item.period}: {item.events.join(', ')}</div>)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Mermaid User Journey Editor
+            const MermaidJourneyEditor = ({ code, onCodeChange, previewUrl, previewLoading }) => {
+                const [tasks, setTasks] = useState([]);
+                
+                useEffect(() => {
+                    if (!code) return;
+                    const extractedTasks = [];
+                    let currentSection = null;
+                    code.split('\n').forEach((line, idx) => {
+                        const trimmed = line.trim();
+                        if (!trimmed || trimmed === 'journey' || trimmed.startsWith('%%')) return;
+                        const sectionMatch = trimmed.match(/^section\s+(.+)$/i);
+                        if (sectionMatch) { currentSection = sectionMatch[1]; return; }
+                        const taskMatch = trimmed.match(/^(.+?)\s*:\s*(\d+)(?:\s*:\s*(.+))?$/);
+                        if (taskMatch && !['title'].includes(taskMatch[1].toLowerCase())) {
+                            extractedTasks.push({ name: taskMatch[1], score: parseInt(taskMatch[2]), actors: taskMatch[3] || '', section: currentSection, lineIndex: idx });
+                        }
+                    });
+                    setTasks(extractedTasks);
+                }, [code]);
+                
+                const handleAddTask = () => onCodeChange(code.trimEnd() + '\n    New Task: 5: Actor');
+                const getScoreColor = (score) => ({ 1: 'bg-red-100 text-red-700', 2: 'bg-orange-100 text-orange-700', 3: 'bg-yellow-100 text-yellow-700', 4: 'bg-lime-100 text-lime-700', 5: 'bg-green-100 text-green-700' }[score] || 'bg-slate-100 text-slate-700');
+                
+                return (
+                    <div className="w-full h-full flex">
+                        <div className="flex-1 flex flex-col bg-slate-50">
+                            <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-2">
+                                <span className="text-xs font-medium text-slate-600"><i className="fas fa-route mr-1.5"></i>User Journey Editor</span>
+                                <button onClick={handleAddTask} className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"><i className="fas fa-plus mr-1"></i>Task</button>
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                {previewUrl ? <img src={previewUrl} alt="User Journey" className="max-w-full h-auto bg-white shadow-lg rounded" /> : <div className="text-center text-slate-400"><i className="fas fa-route text-4xl mb-3 opacity-30"></i><p className="text-sm">User journey preview</p></div>}
+                            </div>
+                        </div>
+                        <div className="w-72 border-l border-slate-200 bg-white flex flex-col">
+                            <div className="flex-none px-3 py-2 border-b border-slate-200"><span className="text-xs font-medium text-slate-600">Tasks ({tasks.length})</span></div>
+                            <div className="flex-1 overflow-auto p-2">
+                                {tasks.map((task, idx) => (
+                                    <div key={idx} className="p-2 bg-slate-50 rounded text-xs mb-1">
+                                        {task.section && <div className="text-[10px] text-indigo-500 mb-1">{task.section}</div>}
+                                        <div className="flex justify-between items-center"><span className="font-medium">{task.name}</span><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${getScoreColor(task.score)}`}>{task.score}</span></div>
+                                        {task.actors && <div className="text-[10px] text-slate-500 mt-1">Actors: {task.actors}</div>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Mermaid Mindmap Editor
+            const MermaidMindmapEditor = ({ code, onCodeChange, previewUrl, previewLoading }) => {
+                const handleAddNode = () => onCodeChange(code.trimEnd() + '\n    New Node');
+                
+                return (
+                    <div className="w-full h-full flex">
+                        <div className="flex-1 flex flex-col bg-slate-50">
+                            <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center gap-2">
+                                <span className="text-xs font-medium text-slate-600"><i className="fas fa-brain mr-1.5"></i>Mindmap Editor</span>
+                                <button onClick={handleAddNode} className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"><i className="fas fa-plus mr-1"></i>Node</button>
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                {previewUrl ? <img src={previewUrl} alt="Mindmap" className="max-w-full h-auto bg-white shadow-lg rounded" /> : <div className="text-center text-slate-400"><i className="fas fa-brain text-4xl mb-3 opacity-30"></i><p className="text-sm">Mindmap preview</p></div>}
+                            </div>
+                        </div>
+                        <div className="w-72 border-l border-slate-200 bg-white flex flex-col">
+                            <div className="flex-none px-3 py-2 border-b border-slate-200"><span className="text-xs font-medium text-slate-600">Structure</span></div>
+                            <div className="flex-1 overflow-auto p-2"><p className="text-xs text-slate-500">Edit mindmap nodes in code view. Add child nodes using indentation.</p></div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Template Gallery Modal
+            const TemplateGalleryModal = ({ isOpen, onClose, onSelect, diagramType }) => {
+                if (!isOpen) return null;
+                const isMermaid = diagramType === 'mermaid';
+                const templates = isMermaid ? MERMAID_TEMPLATES : PLANTUML_TEMPLATES;
+                const title = isMermaid ? 'Mermaid Templates' : 'PlantUML Templates';
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+                        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden mx-4">
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-900"><i className="fas fa-th-large mr-2 text-indigo-500"></i>{title}</h2>
+                                    <p className="text-sm text-slate-500 mt-0.5">Choose a template to get started quickly</p>
+                                </div>
+                                <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                                    <i className="fas fa-times text-lg"></i>
+                                </button>
+                            </div>
+                            <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {templates.map((template) => (
+                                        <button key={template.id} onClick={() => { onSelect(template.code); onClose(); }}
+                                            className="group p-4 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg text-left transition-all hover:shadow-md">
+                                            <div className="w-10 h-10 bg-white group-hover:bg-indigo-100 rounded-lg flex items-center justify-center mb-3 border border-slate-200 group-hover:border-indigo-200 transition-colors">
+                                                <i className={`fas ${template.icon} text-slate-500 group-hover:text-indigo-600 transition-colors`}></i>
+                                            </div>
+                                            <h3 className="font-semibold text-slate-800 group-hover:text-indigo-700 text-sm mb-1 transition-colors">{template.label}</h3>
+                                            <p className="text-xs text-slate-500 line-clamp-2">{template.description}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // =====================================================
+            // MAIN APP COMPONENT
+            // =====================================================
+            const App = () => {
+                const [textInput, setTextInput] = useState('');
+                const [diagramType, setDiagramType] = useState('bpmn');
+                const [detectedModel, setDetectedModel] = useState('');
+                const [url, setUrl] = useState('');
+                const [stats, setStats] = useState({ length: 0, method: 'GET' });
+                const [loading, setLoading] = useState(false);
+                const [previewError, setPreviewError] = useState(null);
+                const [errorLine, setErrorLine] = useState(null);
+                const [previewImage, setPreviewImage] = useState(null);
+                const [svgContent, setSvgContent] = useState(null);
+                const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+                const [viewMode, setViewMode] = useState('code');
+                const [showTemplates, setShowTemplates] = useState(false);
+                
+                // Mermaid state
+                const [mermaidAst, setMermaidAst] = useState(null);
+                const [mermaidAstLoaded, setMermaidAstLoaded] = useState(!!window.MermaidASTLoaded);
+                const mermaidSyncRef = useRef(createMermaidSyncController());
+                
+                const editorRef = useRef(null);
+                const isVisualSupported = diagramType === 'bpmn' || diagramType === 'mermaid';
+
+                // Listen for MermaidAST load
+                useEffect(() => {
+                    if (window.MermaidASTLoaded) setMermaidAstLoaded(true);
+                    else {
+                        const handler = () => setMermaidAstLoaded(true);
+                        window.addEventListener('mermaid-ast-loaded', handler, { once: true });
+                        return () => window.removeEventListener('mermaid-ast-loaded', handler);
+                    }
+                }, []);
+
+                // Sync Mermaid AST
+                useEffect(() => {
+                    if (diagramType !== 'mermaid' || !textInput.trim()) {
+                        setMermaidAst(null);
+                        return;
+                    }
+                    mermaidSyncRef.current.parseCode(
+                        textInput,
+                        (ast) => setMermaidAst(ast),
+                        (error) => console.log('Mermaid parse error:', error)
+                    );
+                }, [textInput, diagramType]);
+
+                // Generate preview
+                useEffect(() => {
+                    if (!textInput.trim()) {
+                        setUrl('');
+                        setPreviewImage(null);
+                        setSvgContent(null);
+                        setPreviewError(null);
+                        setStats({ length: 0, method: '' });
+                        return;
+                    }
+
+                    const detected = detectSpecificModel(textInput, diagramType);
+                    setDetectedModel(detected);
+                    
+                    const encoded = encodeKroki(textInput);
+                    if (!encoded) {
+                        setPreviewError('Failed to encode diagram');
+                        return;
+                    }
+
+                    const baseUrl = KROKI_BASE_URL;
+                    const newUrl = `${baseUrl}/${diagramType}/svg/${encoded}`;
+                    setUrl(newUrl);
+                    setStats({ length: textInput.length, method: newUrl.length > 4000 ? 'POST' : 'GET' });
+                    setPreviewError(null);
+                    setErrorLine(null);
+                    if (editorRef.current?.clearMarkers) editorRef.current.clearMarkers();
+                    setLoading(true);
+
+                    const fetchPreview = async () => {
+                        try {
+                            let response;
+                            if (newUrl.length > 4000) {
+                                response = await fetch(`${baseUrl}/${diagramType}/svg`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'text/plain' },
+                                    body: textInput
+                                });
+                            } else {
+                                response = await fetch(newUrl);
+                            }
+
+                            if (!response.ok) {
+                                const errorText = await response.text();
+                                throw new Error(errorText || `HTTP ${response.status}`);
+                            }
+
+                            const svg = await response.text();
+                            setSvgContent(svg);
+                            setPreviewImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+                            setPreviewError(null);
+                        } catch (err) {
+                            setPreviewError(err.message);
+                            setSvgContent(null);
+                            setPreviewImage(null);
+                            // Use consolidated error diagnostics module
+                            const errorInfo = window.ErrorDiagnostics?.parseError(err.message, diagramType, textInput) || parseErrorInfoFallback(err.message, diagramType);
+                            const line = errorInfo?.line || extractErrorLine(err.message);
+                            if (line) {
+                                setErrorLine(line);
+                                if (editorRef.current?.setMarkers) {
+                                    editorRef.current.setMarkers([{
+                                        startLineNumber: line,
+                                        startColumn: errorInfo?.column || 1,
+                                        endLineNumber: line,
+                                        endColumn: errorInfo?.endColumn || 1000,
+                                        message: errorInfo?.shortMessage || err.message,
+                                        severity: 8,
+                                        code: errorInfo?.code || 'syntax-error',
+                                        source: 'kroki',
+                                        relatedInformation: errorInfo ? [{
+                                            expected: errorInfo.expected,
+                                            found: errorInfo.found,
+                                            column: errorInfo.column,
+                                            diagramType: diagramType
+                                        }] : [{ diagramType: diagramType }]
+                                    }]);
+                                }
+                            }
+                        }
+                        setLoading(false);
+                    };
+
+                    const timer = setTimeout(fetchPreview, 500);
+                    return () => clearTimeout(timer);
+                }, [textInput, diagramType]);
+
+                // Handle file drop
+                const handleFileDrop = useCallback((e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer?.files?.[0];
+                    if (!file) return;
+                    const detectedType = detectTypeFromExtension(file.name);
+                    setDiagramType(detectedType);
+                    const reader = new FileReader();
+                    reader.onload = (event) => setTextInput(event.target.result);
+                    reader.readAsText(file);
+                }, []);
+
+                // Handle visual editor changes
+                const handleVisualChange = useCallback((newXml) => {
+                    if (newXml !== textInput) setTextInput(newXml);
+                }, [textInput]);
+
+                // Handle snippet insert
+                const handleSnippetInsert = useCallback((code) => {
+                    if (editorRef.current) editorRef.current.insertAtCursor(code);
+                }, []);
+
+                // File input ref for Open button
+                const fileInputRef = useRef(null);
+
+                // Handle file open via button
+                const handleFileOpen = useCallback((e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const detectedType = detectTypeFromExtension(file.name);
+                    setDiagramType(detectedType);
+                    const reader = new FileReader();
+                    reader.onload = (event) => setTextInput(event.target.result);
+                    reader.readAsText(file);
+                    e.target.value = ''; // Reset for same file selection
+                }, []);
+
+                // Download SVG
+                const handleDownloadSvg = useCallback(() => {
+                    if (!svgContent) return;
+                    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `diagram-${diagramType}.svg`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }, [svgContent, diagramType]);
+
+                // Download PNG
+                const handleDownloadPng = useCallback(() => {
+                    if (!svgContent) return;
+                    const img = new Image();
+                    const svgBlob = new Blob([svgContent], { type: 'image/svg+xml' });
+                    const url = URL.createObjectURL(svgBlob);
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width * 2; // 2x for better quality
+                        canvas.height = img.height * 2;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob((blob) => {
+                            const pngUrl = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = pngUrl;
+                            a.download = `diagram-${diagramType}.png`;
+                            a.click();
+                            URL.revokeObjectURL(pngUrl);
+                        }, 'image/png');
+                        URL.revokeObjectURL(url);
+                    };
+                    img.src = url;
+                }, [svgContent, diagramType]);
+
+                return (
+                    <div className="h-full flex flex-col bg-slate-50"
+                         onDrop={handleFileDrop}
+                         onDragOver={(e) => e.preventDefault()}>
+                        
+                        {/* Header */}
+                        <header className="flex-none bg-white border-b border-slate-200 px-4 py-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-lg font-bold text-slate-800">
+                                        <i className="fas fa-project-diagram mr-2 text-indigo-500"></i>
+                                        Universal Diagram Editor
+                                    </h1>
+                                    <select
+                                        value={diagramType}
+                                        onChange={(e) => { setDiagramType(e.target.value); setViewMode('code'); }}
+                                        className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    >
+                                        {Object.entries(DIAGRAM_TYPES).map(([key, config]) => (
+                                            <option key={key} value={key}>{config.label}</option>
+                                        ))}
+                                    </select>
+                                    {detectedModel && <StatusBadge type="info" text={detectedModel} />}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {/* File buttons */}
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileOpen}
+                                        accept=".bpmn,.xml,.mmd,.mermaid,.puml,.plantuml,.wsd,.dot,.gv,.json,.yaml,.yml"
+                                        className="hidden"
+                                    />
+                                    <Button variant="secondary" size="sm" icon="fas fa-folder-open" onClick={() => fileInputRef.current?.click()}>Open</Button>
+                                    <Button variant="secondary" size="sm" icon="fas fa-download" onClick={handleDownloadSvg} disabled={!svgContent}>SVG</Button>
+                                    <Button variant="secondary" size="sm" icon="fas fa-image" onClick={handleDownloadPng} disabled={!svgContent}>PNG</Button>
+                                    <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                                    {isVisualSupported && (
+                                        <div className="flex bg-slate-100 rounded-lg p-1">
+                                            <button
+                                                onClick={() => setViewMode('code')}
+                                                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${viewMode === 'code' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                                            >
+                                                <i className="fas fa-code mr-1"></i> Code
+                                            </button>
+                                            <button
+                                                onClick={() => setViewMode('visual')}
+                                                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${viewMode === 'visual' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                                            >
+                                                <i className="fas fa-paint-brush mr-1"></i> Design
+                                            </button>
+                                        </div>
+                                    )}
+                                    {(diagramType === 'plantuml' || diagramType === 'mermaid') && (
+                                        <Button variant="secondary" size="sm" icon="fas fa-th-large" onClick={() => setShowTemplates(true)}>
+                                            Templates
+                                        </Button>
+                                    )}
+                                    {DIAGRAM_TYPES[diagramType]?.docs && (
+                                        <a href={DIAGRAM_TYPES[diagramType].docs} target="_blank" rel="noopener noreferrer"
+                                           className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Documentation">
+                                            <i className="fas fa-book"></i>
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        </header>
+
+                        {/* Main Content */}
+                        <main className="flex-1 flex overflow-hidden relative">
+                            {/* Code View (Split) */}
+                            <div className={`flex-1 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
+                                {/* Editor Panel */}
+                                <div className="w-1/2 flex flex-col border-r border-slate-200">
+                                    {diagramType === 'plantuml' && <PlantUmlToolbar detectedModel={detectedModel} onInsert={handleSnippetInsert} />}
+                                    {diagramType === 'mermaid' && <MermaidToolbar detectedModel={detectedModel} onInsert={handleSnippetInsert} />}
+                                    <div className="flex-1">
+                                        <MonacoWrapper
+                                            ref={editorRef}
+                                            value={textInput}
+                                            onChange={setTextInput}
+                                            language={DIAGRAM_TYPES[diagramType]?.monacoLang || 'xml'}
+                                            onCursorChange={(line, col) => setCursorPos({ line, col })}
+                                        />
+                                    </div>
+                                    <div className="flex-none px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                                        <span>Ln {cursorPos.line}, Col {cursorPos.col}</span>
+                                        <span>{stats.length} chars {stats.method && `| ${stats.method}`}</span>
+                                    </div>
+                                </div>
+
+                                {/* Preview Panel */}
+                                <div className="w-1/2 flex flex-col bg-slate-100">
+                                    <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center justify-between">
+                                        <span className="text-xs font-medium text-slate-600">
+                                            <i className="fas fa-image mr-1.5"></i> Preview
+                                        </span>
+                                        {loading && <span className="text-xs text-slate-400"><i className="fas fa-circle-notch fa-spin mr-1"></i> Rendering...</span>}
+                                    </div>
+                                    <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
+                                        {previewError ? (
+                                            <div className="text-center max-w-md">
+                                                <i className="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
+                                                <p className="text-sm text-red-600 font-medium mb-2">Rendering Error</p>
+                                                <pre className="text-xs text-slate-600 bg-white p-3 rounded border overflow-auto max-h-48">{previewError}</pre>
+                                                {errorLine && (
+                                                    <button onClick={() => editorRef.current?.scrollToLine(errorLine)}
+                                                        className="mt-2 text-xs text-indigo-600 hover:underline">
+                                                        Go to line {errorLine}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : previewImage ? (
+                                            <img src={previewImage} alt="Diagram Preview" className="max-w-full h-auto bg-white shadow-lg rounded" />
+                                        ) : (
+                                            <div className="text-center text-slate-400">
+                                                <i className="fas fa-image text-4xl mb-3 opacity-30"></i>
+                                                <p className="text-sm">Enter diagram code to see preview</p>
+                                                <p className="text-xs mt-1">or drag & drop a file</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Visual View */}
+                            <div className={`flex-1 w-full h-full transition-opacity duration-300 ${viewMode === 'visual' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
+                                {diagramType === 'bpmn' && viewMode === 'visual' && (
+                                    <BpmnVisualEditor xml={textInput} onChange={handleVisualChange} onError={setPreviewError} />
+                                )}
+                                {diagramType === 'mermaid' && viewMode === 'visual' && (
+                                    <MermaidVisualEditor
+                                        ast={mermaidAst}
+                                        code={textInput}
+                                        astLoaded={mermaidAstLoaded}
+                                        detectedModel={detectedModel}
+                                        onChange={(ast) => {
+                                            const newCode = mermaidSyncRef.current.renderToCode(ast);
+                                            if (newCode) setTextInput(newCode);
+                                        }}
+                                        onCodeChange={setTextInput}
+                                        onError={setPreviewError}
+                                    />
+                                )}
+                            </div>
+                        </main>
+
+                        {/* Template Modal */}
+                        <TemplateGalleryModal isOpen={showTemplates} onClose={() => setShowTemplates(false)} onSelect={setTextInput} diagramType={diagramType} />
+                    </div>
+                );
+            };
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
