@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kroki Universal Diagram Generator</title>
     
+    <!-- Import map for ES modules (required for Excalidraw) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom": "https://esm.sh/react-dom@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime"
+        }
+    }
+    </script>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+    
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -15,14 +34,17 @@
     <!-- Pako for Zlib Compression -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 
+    <!-- Save native import before Monaco's AMD loader overwrites it -->
+    <script>window.nativeImport = (url) => import(url);</script>
+
     <!-- Monaco Editor Loader -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs/loader.min.js"></script>
 
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- React Flow CSS -->
-    <link href="https://unpkg.com/@xyflow/react@12/dist/style.css" rel="stylesheet">
+    <link href="https://unpkg.com/@xyflow/react@12.10.0/dist/style.css" rel="stylesheet">
 
     <!-- Dagre for auto-layout -->
     <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
@@ -48,11 +70,19 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="h-screen flex flex-col text-sm">
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-content">
+            <img src="Universal Diagram Editor.png" alt="Universal Diagram Editor" class="splash-logo" />
+            <h1 class="splash-title">Universal Diagram Editor</h1>
+        </div>
+    </div>
+    
     <div id="root" class="h-full"></div>
 
     <!-- Mermaid AST Library (ES Module) -->
     <script type="module">
-        import * as MermaidAST from 'https://esm.sh/jsr/@emily/mermaid-ast@0.8';
+        import * as MermaidAST from 'https://esm.sh/jsr/@emily/mermaid-ast@0.8.2';
         window.MermaidAST = MermaidAST;
         window.MermaidASTLoaded = true;
         window.dispatchEvent(new Event('mermaid-ast-loaded'));
@@ -84,6 +114,68 @@
         window.dispatchEvent(new Event('error-diagnostics-loaded'));
     </script>
 
+    <!-- Library Update Manager (ES Module) -->
+    <script type="module">
+        import { updateManager } from './js/update-manager.js';
+        import { LIBRARY_REGISTRY, getCheckableLibraries } from './js/library-registry.js';
+        import { getChangelogUrl } from './js/cdn-version-checker.js';
+        
+        // Expose update system globally for Babel script
+        window.UpdateSystem = {
+            manager: updateManager,
+            registry: LIBRARY_REGISTRY,
+            getCheckableLibraries,
+            getChangelogUrl
+        };
+        window.UpdateSystemLoaded = true;
+        window.dispatchEvent(new Event('update-system-loaded'));
+    </script>
+
+    <!-- Excalidraw Library (ES Module) -->
+    <!-- Use esm.sh with external React - keep ESM React isolated to avoid breaking UMD React -->
+    <script type="module">
+        // Load ESM React/ReactDOM for Excalidraw only (do NOT overwrite global window.React)
+        const ReactModule = await import('https://esm.sh/react@18.2.0');
+        const ReactDOMModule = await import('https://esm.sh/react-dom@18.2.0/client');
+        
+        // Extract the actual React objects from ESM modules
+        const ExcalidrawReact = ReactModule.default || ReactModule;
+        const ExcalidrawReactDOM = ReactDOMModule.default || ReactDOMModule;
+        
+        // Load Excalidraw CSS from jsdelivr (correct path: dist/prod/index.css)
+        const linkEl = document.createElement('link');
+        linkEl.rel = 'stylesheet';
+        linkEl.href = 'https://cdn.jsdelivr.net/npm/@excalidraw/excalidraw@0.18.0/dist/prod/index.css';
+        document.head.appendChild(linkEl);
+        
+        // Load Excalidraw with external React (uses the import map React)
+        const ExcalidrawModule = await import('https://esm.sh/@excalidraw/excalidraw@0.18.0?external=react,react-dom');
+        
+        // Handle different export structures (changed in newer versions)
+        const exports = ExcalidrawModule.default || ExcalidrawModule;
+        const Excalidraw = exports.Excalidraw || ExcalidrawModule.Excalidraw;
+        const exportToSvg = exports.exportToSvg || ExcalidrawModule.exportToSvg;
+        const exportToBlob = exports.exportToBlob || ExcalidrawModule.exportToBlob;
+        
+        window.ExcalidrawLib = {
+            Excalidraw,
+            exportToSvg,
+            exportToBlob,
+            // Store the ESM React separately for Excalidraw's use only
+            React: ExcalidrawReact,
+            ReactDOM: ExcalidrawReactDOM,
+            // Helper to render Excalidraw in a container
+            renderExcalidraw: (container, props) => {
+                const root = ExcalidrawReactDOM.createRoot(container);
+                root.render(ExcalidrawReact.createElement(Excalidraw, props));
+                return root;
+            }
+        };
+        window.ExcalidrawLoaded = true;
+        window.dispatchEvent(new Event('excalidraw-loaded'));
+        console.log('Excalidraw loaded successfully', window.ExcalidrawLib.Excalidraw);
+    </script>
+
     <!-- Main Application (uses Babel for JSX) -->
     <script type="text/babel">
         const { useState, useEffect, useRef, forwardRef, useImperativeHandle, useLayoutEffect, useCallback } = React;
@@ -100,7 +192,8 @@
                 example: `flowchart TD\n    A[Start] --> B{Is it working?}\n    B -- Yes --> C[Great!]\n    B -- No --> D[Debug]\n    D --> B` },
             plantuml: { label: 'PlantUML', extensions: ['.puml', '.plantuml', '.wsd'], monacoLang: 'plantuml', docs: 'https://plantuml.com/',
                 example: `@startuml\nAlice -> Bob: Authentication Request\nBob --> Alice: Authentication Response\n@enduml` },
-            excalidraw: { label: 'Excalidraw', extensions: ['.excalidraw', '.json'], monacoLang: 'json', docs: 'https://docs.excalidraw.com/' },
+            excalidraw: { label: 'Excalidraw', extensions: ['.excalidraw', '.json'], monacoLang: 'json', docs: 'https://docs.excalidraw.com/', hasVisualEditor: true,
+                example: `{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "https://excalidraw.com",\n  "elements": [\n    {\n      "type": "rectangle",\n      "id": "rect1",\n      "x": 100,\n      "y": 100,\n      "width": 200,\n      "height": 100,\n      "strokeColor": "#1e1e1e",\n      "backgroundColor": "#a5d8ff",\n      "fillStyle": "solid",\n      "strokeWidth": 2,\n      "roughness": 1,\n      "opacity": 100,\n      "seed": 1,\n      "version": 1,\n      "isDeleted": false,\n      "groupIds": [],\n      "roundness": { "type": 3 }\n    },\n    {\n      "type": "text",\n      "id": "text1",\n      "x": 140,\n      "y": 135,\n      "width": 120,\n      "height": 25,\n      "text": "Hello World",\n      "fontSize": 20,\n      "fontFamily": 1,\n      "textAlign": "center",\n      "verticalAlign": "middle",\n      "strokeColor": "#1e1e1e",\n      "backgroundColor": "transparent",\n      "fillStyle": "solid",\n      "strokeWidth": 1,\n      "roughness": 1,\n      "opacity": 100,\n      "seed": 2,\n      "version": 1,\n      "isDeleted": false,\n      "groupIds": []\n    }\n  ],\n  "appState": {\n    "viewBackgroundColor": "#ffffff",\n    "gridSize": null\n  }\n}` },
             c4plantuml: { label: 'C4 Model', extensions: ['.c4', '.puml'], monacoLang: 'plantuml', docs: 'https://github.com/plantuml-stdlib/C4-PlantUML' },
             ditaa: { label: 'Ditaa', extensions: ['.ditaa', '.txt'], monacoLang: 'plaintext', docs: 'http://ditaa.sourceforge.net/' },
             blockdiag: { label: 'BlockDiag', extensions: ['.diag'], monacoLang: 'python', docs: 'http://blockdiag.com/en/' },
@@ -418,6 +511,35 @@
                 if (config.extensions?.includes(ext)) return key;
             }
             return 'bpmn';
+        };
+
+        // Check if BPMN XML contains Diagram Interchange (DI) information
+        const bpmnHasDI = (xml) => {
+            if (!xml || typeof xml !== 'string') return false;
+            // Check for BPMNDiagram element which contains visual layout info
+            return /<(\w+:)?BPMNDiagram/i.test(xml);
+        };
+
+        // Check if content appears to be valid BPMN XML (has definitions and process elements)
+        const isValidBpmnContent = (xml) => {
+            if (!xml || typeof xml !== 'string') return false;
+            // Check for BPMN definitions element and at least one process-related element
+            const hasDefinitions = /<(\w+:)?definitions/i.test(xml);
+            const hasProcess = /<(\w+:)?(process|collaboration|choreography)/i.test(xml);
+            const hasBpmnNamespace = /xmlns[^=]*=["'][^"']*bpmn/i.test(xml);
+            return hasDefinitions && hasProcess && hasBpmnNamespace;
+        };
+
+        // Apply auto-layout to BPMN XML without DI using bpmn-auto-layout library
+        // Dynamically imports the library from esm.sh CDN (uses nativeImport to bypass Monaco's AMD loader)
+        let layoutProcessFn = null;
+        const applyBpmnAutoLayout = async (xml) => {
+            // Lazy load the library on first use
+            if (!layoutProcessFn) {
+                const module = await window.nativeImport('https://esm.sh/bpmn-auto-layout@1.1.1');
+                layoutProcessFn = module.layoutProcess;
+            }
+            return await layoutProcessFn(xml);
         };
 
         const detectSpecificModel = (code, type) => {
@@ -1052,6 +1174,24 @@
                 );
             };
 
+            // Logo Loader Component - Animated logo for loading states
+            const LogoLoader = ({ size = "sm", text = "Processing...", overlay = false }) => {
+                if (overlay) {
+                    return (
+                        <div className="logo-loader-overlay">
+                            <img src="Universal Diagram Editor.png" alt="Loading" className="logo-loader-icon" />
+                            <span className="logo-loader-text">{text}</span>
+                        </div>
+                    );
+                }
+                return (
+                    <span className="logo-loader">
+                        <img src="Universal Diagram Editor.png" alt="Loading" className={`logo-loader-icon ${size}`} />
+                        <span className="logo-loader-text">{text}</span>
+                    </span>
+                );
+            };
+
             // Status Badge
             const StatusBadge = ({ type, text }) => {
                 const styles = {
@@ -1119,7 +1259,7 @@
 
                 useEffect(() => {
                     let editor;
-                    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+                    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs' }});
                     require(['vs/editor/editor.main'], function() {
                         if (!containerRef.current) return;
                         
@@ -1208,9 +1348,9 @@
                 useEffect(() => {
                     const initEditor = async () => {
                         try {
-                            loadCSS('https://unpkg.com/bpmn-js@16.4.0/dist/assets/diagram-js.css');
-                            loadCSS('https://unpkg.com/bpmn-js@16.4.0/dist/assets/bpmn-font/css/bpmn.css');
-                            if (!window.BpmnJS) await loadScript('https://unpkg.com/bpmn-js@16.4.0/dist/bpmn-modeler.production.min.js');
+                            loadCSS('https://unpkg.com/bpmn-js@18.10.1/dist/assets/diagram-js.css');
+                            loadCSS('https://unpkg.com/bpmn-js@18.10.1/dist/assets/bpmn-font/css/bpmn.css');
+                            if (!window.BpmnJS) await loadScript('https://unpkg.com/bpmn-js@18.10.1/dist/bpmn-modeler.production.min.js');
                             if (!containerRef.current || !window.BpmnJS) return;
 
                             const modeler = new window.BpmnJS({ container: containerRef.current, keyboard: { bindTo: window } });
@@ -1252,6 +1392,165 @@
                             </div>
                         )}
                         <div ref={containerRef} className="bjs-container" style={{visibility: isReady ? 'visible' : 'hidden'}} />
+                    </div>
+                );
+            };
+
+            // Excalidraw Visual Editor
+            // Uses a separate React tree for Excalidraw (bundled with esm.sh)
+            const ExcalidrawVisualEditor = ({ json, onChange, onError }) => {
+                const containerRef = useRef(null);
+                const rootRef = useRef(null);
+                const excalidrawAPIRef = useRef(null);
+                const [isReady, setIsReady] = useState(false);
+                const [excalidrawLoaded, setExcalidrawLoaded] = useState(window.ExcalidrawLoaded || false);
+                const lastJsonRef = useRef(json);
+                const isInternalChange = useRef(false);
+                const onChangeRef = useRef(onChange);
+                
+                // Keep onChange ref updated
+                useEffect(() => {
+                    onChangeRef.current = onChange;
+                }, [onChange]);
+
+                // Wait for Excalidraw library to load
+                useEffect(() => {
+                    if (window.ExcalidrawLoaded) {
+                        setExcalidrawLoaded(true);
+                        return;
+                    }
+                    const handler = () => setExcalidrawLoaded(true);
+                    window.addEventListener('excalidraw-loaded', handler);
+                    return () => window.removeEventListener('excalidraw-loaded', handler);
+                }, []);
+
+                // Parse initial data from JSON
+                const parseInitialData = (jsonStr) => {
+                    if (!jsonStr || !jsonStr.trim()) return { elements: [], appState: { viewBackgroundColor: '#ffffff' } };
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        return {
+                            elements: parsed.elements || [],
+                            appState: {
+                                viewBackgroundColor: parsed.appState?.viewBackgroundColor || '#ffffff',
+                                zoom: parsed.appState?.zoom || { value: 1 },
+                                scrollX: parsed.appState?.scrollX || 0,
+                                scrollY: parsed.appState?.scrollY || 0,
+                            },
+                            files: parsed.files || {}
+                        };
+                    } catch (e) {
+                        console.error('Failed to parse Excalidraw JSON:', e);
+                        return { elements: [], appState: { viewBackgroundColor: '#ffffff' } };
+                    }
+                };
+
+                // Mount Excalidraw when library is loaded
+                useEffect(() => {
+                    if (!excalidrawLoaded || !containerRef.current) return;
+                    
+                    const { renderExcalidraw } = window.ExcalidrawLib;
+                    
+                    // Handle changes from Excalidraw
+                    const handleChange = (elements, appState, files) => {
+                        if (isInternalChange.current) return;
+                        
+                        const data = {
+                            type: "excalidraw",
+                            version: 2,
+                            source: "https://excalidraw.com",
+                            elements: elements.filter(el => !el.isDeleted),
+                            appState: {
+                                viewBackgroundColor: appState.viewBackgroundColor,
+                                gridSize: appState.gridSize || null
+                            },
+                            files: files || {}
+                        };
+                        
+                        const newJson = JSON.stringify(data, null, 2);
+                        if (newJson !== lastJsonRef.current) {
+                            lastJsonRef.current = newJson;
+                            onChangeRef.current(newJson);
+                        }
+                    };
+                    
+                    // Render Excalidraw
+                    const initialData = parseInitialData(json);
+                    rootRef.current = renderExcalidraw(containerRef.current, {
+                        initialData,
+                        onChange: handleChange,
+                        theme: "light",
+                        excalidrawAPI: (api) => {
+                            excalidrawAPIRef.current = api;
+                            setIsReady(true);
+                        },
+                        UIOptions: {
+                            canvasActions: {
+                                saveAsImage: false,
+                                loadScene: false,
+                                export: false,
+                                saveToActiveFile: false
+                            }
+                        }
+                    });
+                    
+                    // Cleanup
+                    return () => {
+                        if (rootRef.current) {
+                            rootRef.current.unmount();
+                            rootRef.current = null;
+                        }
+                    };
+                }, [excalidrawLoaded]);
+
+                // Handle external JSON updates (from code editor)
+                useEffect(() => {
+                    if (!excalidrawAPIRef.current || !isReady || !json) return;
+                    if (json === lastJsonRef.current) return;
+                    
+                    try {
+                        const parsed = JSON.parse(json);
+                        const currentElements = excalidrawAPIRef.current.getSceneElements();
+                        
+                        const newElementsStr = JSON.stringify(parsed.elements || []);
+                        const currentElementsStr = JSON.stringify(currentElements.filter(el => !el.isDeleted));
+                        
+                        if (newElementsStr !== currentElementsStr) {
+                            isInternalChange.current = true;
+                            lastJsonRef.current = json;
+                            excalidrawAPIRef.current.updateScene({
+                                elements: parsed.elements || [],
+                                appState: {
+                                    viewBackgroundColor: parsed.appState?.viewBackgroundColor || '#ffffff'
+                                }
+                            });
+                            setTimeout(() => { isInternalChange.current = false; }, 100);
+                        }
+                    } catch (e) {
+                        // Ignore parse errors - user might be typing
+                    }
+                }, [json, isReady]);
+
+                if (!excalidrawLoaded) {
+                    return (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-50">
+                            <div className="text-center">
+                                <div className="loader mb-3 mx-auto"></div>
+                                <span className="text-slate-500 text-sm">Loading Excalidraw...</span>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="w-full h-full relative">
+                        {!isReady && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-20">
+                                <div className="loader mb-3"></div>
+                                <span className="text-slate-500 text-xs">Initializing Editor...</span>
+                            </div>
+                        )}
+                        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
                     </div>
                 );
             };
@@ -1338,7 +1637,7 @@
                                     <i className="fas fa-eye mr-1.5"></i>Live Preview
                                     {ast?.type && <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[10px]">{ast.type}</span>}
                                 </span>
-                                {previewLoading && <span className="text-xs text-slate-400"><i className="fas fa-circle-notch fa-spin mr-1"></i></span>}
+                                {previewLoading && <LogoLoader size="sm" text="" />}
                             </div>
                             <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
                                 {previewUrl ? (
@@ -1514,7 +1813,7 @@
                                 <button onClick={handleAddNode} className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100"><i className="fas fa-plus mr-1"></i>Node</button>
                                 <button onClick={handleAddEdge} className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded hover:bg-slate-200" disabled={nodes.length < 2}><i className="fas fa-arrow-right mr-1"></i>Edge</button>
                                 <div className="flex-1"></div>
-                                {previewLoading && <span className="text-xs text-slate-400"><i className="fas fa-circle-notch fa-spin"></i></span>}
+                                {previewLoading && <LogoLoader size="sm" text="" />}
                             </div>
                             <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
                                 {previewUrl ? <img src={previewUrl} alt="Flowchart" className="max-w-full h-auto bg-white shadow-lg rounded" /> : <div className="text-center text-slate-400"><i className="fas fa-project-diagram text-4xl mb-3 opacity-30"></i><p className="text-sm">Flowchart preview</p></div>}
@@ -1827,6 +2126,276 @@
                 );
             };
 
+            // BPMN Auto-Layout Dialog - shown when a BPMN file without DI is loaded
+            const BpmnAutoLayoutDialog = ({ isOpen, onClose, onApplyLayout, onSkip, isProcessing }) => {
+                if (!isOpen) return null;
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onSkip} />
+                        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+                            <div className="px-6 py-5">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex-shrink-0 w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                                        <i className="fas fa-diagram-project text-amber-600 text-xl"></i>
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-semibold text-slate-900">Missing Diagram Layout</h3>
+                                        <p className="mt-2 text-sm text-slate-600">
+                                            This BPMN file doesn't contain visual layout information (DI). 
+                                            Without it, the diagram cannot be rendered properly.
+                                        </p>
+                                        <p className="mt-2 text-sm text-slate-600">
+                                            Would you like to auto-generate the layout?
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="px-6 py-4 bg-slate-50 rounded-b-xl flex justify-end gap-3">
+                                <button 
+                                    onClick={onSkip}
+                                    disabled={isProcessing}
+                                    className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                                >
+                                    Load Anyway
+                                </button>
+                                <button 
+                                    onClick={onApplyLayout}
+                                    disabled={isProcessing}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+                                >
+                                    {isProcessing ? (
+                                        <>
+                                            <i className="fas fa-spinner fa-spin"></i>
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="fas fa-magic"></i>
+                                            Auto-Generate Layout
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Library Update Panel - Check for and apply library updates
+            const UpdatePanel = ({ isOpen, onClose }) => {
+                const [updateSystemLoaded, setUpdateSystemLoaded] = useState(!!window.UpdateSystemLoaded);
+                const [state, setState] = useState({ availableUpdates: [], isChecking: false, isTesting: false, testResults: null, lastCheck: null });
+                const [error, setError] = useState(null);
+                
+                // Wait for update system to load
+                useEffect(() => {
+                    if (window.UpdateSystemLoaded) { setUpdateSystemLoaded(true); return; }
+                    const handler = () => setUpdateSystemLoaded(true);
+                    window.addEventListener('update-system-loaded', handler);
+                    return () => window.removeEventListener('update-system-loaded', handler);
+                }, []);
+                
+                // Subscribe to update manager state
+                useEffect(() => {
+                    if (!updateSystemLoaded || !window.UpdateSystem?.manager) return;
+                    const unsubscribe = window.UpdateSystem.manager.subscribe(setState);
+                    setState(window.UpdateSystem.manager.getState());
+                    return unsubscribe;
+                }, [updateSystemLoaded]);
+                
+                const handleCheckUpdates = async () => {
+                    if (!window.UpdateSystem?.manager) return;
+                    setError(null);
+                    try {
+                        await window.UpdateSystem.manager.checkForUpdates();
+                    } catch (e) {
+                        setError('Failed to check for updates: ' + e.message);
+                    }
+                };
+                
+                const handleTestUpdates = async () => {
+                    if (!window.UpdateSystem?.manager) return;
+                    setError(null);
+                    try {
+                        await window.UpdateSystem.manager.testSelectedUpdates();
+                    } catch (e) {
+                        setError('Test failed: ' + e.message);
+                    }
+                };
+                
+                const handleApplyUpdates = async () => {
+                    if (!window.UpdateSystem?.manager) return;
+                    setError(null);
+                    try {
+                        const result = await window.UpdateSystem.manager.applyUpdates();
+                        if (result.success) {
+                            alert('Updated HTML downloaded! Replace your index.html with the downloaded file and refresh the page.');
+                        }
+                    } catch (e) {
+                        setError('Failed to apply updates: ' + e.message);
+                    }
+                };
+                
+                const handleToggleUpdate = (id) => {
+                    if (window.UpdateSystem?.manager) {
+                        window.UpdateSystem.manager.toggleUpdate(id);
+                    }
+                };
+                
+                const selectedCount = state.availableUpdates.filter(u => u.selected).length;
+                const hasTestedAndPassed = state.testResults?.success === true;
+                
+                if (!isOpen) return null;
+                
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+                        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-900">
+                                        <i className="fas fa-sync-alt mr-2 text-indigo-500"></i>Library Updates
+                                    </h2>
+                                    {state.lastCheck && (
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Last checked: {window.UpdateSystem?.manager?.getTimeSinceLastCheck() || 'Unknown'}
+                                        </p>
+                                    )}
+                                </div>
+                                <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                                    <i className="fas fa-times text-lg"></i>
+                                </button>
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="flex-1 overflow-auto p-6">
+                                {!updateSystemLoaded ? (
+                                    <div className="text-center py-8">
+                                        <div className="loader mb-3 mx-auto"></div>
+                                        <p className="text-sm text-slate-500">Loading update system...</p>
+                                    </div>
+                                ) : state.isChecking ? (
+                                    <div className="text-center py-8">
+                                        <LogoLoader size="md" text="Checking for updates..." />
+                                    </div>
+                                ) : state.isTesting ? (
+                                    <div className="text-center py-8">
+                                        <LogoLoader size="md" text="Testing updates in sandbox..." />
+                                        <p className="text-xs text-slate-500 mt-2">This may take a few seconds</p>
+                                    </div>
+                                ) : state.availableUpdates.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {state.availableUpdates.map((update) => (
+                                            <div key={update.id} 
+                                                className={`p-3 rounded-lg border ${update.selected ? 'border-indigo-200 bg-indigo-50' : 'border-slate-200 bg-slate-50'}`}>
+                                                <label className="flex items-start gap-3 cursor-pointer">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={update.selected} 
+                                                        onChange={() => handleToggleUpdate(update.id)}
+                                                        className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium text-slate-800">{update.name}</span>
+                                                            {update.isMajor && (
+                                                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded">MAJOR</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-sm text-slate-600 mt-0.5">
+                                                            <span className="text-slate-400">{update.current}</span>
+                                                            <i className="fas fa-arrow-right mx-2 text-xs text-slate-400"></i>
+                                                            <span className="text-green-600 font-medium">{update.latest}</span>
+                                                        </div>
+                                                        {update.changelogUrl && (
+                                                            <a href={update.changelogUrl} target="_blank" rel="noopener noreferrer"
+                                                                className="text-xs text-indigo-600 hover:underline mt-1 inline-block">
+                                                                View changelog
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        ))}
+                                        
+                                        {/* Test Results */}
+                                        {state.testResults && (
+                                            <div className={`p-3 rounded-lg border ${state.testResults.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <i className={`fas ${state.testResults.success ? 'fa-check-circle text-green-600' : 'fa-times-circle text-red-600'}`}></i>
+                                                    <span className={`font-medium ${state.testResults.success ? 'text-green-800' : 'text-red-800'}`}>
+                                                        {state.testResults.success ? 'All tests passed!' : 'Some tests failed'}
+                                                    </span>
+                                                </div>
+                                                {state.testResults.passed.length > 0 && (
+                                                    <p className="text-xs text-green-700">Passed: {state.testResults.passed.join(', ')}</p>
+                                                )}
+                                                {state.testResults.failed.length > 0 && (
+                                                    <p className="text-xs text-red-700 mt-1">Failed: {state.testResults.failed.join(', ')}</p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <i className="fas fa-box-open text-4xl text-slate-300 mb-3"></i>
+                                        <p className="text-sm text-slate-600">Click "Check for Updates" to scan for newer library versions</p>
+                                    </div>
+                                )}
+                                
+                                {/* Error message */}
+                                {error && (
+                                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                        <p className="text-sm text-red-700"><i className="fas fa-exclamation-circle mr-2"></i>{error}</p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Footer */}
+                            <div className="px-6 py-4 bg-slate-50 rounded-b-xl border-t border-slate-200 flex items-center justify-between">
+                                <div className="text-xs text-slate-500">
+                                    {selectedCount > 0 && `${selectedCount} update${selectedCount > 1 ? 's' : ''} selected`}
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button 
+                                        variant="secondary" 
+                                        size="sm" 
+                                        icon="fas fa-search"
+                                        onClick={handleCheckUpdates}
+                                        disabled={state.isChecking || state.isTesting}
+                                    >
+                                        Check for Updates
+                                    </Button>
+                                    {selectedCount > 0 && !hasTestedAndPassed && (
+                                        <Button 
+                                            variant="secondary" 
+                                            size="sm" 
+                                            icon="fas fa-vial"
+                                            onClick={handleTestUpdates}
+                                            disabled={state.isChecking || state.isTesting}
+                                        >
+                                            Test Selected
+                                        </Button>
+                                    )}
+                                    {hasTestedAndPassed && selectedCount > 0 && (
+                                        <Button 
+                                            variant="primary" 
+                                            size="sm" 
+                                            icon="fas fa-download"
+                                            onClick={handleApplyUpdates}
+                                            disabled={state.isChecking || state.isTesting}
+                                        >
+                                            Download Updated HTML
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             // Template Gallery Modal
             const TemplateGalleryModal = ({ isOpen, onClose, onSelect, diagramType }) => {
                 if (!isOpen) return null;
@@ -1882,6 +2451,13 @@
                 const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
                 const [viewMode, setViewMode] = useState('code');
                 const [showTemplates, setShowTemplates] = useState(false);
+                const [showUpdatePanel, setShowUpdatePanel] = useState(false);
+                
+                // BPMN Auto-Layout dialog state
+                const [showAutoLayoutDialog, setShowAutoLayoutDialog] = useState(false);
+                const [pendingBpmnXml, setPendingBpmnXml] = useState(null);
+                const [autoLayoutProcessing, setAutoLayoutProcessing] = useState(false);
+                const [bpmnMissingDI, setBpmnMissingDI] = useState(false);
                 
                 // Mermaid state
                 const [mermaidAst, setMermaidAst] = useState(null);
@@ -1889,7 +2465,7 @@
                 const mermaidSyncRef = useRef(createMermaidSyncController());
                 
                 const editorRef = useRef(null);
-                const isVisualSupported = diagramType === 'bpmn' || diagramType === 'mermaid';
+                const isVisualSupported = DIAGRAM_TYPES[diagramType]?.hasVisualEditor === true;
 
                 // Listen for MermaidAST load
                 useEffect(() => {
@@ -1921,12 +2497,25 @@
                         setPreviewImage(null);
                         setSvgContent(null);
                         setPreviewError(null);
+                        setBpmnMissingDI(false);
                         setStats({ length: 0, method: '' });
                         return;
                     }
 
                     const detected = detectSpecificModel(textInput, diagramType);
                     setDetectedModel(detected);
+                    
+                    // Check for BPMN without DI - detect early and show helpful message
+                    if (diagramType === 'bpmn' && isValidBpmnContent(textInput) && !bpmnHasDI(textInput)) {
+                        setBpmnMissingDI(true);
+                        setPreviewError('This BPMN content is missing diagram layout information (DI). Without it, the diagram cannot be rendered.');
+                        setPreviewImage(null);
+                        setSvgContent(null);
+                        setLoading(false);
+                        setStats({ length: textInput.length, method: '' });
+                        return;
+                    }
+                    setBpmnMissingDI(false);
                     
                     const encoded = encodeKroki(textInput);
                     if (!encoded) {
@@ -2001,6 +2590,65 @@
                     return () => clearTimeout(timer);
                 }, [textInput, diagramType]);
 
+                // Handle BPMN file content - check for DI and prompt if missing
+                const handleBpmnFileContent = useCallback((content, detectedType) => {
+                    if (detectedType === 'bpmn' && !bpmnHasDI(content)) {
+                        // BPMN without DI - show dialog
+                        setPendingBpmnXml(content);
+                        setShowAutoLayoutDialog(true);
+                    } else {
+                        // Has DI or not BPMN - load directly
+                        setTextInput(content);
+                    }
+                }, []);
+
+                // Handle auto-layout dialog actions
+                const handleApplyAutoLayout = useCallback(async () => {
+                    if (!pendingBpmnXml) return;
+                    setAutoLayoutProcessing(true);
+                    try {
+                        const layoutedXml = await applyBpmnAutoLayout(pendingBpmnXml);
+                        setTextInput(layoutedXml);
+                        setShowAutoLayoutDialog(false);
+                        setPendingBpmnXml(null);
+                    } catch (err) {
+                        console.error('Auto-layout failed:', err);
+                        setPreviewError('Auto-layout failed: ' + err.message);
+                        // Load original XML anyway
+                        setTextInput(pendingBpmnXml);
+                        setShowAutoLayoutDialog(false);
+                        setPendingBpmnXml(null);
+                    } finally {
+                        setAutoLayoutProcessing(false);
+                    }
+                }, [pendingBpmnXml]);
+
+                const handleSkipAutoLayout = useCallback(() => {
+                    if (pendingBpmnXml) {
+                        setTextInput(pendingBpmnXml);
+                    }
+                    setShowAutoLayoutDialog(false);
+                    setPendingBpmnXml(null);
+                }, [pendingBpmnXml]);
+
+                // Handle inline auto-layout from error panel (for pasted BPMN without DI)
+                const handleInlineAutoLayout = useCallback(async () => {
+                    if (!textInput || !bpmnMissingDI) return;
+                    setAutoLayoutProcessing(true);
+                    setPreviewError('Generating layout...');
+                    try {
+                        const layoutedXml = await applyBpmnAutoLayout(textInput);
+                        setTextInput(layoutedXml);
+                        setBpmnMissingDI(false);
+                        setPreviewError(null);
+                    } catch (err) {
+                        console.error('Auto-layout failed:', err);
+                        setPreviewError('Auto-layout failed: ' + err.message);
+                    } finally {
+                        setAutoLayoutProcessing(false);
+                    }
+                }, [textInput, bpmnMissingDI]);
+
                 // Handle file drop
                 const handleFileDrop = useCallback((e) => {
                     e.preventDefault();
@@ -2009,9 +2657,9 @@
                     const detectedType = detectTypeFromExtension(file.name);
                     setDiagramType(detectedType);
                     const reader = new FileReader();
-                    reader.onload = (event) => setTextInput(event.target.result);
+                    reader.onload = (event) => handleBpmnFileContent(event.target.result, detectedType);
                     reader.readAsText(file);
-                }, []);
+                }, [handleBpmnFileContent]);
 
                 // Handle visual editor changes
                 const handleVisualChange = useCallback((newXml) => {
@@ -2033,10 +2681,10 @@
                     const detectedType = detectTypeFromExtension(file.name);
                     setDiagramType(detectedType);
                     const reader = new FileReader();
-                    reader.onload = (event) => setTextInput(event.target.result);
+                    reader.onload = (event) => handleBpmnFileContent(event.target.result, detectedType);
                     reader.readAsText(file);
                     e.target.value = ''; // Reset for same file selection
-                }, []);
+                }, [handleBpmnFileContent]);
 
                 // Download SVG
                 const handleDownloadSvg = useCallback(() => {
@@ -2077,6 +2725,20 @@
                     img.src = url;
                 }, [svgContent, diagramType]);
 
+                // Download source code
+                const handleDownloadSource = useCallback(() => {
+                    if (!textInput.trim()) return;
+                    const ext = DIAGRAM_TYPES[diagramType]?.extensions?.[0] || '.txt';
+                    const mimeType = ext === '.json' ? 'application/json' : (ext === '.xml' || ext === '.bpmn' ? 'application/xml' : 'text/plain');
+                    const blob = new Blob([textInput], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `diagram${ext}`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }, [textInput, diagramType]);
+
                 return (
                     <div className="h-full flex flex-col bg-slate-50"
                          onDrop={handleFileDrop}
@@ -2086,8 +2748,8 @@
                         <header className="flex-none bg-white border-b border-slate-200 px-4 py-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <h1 className="text-lg font-bold text-slate-800">
-                                        <i className="fas fa-project-diagram mr-2 text-indigo-500"></i>
+                                    <h1 className="text-lg font-bold text-slate-800 flex items-center">
+                                        <img src="Universal Diagram Editor.png" alt="Logo" className="w-10 h-10 mr-2" />
                                         Universal Diagram Editor
                                     </h1>
                                     <select
@@ -2111,6 +2773,7 @@
                                         className="hidden"
                                     />
                                     <Button variant="secondary" size="sm" icon="fas fa-folder-open" onClick={() => fileInputRef.current?.click()}>Open</Button>
+                                    <Button variant="secondary" size="sm" icon="fas fa-save" onClick={handleDownloadSource} disabled={!textInput.trim()}>Save</Button>
                                     <Button variant="secondary" size="sm" icon="fas fa-download" onClick={handleDownloadSvg} disabled={!svgContent}>SVG</Button>
                                     <Button variant="secondary" size="sm" icon="fas fa-image" onClick={handleDownloadPng} disabled={!svgContent}>PNG</Button>
                                     <div className="w-px h-6 bg-slate-200 mx-1"></div>
@@ -2141,6 +2804,13 @@
                                             <i className="fas fa-book"></i>
                                         </a>
                                     )}
+                                    <button 
+                                        onClick={() => setShowUpdatePanel(true)}
+                                        className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" 
+                                        title="Check for library updates"
+                                    >
+                                        <i className="fas fa-sync-alt"></i>
+                                    </button>
                                 </div>
                             </div>
                         </header>
@@ -2174,19 +2844,40 @@
                                         <span className="text-xs font-medium text-slate-600">
                                             <i className="fas fa-image mr-1.5"></i> Preview
                                         </span>
-                                        {loading && <span className="text-xs text-slate-400"><i className="fas fa-circle-notch fa-spin mr-1"></i> Rendering...</span>}
+                                        {loading && <LogoLoader size="sm" text="Rendering..." />}
                                     </div>
                                     <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
                                         {previewError ? (
                                             <div className="text-center max-w-md">
-                                                <i className="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                                <p className="text-sm text-red-600 font-medium mb-2">Rendering Error</p>
-                                                <pre className="text-xs text-slate-600 bg-white p-3 rounded border overflow-auto max-h-48">{previewError}</pre>
-                                                {errorLine && (
-                                                    <button onClick={() => editorRef.current?.scrollToLine(errorLine)}
-                                                        className="mt-2 text-xs text-indigo-600 hover:underline">
-                                                        Go to line {errorLine}
-                                                    </button>
+                                                {bpmnMissingDI ? (
+                                                    <>
+                                                        <i className="fas fa-diagram-project text-4xl text-amber-500 mb-3"></i>
+                                                        <p className="text-sm text-amber-700 font-medium mb-2">Missing Diagram Layout</p>
+                                                        <p className="text-xs text-slate-600 mb-3">This BPMN content doesn't contain visual layout information (DI). Without it, the diagram cannot be rendered.</p>
+                                                        <button 
+                                                            onClick={handleInlineAutoLayout}
+                                                            disabled={autoLayoutProcessing}
+                                                            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 mx-auto"
+                                                        >
+                                                            {autoLayoutProcessing ? (
+                                                                <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+                                                            ) : (
+                                                                <><i className="fas fa-magic"></i> Auto-Generate Layout</>
+                                                            )}
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <i className="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
+                                                        <p className="text-sm text-red-600 font-medium mb-2">Rendering Error</p>
+                                                        <pre className="text-xs text-slate-600 bg-white p-3 rounded border overflow-auto max-h-48">{previewError}</pre>
+                                                        {errorLine && (
+                                                            <button onClick={() => editorRef.current?.scrollToLine(errorLine)}
+                                                                className="mt-2 text-xs text-indigo-600 hover:underline">
+                                                                Go to line {errorLine}
+                                                            </button>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         ) : previewImage ? (
@@ -2221,11 +2912,30 @@
                                         onError={setPreviewError}
                                     />
                                 )}
+                                {diagramType === 'excalidraw' && viewMode === 'visual' && (
+                                    <ExcalidrawVisualEditor 
+                                        json={textInput} 
+                                        onChange={handleVisualChange} 
+                                        onError={setPreviewError} 
+                                    />
+                                )}
                             </div>
                         </main>
 
                         {/* Template Modal */}
                         <TemplateGalleryModal isOpen={showTemplates} onClose={() => setShowTemplates(false)} onSelect={setTextInput} diagramType={diagramType} />
+                        
+                        {/* BPMN Auto-Layout Dialog */}
+                        <BpmnAutoLayoutDialog 
+                            isOpen={showAutoLayoutDialog} 
+                            onClose={() => setShowAutoLayoutDialog(false)} 
+                            onApplyLayout={handleApplyAutoLayout}
+                            onSkip={handleSkipAutoLayout}
+                            isProcessing={autoLayoutProcessing}
+                        />
+                        
+                        {/* Library Update Panel */}
+                        <UpdatePanel isOpen={showUpdatePanel} onClose={() => setShowUpdatePanel(false)} />
                     </div>
                 );
             };
@@ -2233,6 +2943,16 @@
         // Render the app
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+        
+        // Hide splash screen after app renders
+        requestAnimationFrame(() => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.classList.add('hidden');
+                // Remove from DOM after transition
+                setTimeout(() => splash.remove(), 500);
+            }
+        });
     </script>
 </body>
 </html>

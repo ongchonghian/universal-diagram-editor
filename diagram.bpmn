@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Defs_GPOnboarding_StrictHCI_NoDI" targetNamespace="http://example.com/bpmn/gp-onboarding">
+  <bpmn:process id="Process_GPOnboarding_StrictHCI" name="GP Onboarding – Strict HCI Validation (No DI)" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Applicant" name="Onboardee (Clinic / Entity)">
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitOnboarding</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProvideEntityType</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProvideHCICode</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProvideAltIdentifier</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CorrectHCICode</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Onboarded</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Healthdex" name="SGHealthdex Onboarding Service">
+        <bpmn:flowNodeRef>Task_BasicChecks</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_RequiresHCI</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ValidateHCI</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_MOHResponse</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_HCIValid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RequestCorrection</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ManualVerification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FinalApproval</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_1" name="Onboarding Initiated">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_SubmitOnboarding" name="Submit onboarding application (basic info)">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_BasicChecks" name="Perform basic checks (completeness, contact, consent)">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ProvideEntityType" name="Provide Entity Type (new field)">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_RequiresHCI" name="Entity Type requires HCI Code?">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_YesRequiresHCI</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoHCI</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ProvideHCICode" name="Provide HCI Code (new field)">
+      <bpmn:incoming>Flow_YesRequiresHCI</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ValidateHCI" name="Validate HCI Code (strict) against authoritative source">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Event_MOHResponse" name="Validation result received">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_MOHResponse" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_HCIValid" name="HCI Code valid &#38; belongs to onboardee?">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_HCIValid</bpmn:outgoing>
+      <bpmn:outgoing>Flow_HCIInvalid</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_RequestCorrection" name="Reject / request correction (invalid HCI)">
+      <bpmn:incoming>Flow_HCIInvalid</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CorrectHCICode" name="Correct HCI Code and resubmit">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_CorrectHCICode" targetRef="Task_ValidateHCI" />
+    <bpmn:task id="Task_FinalApproval" name="Approve onboarding &#38; activate account">
+      <bpmn:incoming>Flow_HCIValid</bpmn:incoming>
+      <bpmn:incoming>Flow_ManualApproved</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_Onboarded" name="Onboarded">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_ProvideAltIdentifier" name="Provide alternative identifier (e.g., UEN / licence type / service details)">
+      <bpmn:incoming>Flow_NoHCI</bpmn:incoming>
+      <bpmn:outgoing>Flow_Alt_1</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ManualVerification" name="Risk-based verification (manual / documentary checks)">
+      <bpmn:incoming>Flow_Alt_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Alt_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="Flow_ManualApproved" sourceRef="Task_ManualVerification" targetRef="Task_FinalApproval" />
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_SubmitOnboarding" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_SubmitOnboarding" targetRef="Task_BasicChecks" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_BasicChecks" targetRef="Task_ProvideEntityType" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_ProvideEntityType" targetRef="Gateway_RequiresHCI" />
+    <bpmn:sequenceFlow id="Flow_YesRequiresHCI" sourceRef="Gateway_RequiresHCI" targetRef="Task_ProvideHCICode">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">requiresHCI == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NoHCI" sourceRef="Gateway_RequiresHCI" targetRef="Task_ProvideAltIdentifier">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">requiresHCI == false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_ProvideHCICode" targetRef="Task_ValidateHCI" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_ValidateHCI" targetRef="Event_MOHResponse" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Event_MOHResponse" targetRef="Gateway_HCIValid" />
+    <bpmn:sequenceFlow id="Flow_HCIValid" sourceRef="Gateway_HCIValid" targetRef="Task_FinalApproval">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">hciValid == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_HCIInvalid" sourceRef="Gateway_HCIValid" targetRef="Task_RequestCorrection">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">hciValid == false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_RequestCorrection" targetRef="Task_CorrectHCICode" />
+    <bpmn:sequenceFlow id="Flow_Alt_1" sourceRef="Task_ProvideAltIdentifier" targetRef="Task_ManualVerification" />
+    <bpmn:sequenceFlow id="Flow_Alt_2" sourceRef="Task_ManualVerification" targetRef="Task_FinalApproval" />
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_FinalApproval" targetRef="EndEvent_Onboarded" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Process_GPOnboarding_StrictHCI">
+    <bpmndi:BPMNPlane id="BPMNPlane_Process_GPOnboarding_StrictHCI" bpmnElement="Process_GPOnboarding_StrictHCI">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="57" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SubmitOnboarding_di" bpmnElement="Task_SubmitOnboarding">
+        <dc:Bounds x="175" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BasicChecks_di" bpmnElement="Task_BasicChecks">
+        <dc:Bounds x="325" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ProvideEntityType_di" bpmnElement="Task_ProvideEntityType">
+        <dc:Bounds x="475" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_RequiresHCI_di" bpmnElement="Gateway_RequiresHCI" isMarkerVisible="true">
+        <dc:Bounds x="650" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ProvideHCICode_di" bpmnElement="Task_ProvideHCICode">
+        <dc:Bounds x="775" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidateHCI_di" bpmnElement="Task_ValidateHCI">
+        <dc:Bounds x="925" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_MOHResponse_di" bpmnElement="Event_MOHResponse">
+        <dc:Bounds x="1107" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_HCIValid_di" bpmnElement="Gateway_HCIValid" isMarkerVisible="true">
+        <dc:Bounds x="1250" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RequestCorrection_di" bpmnElement="Task_RequestCorrection">
+        <dc:Bounds x="1375" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CorrectHCICode_di" bpmnElement="Task_CorrectHCICode">
+        <dc:Bounds x="1525" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ProvideAltIdentifier_di" bpmnElement="Task_ProvideAltIdentifier">
+        <dc:Bounds x="775" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ManualVerification_di" bpmnElement="Task_ManualVerification">
+        <dc:Bounds x="925" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_FinalApproval_di" bpmnElement="Task_FinalApproval">
+        <dc:Bounds x="1375" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Onboarded_di" bpmnElement="EndEvent_Onboarded">
+        <dc:Bounds x="1557" y="192" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="93" y="70" />
+        <di:waypoint x="175" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="275" y="70" />
+        <di:waypoint x="325" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="425" y="70" />
+        <di:waypoint x="475" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="575" y="70" />
+        <di:waypoint x="650" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_YesRequiresHCI_di" bpmnElement="Flow_YesRequiresHCI">
+        <di:waypoint x="700" y="70" />
+        <di:waypoint x="775" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NoHCI_di" bpmnElement="Flow_NoHCI">
+        <di:waypoint x="675" y="95" />
+        <di:waypoint x="675" y="210" />
+        <di:waypoint x="775" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="875" y="70" />
+        <di:waypoint x="925" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
+        <di:waypoint x="1025" y="70" />
+        <di:waypoint x="1107" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
+        <di:waypoint x="1143" y="70" />
+        <di:waypoint x="1250" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_HCIValid_di" bpmnElement="Flow_HCIValid">
+        <di:waypoint x="1275" y="95" />
+        <di:waypoint x="1275" y="210" />
+        <di:waypoint x="1375" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_HCIInvalid_di" bpmnElement="Flow_HCIInvalid">
+        <di:waypoint x="1300" y="70" />
+        <di:waypoint x="1375" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11">
+        <di:waypoint x="1475" y="70" />
+        <di:waypoint x="1525" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12">
+        <di:waypoint x="1575" y="110" />
+        <di:waypoint x="1575" y="140" />
+        <di:waypoint x="975" y="140" />
+        <di:waypoint x="975" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Alt_1_di" bpmnElement="Flow_Alt_1">
+        <di:waypoint x="875" y="210" />
+        <di:waypoint x="925" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Alt_2_di" bpmnElement="Flow_Alt_2">
+        <di:waypoint x="1025" y="210" />
+        <di:waypoint x="1375" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13">
+        <di:waypoint x="1475" y="210" />
+        <di:waypoint x="1557" y="210" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

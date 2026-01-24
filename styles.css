@@ -1,5 +1,163 @@
 /* Kroki Universal Diagram Generator - Styles */
 
+/* Splash Screen */
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.splash-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.splash-content {
+    text-align: center;
+    animation: fadeInScale 0.8s ease-out forwards;
+}
+
+.splash-logo {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 24px;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: logoFloat 2s ease-in-out infinite;
+}
+
+.splash-title {
+    color: white;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin: 0;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out 0.3s forwards;
+}
+
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes logoFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Logo Loader - Inline loading indicator */
+.logo-loader {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-loader-icon {
+    border-radius: 4px;
+    animation: logoPulse 1.5s ease-in-out infinite;
+}
+
+.logo-loader-icon.sm {
+    width: 16px;
+    height: 16px;
+}
+
+.logo-loader-icon.md {
+    width: 24px;
+    height: 24px;
+}
+
+.logo-loader-icon.lg {
+    width: 32px;
+    height: 32px;
+}
+
+.logo-loader-text {
+    font-size: 12px;
+    color: #64748b;
+    animation: textPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(0.95);
+    }
+}
+
+@keyframes textPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Logo Loader - Overlay version for full-screen loading */
+.logo-loader-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(248, 250, 252, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(2px);
+}
+
+.logo-loader-overlay .logo-loader-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-bottom: 12px;
+}
+
+.logo-loader-overlay .logo-loader-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+}
+
 /* Base styles */
 body {
     background-color: #f8fafc;
@@ -367,3 +525,42 @@ body {
 .toast.warning {
     background: #d97706;
 }
+
+/* Update Panel Styles */
+.update-panel-item {
+    transition: all 0.15s ease;
+}
+
+.update-panel-item:hover {
+    transform: translateX(2px);
+}
+
+.update-panel-checkbox {
+    accent-color: #4f46e5;
+}
+
+/* Update button pulse animation when updates available */
+.update-btn-pulse {
+    animation: updatePulse 2s ease-in-out infinite;
+}
+
+@keyframes updatePulse {
+    0%, 100% {
+        color: #94a3b8;
+    }
+    50% {
+        color: #4f46e5;
+    }
+}
+
+/* Sandbox iframe (hidden) */
+#library-update-tester-iframe {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    width: 800px;
+    height: 600px;
+    border: none;
+    visibility: hidden;
+}
+
