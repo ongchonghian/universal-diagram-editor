@@ -89,12 +89,45 @@ export const BpmnVisualEditor = ({ xml, onChange, onError }) => {
         }
     }, [xml, isReady]);
 
+    const handleCreateNew = () => {
+        // Minimal valid BPMN 2.0 XML with a start event
+        const defaultXml = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="412" y="240" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+        onChange(defaultXml);
+    };
+
     return html`
         <div className="w-full h-full relative">
             ${!isReady && html`
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-20">
                     <div className="loader mb-3"></div>
                     <span className="text-slate-500 text-xs">Loading Editor...</span>
+                </div>
+            `}
+            ${isReady && !xml && html`
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                    <div className="text-center">
+                        <i className="fas fa-project-diagram text-4xl text-slate-200 mb-4"></i>
+                        <p className="text-slate-500 text-sm mb-4">No diagram loaded</p>
+                        <button 
+                            onClick=${handleCreateNew}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm text-sm font-medium flex items-center justify-center mx-auto"
+                        >
+                            <i className="fas fa-plus mr-2"></i>
+                            Create New Diagram
+                        </button>
+                    </div>
                 </div>
             `}
             <div ref=${containerRef} className="bjs-container" style=${{ visibility: isReady ? 'visible' : 'hidden' }} />

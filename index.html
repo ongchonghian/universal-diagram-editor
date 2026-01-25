@@ -41,7 +41,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs/loader.min.js"></script>
 
     <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 
     <!-- React Flow CSS -->
     <link href="https://unpkg.com/@xyflow/react@12.10.0/dist/style.css" rel="stylesheet">
@@ -1383,12 +1383,44 @@
                     }
                 }, [xml, isReady]);
 
+                const handleCreateNew = () => {
+                    const defaultXml = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="412" y="240" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+                    onChange(defaultXml);
+                };
+
                 return (
                     <div className="w-full h-full relative">
                         {!isReady && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-20">
                                 <div className="loader mb-3"></div>
                                 <span className="text-slate-500 text-xs">Loading Editor...</span>
+                            </div>
+                        )}
+                        {isReady && !xml && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                                <div className="text-center">
+                                    <i className="fas fa-project-diagram text-4xl text-slate-200 mb-4"></i>
+                                    <p className="text-slate-500 text-sm mb-4">No diagram loaded</p>
+                                    <button 
+                                        onClick={handleCreateNew}
+                                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm text-sm font-medium flex items-center justify-center mx-auto"
+                                    >
+                                        <i className="fas fa-plus mr-2"></i>
+                                        Create New Diagram
+                                    </button>
+                                </div>
                             </div>
                         )}
                         <div ref={containerRef} className="bjs-container" style={{visibility: isReady ? 'visible' : 'hidden'}} />
@@ -1542,12 +1574,44 @@
                     );
                 }
 
+                const handleCreateNew = () => {
+                    const defaultData = {
+                        type: "excalidraw",
+                        version: 2,
+                        source: "https://excalidraw.com",
+                        elements: [],
+                        appState: { viewBackgroundColor: "#ffffff", gridSize: null },
+                        files: {}
+                    };
+                    const jsonStr = JSON.stringify(defaultData, null, 2);
+                    onChangeRef.current(jsonStr);
+                    // Force internal update since we're setting initial content
+                    if (excalidrawAPIRef.current) {
+                        excalidrawAPIRef.current.updateScene({ elements: [] });
+                    }
+                };
+
                 return (
                     <div className="w-full h-full relative">
                         {!isReady && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-20">
                                 <div className="loader mb-3"></div>
                                 <span className="text-slate-500 text-xs">Initializing Editor...</span>
+                            </div>
+                        )}
+                        {isReady && (!json || !json.trim()) && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                                <div className="text-center">
+                                    <i className="fas fa-pencil-alt text-4xl text-slate-200 mb-4"></i>
+                                    <p className="text-slate-500 text-sm mb-4">No drawing loaded</p>
+                                    <button 
+                                        onClick={handleCreateNew}
+                                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm text-sm font-medium flex items-center justify-center mx-auto"
+                                    >
+                                        <i className="fas fa-plus mr-2"></i>
+                                        Create New Drawing
+                                    </button>
+                                </div>
                             </div>
                         )}
                         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
@@ -1629,9 +1693,64 @@
                 }
                 
                 // Generic/Fallback Editor with preview + AST explorer
+                const handleCreateGeneric = (type) => {
+                    let template = '';
+                    switch(type) {
+                        case 'flowchart': template = 'graph TD\n    A[Start] --> B[End]'; break;
+                        case 'sequence': template = 'sequenceDiagram\n    Alice->>Bob: Hello Bob, how are you?'; break;
+                        case 'class': template = 'classDiagram\n    class Animal{\n        +String name\n        +move()\n    }'; break;
+                        case 'state': template = 'stateDiagram-v2\n    [*] --> Still\n    Still --> [*]'; break;
+                        case 'er': template = 'erDiagram\n    CUSTOMER ||--o{ ORDER : places'; break;
+                        case 'gantt': template = 'gantt\n    title A Gantt Diagram\n    dateFormat  YYYY-MM-DD\n    section Section\n    A task :a1, 2014-01-01, 30d'; break;
+                        case 'pie': template = 'pie title Pets adopted by volunteers\n    "Dogs" : 386\n    "Cats" : 85\n    "Rats" : 15'; break;
+                        case 'mindmap': template = 'mindmap\n  root((mindmap))\n    Origins\n      Long history\n      ::icon(fa fa-book)\n      Popularisation\n        British popular psychology author Tony Buzan'; break;
+                        case 'timeline': template = 'timeline\n    title History of Social Media Platform\n    2002 : LinkedIn\n    2004 : Facebook\n    2005 : Youtube\n    2006 : Twitter'; break;
+                        case 'user-journey': template = 'journey\n    title My working day\n    section Go to work\n      Make tea: 5: Me\n      Go upstairs: 3: Me\n      Do work: 1: Me, Cat'; break;
+                        default: template = 'graph TD\n    A[Start] --> B[End]';
+                    }
+                    onCodeChange(template);
+                };
+
                 return (
                     <div className="w-full h-full flex">
-                        <div className="flex-1 flex flex-col bg-slate-50">
+                        <div className="flex-1 flex flex-col bg-slate-50 relative">
+                            {(!code || !code.trim()) && (
+                                <div className="absolute inset-0 bg-white z-10 flex flex-col items-center justify-center">
+                                    <div className="text-center max-w-2xl px-4">
+                                        <i className="fas fa-project-diagram text-4xl text-slate-200 mb-6"></i>
+                                        <h3 className="text-lg font-medium text-slate-900 mb-2">Start a New Diagram</h3>
+                                        <p className="text-slate-500 text-sm mb-8">Select a diagram type to get started</p>
+                                        
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-left">
+                                            <button onClick={() => handleCreateGeneric('flowchart')} className="p-3 bg-white border border-slate-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-all group">
+                                                <div className="flex items-center mb-2"><i className="fas fa-project-diagram text-indigo-500 mr-2"></i><span className="font-medium text-slate-700 group-hover:text-indigo-600 text-xs">Flowchart</span></div>
+                                            </button>
+                                            <button onClick={() => handleCreateGeneric('sequence')} className="p-3 bg-white border border-slate-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-all group">
+                                                <div className="flex items-center mb-2"><i className="fas fa-exchange-alt text-indigo-500 mr-2"></i><span className="font-medium text-slate-700 group-hover:text-indigo-600 text-xs">Sequence</span></div>
+                                            </button>
+                                            <button onClick={() => handleCreateGeneric('class')} className="p-3 bg-white border border-slate-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-all group">
+                                                <div className="flex items-center mb-2"><i className="fas fa-shapes text-indigo-500 mr-2"></i><span className="font-medium text-slate-700 group-hover:text-indigo-600 text-xs">Class</span></div>
+                                            </button>
+                                            <button onClick={() => handleCreateGeneric('state')} className="p-3 bg-white border border-slate-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-all group">
+                                                <div className="flex items-center mb-2"><i className="fas fa-traffic-light text-indigo-500 mr-2"></i><span className="font-medium text-slate-700 group-hover:text-indigo-600 text-xs">State</span></div>
+                                            </button>
+                                            <button onClick={() => handleCreateGeneric('er')} className="p-3 bg-white border border-slate-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-all group">
+                                                <div className="flex items-center mb-2"><i className="fas fa-database text-indigo-500 mr-2"></i><span className="font-medium text-slate-700 group-hover:text-indigo-600 text-xs">ER Diagram</span></div>
+                                            </button>
+                                            <button onClick={() => handleCreateGeneric('gantt')} className="p-3 bg-white border border-slate-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-all group">
+                                                <div className="flex items-center mb-2"><i className="fas fa-tasks text-indigo-500 mr-2"></i><span className="font-medium text-slate-700 group-hover:text-indigo-600 text-xs">Gantt</span></div>
+                                            </button>
+                                            <button onClick={() => handleCreateGeneric('mindmap')} className="p-3 bg-white border border-slate-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-all group">
+                                                <div className="flex items-center mb-2"><i className="fas fa-brain text-indigo-500 mr-2"></i><span className="font-medium text-slate-700 group-hover:text-indigo-600 text-xs">Mindmap</span></div>
+                                            </button>
+                                            <button onClick={() => handleCreateGeneric('user-journey')} className="p-3 bg-white border border-slate-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-all group">
+                                                <div className="flex items-center mb-2"><i className="fas fa-route text-indigo-500 mr-2"></i><span className="font-medium text-slate-700 group-hover:text-indigo-600 text-xs">User Journey</span></div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center justify-between">
                                 <span className="text-xs font-medium text-slate-600">
                                     <i className="fas fa-eye mr-1.5"></i>Live Preview
@@ -2241,6 +2360,28 @@
                         window.UpdateSystem.manager.toggleUpdate(id);
                     }
                 };
+
+                const handleSkipUpdate = (id) => {
+                    // Check for test failures to auto-populate reason
+                    let defaultReason = 'Not needed right now';
+                    if (state.testResults?.details?.[id]?.success === false) {
+                        defaultReason = state.testResults.details[id].error || 'Test failed';
+                    }
+
+                    const reason = prompt('Why are you skipping this update? (optional)', defaultReason);
+                    if (reason !== null && window.UpdateSystem?.manager) {
+                        const update = state.availableUpdates.find(u => u.id === id);
+                        if (update) {
+                            window.UpdateSystem.manager.ignoreUpdate(id, update.latest, reason || 'User skipped');
+                        }
+                    }
+                };
+
+                const handleUnskipUpdate = (id) => {
+                    if (window.UpdateSystem?.manager) {
+                        window.UpdateSystem.manager.unignoreUpdate(id);
+                    }
+                };
                 
                 const selectedCount = state.availableUpdates.filter(u => u.selected).length;
                 const hasTestedAndPassed = state.testResults?.success === true;
@@ -2288,34 +2429,75 @@
                                     <div className="space-y-3">
                                         {state.availableUpdates.map((update) => (
                                             <div key={update.id} 
-                                                className={`p-3 rounded-lg border ${update.selected ? 'border-indigo-200 bg-indigo-50' : 'border-slate-200 bg-slate-50'}`}>
-                                                <label className="flex items-start gap-3 cursor-pointer">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={update.selected} 
-                                                        onChange={() => handleToggleUpdate(update.id)}
-                                                        className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                    />
+                                                className={`p-3 rounded-lg border ${
+                                                    update.skipped 
+                                                        ? 'border-slate-200 bg-slate-50 opacity-75' 
+                                                        : update.selected 
+                                                            ? 'border-indigo-200 bg-indigo-50' 
+                                                            : 'border-slate-200 bg-slate-50'
+                                                }`}>
+                                                <div className="flex items-start gap-3">
+                                                    <div className="pt-1">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={update.selected} 
+                                                            disabled={update.skipped}
+                                                            onChange={() => handleToggleUpdate(update.id)}
+                                                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        />
+                                                    </div>
                                                     <div className="flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-slate-800">{update.name}</span>
-                                                            {update.isMajor && (
-                                                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded">MAJOR</span>
-                                                            )}
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-slate-800">{update.name}</span>
+                                                                {update.isMajor && (
+                                                                    <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded">MAJOR</span>
+                                                                )}
+                                                                {update.skipped && (
+                                                                    <span className="px-1.5 py-0.5 text-[10px] font-medium bg-slate-200 text-slate-600 rounded">SKIPPED</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                {update.skipped ? (
+                                                                    <button 
+                                                                        onClick={() => handleUnskipUpdate(update.id)}
+                                                                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
+                                                                        title="Re-enable this update"
+                                                                    >
+                                                                        Enable
+                                                                    </button>
+                                                                ) : (
+                                                                    <button 
+                                                                        onClick={() => handleSkipUpdate(update.id)}
+                                                                        className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 rounded hover:bg-slate-100 transition-colors"
+                                                                        title="Skip this version"
+                                                                    >
+                                                                        Skip
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        <div className="text-sm text-slate-600 mt-0.5">
-                                                            <span className="text-slate-400">{update.current}</span>
-                                                            <i className="fas fa-arrow-right mx-2 text-xs text-slate-400"></i>
-                                                            <span className="text-green-600 font-medium">{update.latest}</span>
-                                                        </div>
-                                                        {update.changelogUrl && (
+                                                        
+                                                        {update.skipped ? (
+                                                            <p className="text-xs text-slate-500 mt-1 italic">
+                                                                Reason: {update.skipReason || 'No reason provided'}
+                                                            </p>
+                                                        ) : (
+                                                            <div className="text-sm text-slate-600 mt-0.5">
+                                                                <span className="text-slate-400">{update.current}</span>
+                                                                <i className="fas fa-arrow-right mx-2 text-xs text-slate-400"></i>
+                                                                <span className="text-green-600 font-medium">{update.latest}</span>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {update.changelogUrl && !update.skipped && (
                                                             <a href={update.changelogUrl} target="_blank" rel="noopener noreferrer"
                                                                 className="text-xs text-indigo-600 hover:underline mt-1 inline-block">
                                                                 View changelog
                                                             </a>
                                                         )}
                                                     </div>
-                                                </label>
+                                                </div>
                                             </div>
                                         ))}
                                         
@@ -2820,7 +3002,7 @@
                             {/* Code View (Split) */}
                             <div className={`flex-1 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
                                 {/* Editor Panel */}
-                                <div className="w-1/2 flex flex-col border-r border-slate-200">
+                                <div className="w-1/2 flex flex-col border-r border-slate-200 relative">
                                     {diagramType === 'plantuml' && <PlantUmlToolbar detectedModel={detectedModel} onInsert={handleSnippetInsert} />}
                                     {diagramType === 'mermaid' && <MermaidToolbar detectedModel={detectedModel} onInsert={handleSnippetInsert} />}
                                     <div className="flex-1">
@@ -2835,6 +3017,47 @@
                                     <div className="flex-none px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
                                         <span>Ln {cursorPos.line}, Col {cursorPos.col}</span>
                                         <span>{stats.length} chars {stats.method && `| ${stats.method}`}</span>
+                                    </div>
+                                    <div className="absolute inset-0 z-20 pointer-events-none">
+                                        {/* Empty State Overlay for Code View */}
+                                        {(!textInput || !textInput.trim()) && (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm pointer-events-auto">
+                                                <div className="text-center p-8 bg-white rounded-xl shadow-xl border border-slate-200 max-w-sm w-full mx-4">
+                                                    <i className="fas fa-code text-4xl text-indigo-500 mb-4"></i>
+                                                    <h3 className="text-lg font-bold text-slate-900 mb-2">Editor Empty</h3>
+                                                    <p className="text-sm text-slate-600 mb-6">Start a new diagram or open an existing file.</p>
+                                                    <div className="space-y-3">
+                                                        <button 
+                                                            onClick={() => {
+                                                                if (diagramType === 'mermaid' || diagramType === 'plantuml') {
+                                                                    setShowTemplates(true);
+                                                                } else if (diagramType === 'bpmn') {
+                                                                    const defaultXml = `<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">\n  <bpmn:process id="Process_1" isExecutable="false">\n    <bpmn:startEvent id="StartEvent_1" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id="BPMNDiagram_1">\n    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">\n      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">\n        <dc:Bounds x="412" y="240" width="36" height="36" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>`;
+                                                                    setTextInput(defaultXml);
+                                                                } else if (diagramType === 'excalidraw') {
+                                                                    const defaultData = { type: "excalidraw", version: 2, source: "https://excalidraw.com", elements: [], appState: { viewBackgroundColor: "#ffffff", gridSize: null }, files: {} };
+                                                                    setTextInput(JSON.stringify(defaultData, null, 2));
+                                                                } else {
+                                                                    // Fallback for others
+                                                                    setTextInput('// Start typing or selecting a template...');
+                                                                }
+                                                            }}
+                                                            className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm flex items-center justify-center"
+                                                        >
+                                                            <i className="fas fa-plus mr-2"></i>
+                                                            Create New
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="w-full px-4 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm flex items-center justify-center"
+                                                        >
+                                                            <i className="fas fa-folder-open mr-2"></i>
+                                                            Open File...
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

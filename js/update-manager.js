@@ -4,7 +4,7 @@
 
 import { LIBRARY_REGISTRY, getCheckableLibraries, isMajorUpdate, parseVersionsFromHtml } from './library-registry.js';
 import { checkAllUpdates, getChangelogUrl } from './cdn-version-checker.js';
-import { testLibraryUpdates, validateUrls } from './update-tester.js';
+import { testLibraryUpdates, validateUrls, validateDependencies } from './update-tester.js';
 import { fetchCurrentHtml, updateLibraryUrls, downloadUpdatedHtml, generateChangeSummary, validateHtml } from './html-rewriter.js';
 
 // LocalStorage keys
@@ -76,12 +76,24 @@ class UpdateManager {
             
             // Filter to only show libraries with updates
             this.availableUpdates = results
-                .filter(r => r.hasUpdate && !this.isIgnored(r.id, r.latest))
-                .map(r => ({
-                    ...r,
-                    changelogUrl: getChangelogUrl(LIBRARY_REGISTRY[r.id]),
-                    selected: !r.isMajor // Auto-select non-major updates
-                }));
+                .filter(r => r.hasUpdate)
+                .map(r => {
+                    const ignored = this.isIgnored(r.id, r.latest);
+                    return {
+                        ...r,
+                        changelogUrl: getChangelogUrl(LIBRARY_REGISTRY[r.id]),
+                        selected: !r.isMajor && !ignored, // Auto-select non-major updates that aren't ignored
+                        skipped: !!ignored,               // Mark as skipped if ignored
+                        skipReason: ignored || null       // Store reason
+                    };
+                });
+            
+            // Filter out updates that are skipped from the main list? 
+            // NO, typically we want to see them as "Skipped" in the UI. 
+            // But verify if the original code filtered them out completely.
+            // Original: .filter(r => r.hasUpdate && !this.isIgnored(r.id, r.latest))
+            // Current Plan: Keep them in the list but marked as skipped.
+
 
             // Save check timestamp
             this.saveLastCheck();
@@ -116,15 +128,61 @@ class UpdateManager {
                 updatesMap[u.id] = u.latest;
             });
 
-            // First validate URLs exist
+            // First validate dependency conflicts
+            const depValidation = validateDependencies(updatesMap);
+            if (!depValidation.valid) {
+                const details = {};
+                
+                // Map errors to both libraries involved (if possible)
+                // We need to look up which library ID corresponds to the names in the error
+                // The error object has: library (name), peer (name), etc.
+                // But wait, validateDependencies returns detailed error objects via checkDependencyConflicts?
+                // Let's check checkDependencyConflicts in library-registry.js imports... 
+                // Ah, validateDependencies wraps it. Let's assume the error objects have library info.
+                // Assuming depValidation.errors are the objects from checkDependencyConflicts
+                
+                const getLibIdByName = (name) => {
+                    const entry = Object.entries(LIBRARY_REGISTRY).find(([_, lib]) => lib.name === name);
+                    return entry ? entry[0] : null;
+                };
+
+                depValidation.errors.forEach(err => {
+                    // err structure: { library: "ReactDOM", peer: "React", message: "..." }
+                    const libId = getLibIdByName(err.library);
+                    const peerId = getLibIdByName(err.peer);
+                    
+                    if (libId) details[libId] = { success: false, error: err.message };
+                    if (peerId) details[peerId] = { success: false, error: err.message };
+                });
+
+                this.testResults = {
+                    success: false,
+                    passed: [],
+                    failed: depValidation.errors.map(e => `Dependency Error: ${e.message}`),
+                    errors: depValidation.errors.map(e => e.message),
+                    warnings: [],
+                    details: details // Add details map for UI
+                };
+                this.isTesting = false;
+                this.notify();
+                return this.testResults;
+            }
+
+            // Then validate URLs exist
             const urlValidation = await validateUrls(updatesMap);
             if (urlValidation.invalid.length > 0) {
+                const details = {};
+                urlValidation.invalid.forEach(i => {
+                    details[i.id] = { success: false, error: `URL not found (${i.status || i.error})` };
+                });
+
                 this.testResults = {
                     success: false,
                     passed: [],
                     failed: urlValidation.invalid.map(i => `${i.id}: URL not found (${i.status || i.error})`),
                     errors: [],
-                    warnings: []
+                    warnings: [],
+                    details: details // Add details map for UI
                 };
                 this.isTesting = false;
                 this.notify();
@@ -166,8 +224,20 @@ class UpdateManager {
 
         // Build updates object
         const updates = {};
+        const allLibraryIds = Object.keys(LIBRARY_REGISTRY);
+
         selected.forEach(u => {
             updates[u.id] = { current: u.current, latest: u.latest };
+
+            // Find and include linked libraries (e.g. react-esm linkedTo react)
+            // This ensures UMD and ESM versions stay in sync
+            allLibraryIds.forEach(libId => {
+                const lib = LIBRARY_REGISTRY[libId];
+                if (lib.linkedTo === u.id) {
+                    console.log(`Auto-updating linked library ${libId} to ${u.latest} (linked to ${u.id})`);
+                    updates[libId] = { current: u.current, latest: u.latest };
+                }
+            });
         });
 
         // Update URLs in HTML
@@ -226,22 +296,70 @@ class UpdateManager {
     /**
      * Ignore an update (won't show in future checks)
      */
-    ignoreUpdate(libraryId, version) {
+    /**
+     * Ignore an update (won't show in future checks)
+     * @param {string} libraryId 
+     * @param {string} version 
+     * @param {string} reason 
+     */
+    ignoreUpdate(libraryId, version, reason = 'User skipped') {
         const ignored = this.getIgnoredUpdates();
-        ignored[libraryId] = version;
+        // Store as object with reason
+        ignored[libraryId] = { version, reason };
         localStorage.setItem(STORAGE_KEYS.IGNORED_UPDATES, JSON.stringify(ignored));
         
-        // Remove from available updates
-        this.availableUpdates = this.availableUpdates.filter(u => u.id !== libraryId);
+        // Update available updates list
+        this.availableUpdates = this.availableUpdates.map(u => {
+            if (u.id === libraryId) {
+                return { ...u, selected: false, skipped: true, skipReason: reason };
+            }
+            return u;
+        });
         this.notify();
     }
 
     /**
+     * Unignore an update (re-enable it)
+     * @param {string} libraryId 
+     */
+    unignoreUpdate(libraryId) {
+        const ignored = this.getIgnoredUpdates();
+        if (ignored[libraryId]) {
+            delete ignored[libraryId];
+            localStorage.setItem(STORAGE_KEYS.IGNORED_UPDATES, JSON.stringify(ignored));
+            
+            // Update available updates list
+            this.availableUpdates = this.availableUpdates.map(u => {
+                if (u.id === libraryId) {
+                    return { ...u, skipped: false, skipReason: null };
+                }
+                return u;
+            });
+            this.notify();
+        }
+    }
+
+    /**
      * Check if an update is ignored
+     * Returns the reason string if ignored, or false if not
      */
     isIgnored(libraryId, version) {
         const ignored = this.getIgnoredUpdates();
-        return ignored[libraryId] === version;
+        const entry = ignored[libraryId];
+        
+        if (!entry) return false;
+        
+        // Handle legacy format (string version)
+        if (typeof entry === 'string') {
+            return entry === version ? 'Skipped (legacy)' : false;
+        }
+        
+        // Handle new format (object)
+        if (entry.version === version) {
+            return entry.reason || 'Skipped';
+        }
+        
+        return false;
     }
 
     /**

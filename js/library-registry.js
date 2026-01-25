@@ -30,7 +30,10 @@ export const LIBRARY_REGISTRY = {
         currentVersion: '18',
         urlPattern: 'https://unpkg.com/react-dom@{version}/umd/react-dom.production.min.js',
         testFn: () => typeof window.ReactDOM !== 'undefined' && window.ReactDOM.createRoot,
-        description: 'React DOM rendering'
+        description: 'React DOM rendering',
+        peerDependencies: {
+            'react': '^18' // Must match React major version
+        }
     },
     babel: {
         name: 'Babel Standalone',
@@ -122,6 +125,10 @@ export const LIBRARY_REGISTRY = {
         urlPattern: 'https://esm.sh/@excalidraw/excalidraw@{version}?external=react,react-dom',
         testFn: () => window.ExcalidrawLoaded === true,
         description: 'Whiteboard drawing tool',
+        peerDependencies: {
+            'react': '^18', // Excalidraw currently depends on React 18
+            'react-dom': '^18'
+        },
         isESModule: true,
         // Complex library configuration for testing
         testConfig: {
@@ -389,8 +396,77 @@ export function isMajorUpdate(currentVersion, newVersion) {
     const currentMajor = getMajor(currentVersion);
     const newMajor = getMajor(newVersion);
     
-    if (currentMajor === null || newMajor === null) return false;
     return newMajor > currentMajor;
+}
+
+/**
+ * Check if a version satisfies a semver range (simplified)
+ * Supports: '18', '^18', '18.x', '>=18'
+ */
+export function satisfies(version, range) {
+    if (!version || !range) return false;
+    if (version === 'latest' || range === '*') return true;
+    
+    // exact fit
+    if (version === range) return true;
+    
+    const vParts = version.replace(/^v/, '').split('.').map(n => parseInt(n, 10));
+    
+    // ^18 or 18.x or 18
+    if (range.startsWith('^') || range.endsWith('.x') || /^\d+$/.test(range)) {
+        const major = parseInt(range.replace(/[^\d]/g, ''), 10);
+        return vParts[0] === major;
+    }
+    
+    // >= 18
+    if (range.startsWith('>=')) {
+        const minMajor = parseInt(range.replace(/[^\d]/g, ''), 10);
+        return vParts[0] >= minMajor;
+    }
+    
+    return false;
+}
+
+/**
+ * Check compatibility of updates against peer dependencies
+ * @param {Object} updates - Map of library updates { id: version }
+ * @param {Object} allLibraries - Map of all current library versions { id: version }
+ * @returns {Array} List of validation errors
+ */
+export function checkDependencyConflicts(updates, allLibraries) {
+    const errors = [];
+    
+    // Merge current state with updates to get the proposed state
+    const proposedState = { ...allLibraries, ...updates };
+    
+    // Check each library in the proposed state
+    Object.keys(proposedState).forEach(libId => {
+        const lib = LIBRARY_REGISTRY[libId];
+        if (!lib || !lib.peerDependencies) return;
+        
+        const proposedVersion = proposedState[libId];
+        
+        // Skip check if library usage isn't active/present? 
+        // For now assume if it's in allLibraries, it's relevant.
+        
+        Object.entries(lib.peerDependencies).forEach(([peerId, range]) => {
+            const peerVersion = proposedState[peerId];
+            
+            // If peer invalid or missing (and we have it in registry), check it
+            if (peerVersion && !satisfies(peerVersion, range)) {
+                errors.push({
+                    library: lib.name,
+                    version: proposedVersion,
+                    peer: LIBRARY_REGISTRY[peerId]?.name || peerId,
+                    peerVersion: peerVersion,
+                    required: range,
+                    message: `${lib.name} requires ${LIBRARY_REGISTRY[peerId]?.name || peerId} ${range}, but found ${peerVersion}`
+                });
+            }
+        });
+    });
+    
+    return errors;
 }
 
 // Export for use in update manager
@@ -404,5 +480,7 @@ export default {
     getAllLibraryUrls,
     parseVersionFromUrl,
     compareVersions,
-    isMajorUpdate
+    isMajorUpdate,
+    satisfies,
+    checkDependencyConflicts
 };
