@@ -12,7 +12,18 @@
 - [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
 - [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
 - [react-helpers.js](file://js/react-helpers.js)
+- [library-registry.js](file://js/library-registry.js)
+- [update-manager.js](file://js/update-manager.js)
+- [cdn-version-checker.js](file://js/cdn-version-checker.js)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated Monaco Editor dependency from 0.44.0 to 0.53.0
+- Enhanced React Flow integration with version 12.10.0
+- Improved dependency management system with centralized library registry
+- Added comprehensive version checking and update management
+- Enhanced error diagnostics system with better provider registration
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -20,13 +31,15 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
+6. [Enhanced Dependency Management](#enhanced-dependency-management)
 7. [Performance Considerations](#performance-considerations)
 8. [Troubleshooting Guide](#troubleshooting-guide)
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive documentation for the Monaco Editor integration and wrapper component used in the Universal Diagram Generator. The integration focuses on advanced code editing features for PlantUML and Mermaid languages, including syntax highlighting, error markers with squiggly underlines, diagnostic providers, custom language registration, bracket matching, auto-closing pairs, and comment configurations. It also covers the error detection system with code action providers for quick fixes, hover providers for contextual explanations, marker management, editor lifecycle including AMD loader configuration, initialization patterns, cleanup procedures, and exposed imperative methods for parent components.
+This document provides comprehensive documentation for the Monaco Editor integration and wrapper component used in the Universal Diagram Generator. The integration focuses on advanced code editing features for PlantUML and Mermaid languages, including syntax highlighting, error markers with squiggly underlines, diagnostic providers, custom language registration, bracket matching, auto-closing pairs, and comment configurations. It also covers the enhanced error detection system with code action providers for quick fixes, hover providers for contextual explanations, marker management, editor lifecycle including AMD loader configuration, initialization patterns, cleanup procedures, and exposed imperative methods for parent components.
+
+**Updated** Enhanced with Monaco Editor 0.53.0 upgrade and improved React Flow integration with version 12.10.0, featuring centralized dependency management and comprehensive version checking.
 
 ## Project Structure
 The Monaco Editor integration is implemented as a React wrapper component that integrates with the Monaco Editor library. The project structure organizes the integration into several key areas:
@@ -36,12 +49,14 @@ The Monaco Editor integration is implemented as a React wrapper component that i
 - **Error Diagnostics**: Comprehensive error parsing, explanations, and fix suggestions
 - **Configuration**: Diagram type definitions and language mappings
 - **Integration**: Seamless integration with the main application and other editors
+- **Dependency Management**: Centralized library registry with version checking and update system
 
 ```mermaid
 graph TB
 subgraph "Application Layer"
 App[Main App]
 Editors[Editor Components]
+UpdateSystem[Update Manager]
 end
 subgraph "Monaco Integration"
 Wrapper[MonacoWrapper]
@@ -53,9 +68,15 @@ Parser[Error Parser]
 Explanations[Error Explanations]
 Fixes[Fix Suggestions]
 end
+subgraph "Dependency Management"
+Registry[Library Registry]
+Checker[Version Checker]
+Updater[Update Manager]
+end
 subgraph "External Dependencies"
-Monaco[Monaco Editor]
+Monaco[Monaco Editor 0.53.0]
 AMD[AMD Loader]
+ReactFlow[React Flow 12.10.0]
 end
 App --> Wrapper
 Wrapper --> Monaco
@@ -65,12 +86,18 @@ Parser --> Explanations
 Parser --> Fixes
 Monaco --> AMD
 Languages --> Monaco
+UpdateSystem --> Registry
+Registry --> Checker
+Checker --> Updater
+ReactFlow --> UpdateSystem
 ```
 
 **Diagram sources**
 - [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
 - [index.html](file://index.html#L598-L727)
 - [config.js](file://js/config.js#L6-L116)
+- [library-registry.js](file://js/library-registry.js#L57-L69)
+- [update-manager.js](file://js/update-manager.js#L1-L461)
 
 **Section sources**
 - [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
@@ -93,6 +120,8 @@ Key features include:
 - Cursor position tracking
 - Theme customization support
 - Minimap integration with configurable scaling
+
+**Updated** Enhanced with improved provider registration and better error handling for the upgraded Monaco Editor version.
 
 **Section sources**
 - [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
@@ -143,7 +172,7 @@ The Monaco Editor integration follows a layered architecture with clear separati
 sequenceDiagram
 participant App as Application
 participant Wrapper as MonacoWrapper
-participant Monaco as Monaco Editor
+participant Monaco as Monaco Editor 0.53.0
 participant Providers as Diagnostic Providers
 participant Parser as Error Parser
 participant Explanations as Explanations
@@ -340,58 +369,53 @@ The hover provider delivers contextual help:
 **Section sources**
 - [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L394-L422)
 
-## Dependency Analysis
+## Enhanced Dependency Management
 
-The Monaco Editor integration has minimal external dependencies while maintaining rich functionality:
+**New Section** The Universal Diagram Generator now features a comprehensive dependency management system that tracks and updates all external libraries, including enhanced support for the upgraded Monaco Editor and React Flow integration.
+
+### Centralized Library Registry
+The system maintains a centralized registry of all CDN dependencies with version tracking and compatibility validation:
+
+- **Monaco Editor**: Upgraded to version 0.53.0 with enhanced AMD loader configuration
+- **React Flow**: Integrated with version 12.10.0 for improved node-based diagram editing
+- **React/ReactDOM**: Maintained at version 18 for compatibility
+- **Other Libraries**: Comprehensive coverage of all external dependencies
+
+### Version Checking and Update System
+The update system provides automated dependency management:
 
 ```mermaid
-graph TB
-subgraph "Internal Dependencies"
-Wrapper[MonacoWrapper]
-Helpers[React Helpers]
-Config[Configuration]
-Diagnostics[Error Diagnostics]
-end
-subgraph "External Dependencies"
-Monaco[Monaco Editor 0.44.0]
-AMD[AMD Loader]
-CDN[CDN Resources]
-end
-subgraph "Browser APIs"
-DOM[DOM Manipulation]
-Events[Event Listeners]
-Storage[Local Storage]
-end
-Wrapper --> Monaco
-Wrapper --> Helpers
-Wrapper --> Diagnostics
-Diagnostics --> Config
-Monaco --> AMD
-AMD --> CDN
-Wrapper --> DOM
-Wrapper --> Events
-Wrapper --> Storage
+flowchart TD
+Check[Check for Updates] --> ParseHTML[Parse Current HTML]
+ParseHTML --> CheckVersions[Check CDN Versions]
+CheckVersions --> Compare[Compare with Registry]
+Compare --> HasUpdate{Has Update?}
+HasUpdate --> |Yes| Validate[Validate Compatibility]
+HasUpdate --> |No| Next[Next Library]
+Validate --> URLCheck[Check URL Accessibility]
+URLCheck --> Test[Run Integration Tests]
+Test --> Apply[Apply Updates]
+HasUpdate --> |Yes| Apply
+Apply --> Download[Download Updated HTML]
+Download --> Success[Update Complete]
 ```
 
 **Diagram sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L5-L8)
-- [index.html](file://index.html#L18-L19)
+- [update-manager.js](file://js/update-manager.js#L63-L110)
+- [cdn-version-checker.js](file://js/cdn-version-checker.js#L191-L214)
 
-### External Dependencies
-- **Monaco Editor**: Version 0.44.0 loaded from CDN
-- **AMD Loader**: Dynamic module loading for Monaco
-- **React**: ES modules via CDN with htm for JSX
-- **Font Awesome**: Icons for UI components
+### Dependency Validation
+The system ensures compatibility between library versions:
 
-### Internal Dependencies
-- **React Helpers**: ES module compatibility layer
-- **Configuration**: Diagram type definitions and language mappings
-- **Error Diagnostics**: Parsing, explanations, and fix suggestions
-- **Component Utilities**: Shared UI components and helpers
+- **Peer Dependencies**: Validates React/ReactDOM compatibility
+- **Linked Libraries**: Automatically updates ESM and UMD versions together
+- **URL Validation**: Checks CDN endpoints are accessible
+- **Integration Testing**: Tests libraries in isolated iframes
 
 **Section sources**
-- [react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [config.js](file://js/config.js#L6-L116)
+- [library-registry.js](file://js/library-registry.js#L57-L69)
+- [update-manager.js](file://js/update-manager.js#L131-L169)
+- [cdn-version-checker.js](file://js/cdn-version-checker.js#L233-L255)
 
 ## Performance Considerations
 
@@ -414,6 +438,8 @@ The Monaco Editor integration implements several performance optimizations:
 - **Automatic Layout**: Monaco's built-in layout management
 - **Selective Updates**: Only language/model changes trigger reconfiguration
 - **Debounced Operations**: Efficient handling of rapid content changes
+
+**Updated** Enhanced performance considerations for the upgraded Monaco Editor 0.53.0, including improved AMD loader configuration and better memory management.
 
 ## Troubleshooting Guide
 
@@ -451,6 +477,8 @@ The Monaco Editor integration implements several performance optimizations:
 - Handle special end-of-file marker (99999) cases
 - Ensure proper Monaco Range creation
 
+**Updated** Enhanced troubleshooting guidance for the upgraded Monaco Editor 0.53.0, including improved error handling and provider registration.
+
 **Section sources**
 - [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L338-L349)
 - [index.js](file://js/error-diagnostics/index.js#L428-L449)
@@ -486,8 +514,11 @@ The Monaco Editor integration provides a robust foundation for advanced diagram 
 - **Performance Optimization**: Efficient loading, memory management, and rendering
 - **Developer Experience**: Rich error feedback, automated fixes, and contextual help
 - **Extensibility**: Easy addition of new diagram languages and error types
+- **Dependency Management**: Centralized version tracking and automated updates
 
-The integration successfully balances functionality with performance, providing a smooth editing experience while maintaining clean code organization and maintainable architecture. The comprehensive error detection system significantly improves user productivity by providing immediate feedback and automated solutions for common syntax errors.
+**Updated** The integration successfully balances functionality with performance, providing a smooth editing experience while maintaining clean code organization and maintainable architecture. The comprehensive error detection system significantly improves user productivity by providing immediate feedback and automated solutions for common syntax errors. The enhanced dependency management system ensures all external libraries remain current and compatible.
+
+The upgrade to Monaco Editor 0.53.0 and improved React Flow integration with version 12.10.0 brings enhanced stability, performance improvements, and better compatibility with modern web standards. The centralized library registry and automated update system provide peace of mind for long-term maintenance and reliability.
 
 Future enhancements could include:
 - Additional diagram language support
@@ -495,3 +526,4 @@ Future enhancements could include:
 - Enhanced collaborative editing features
 - Customizable theme support
 - Integration with external validation services
+- Expanded dependency management for new library types

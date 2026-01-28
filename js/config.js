@@ -84,6 +84,7 @@ Alice <-- Bob: another authentication Response
         extensions: ['.excalidraw', '.json'],
         monacoLang: 'json',
         docs: 'https://docs.excalidraw.com/',
+        hasVisualEditor: true,
         example: `{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "https://excalidraw.com",\n  "elements": [\n    {\n      "type": "rectangle",\n      "id": "rect-1",\n      "x": 100,\n      "y": 100,\n      "width": 100,\n      "height": 100,\n      "strokeColor": "#000000",\n      "backgroundColor": "transparent",\n      "fillStyle": "hachure",\n      "strokeWidth": 1,\n      "strokeStyle": "solid",\n      "roughness": 1,\n      "opacity": 100,\n      "groupIds": [],\n      "strokeSharpness": "sharp",\n      "seed": 1,\n      "version": 1,\n      "versionNonce": 0,\n      "isDeleted": false,\n      "boundElements": null,\n      "updated": 1,\n      "link": null\n    }\n  ]\n}`
     },
     c4plantuml: {
@@ -107,12 +108,71 @@ Rel(personAlias, systemAlias, "Label", "Optional Technology")
     graphviz: { label: 'GraphViz', extensions: ['.dot', '.gv'], monacoLang: 'plaintext', docs: 'https://graphviz.org/documentation/' },
     nomnoml: { label: 'Nomnoml', extensions: ['.nomnoml'], monacoLang: 'plaintext', docs: 'https://nomnoml.com/' },
     pikchr: { label: 'Pikchr', extensions: ['.pikchr'], monacoLang: 'plaintext', docs: 'https://pikchr.org/home/doc/trunk/homepage.md' },
-    structurizr: { label: 'Structurizr', extensions: ['.dsl', '.json'], monacoLang: 'json', docs: 'https://structurizr.com/dsl' },
+    pikchr: { label: 'Pikchr', extensions: ['.pikchr'], monacoLang: 'plaintext', docs: 'https://pikchr.org/home/doc/trunk/homepage.md' },
     svgbob: { label: 'Svgbob', extensions: ['.bob', '.svgbob'], monacoLang: 'plaintext', docs: 'https://ivanceras.github.io/svgbob-doc/' },
-    vega: { label: 'Vega', extensions: ['.vega', '.json'], monacoLang: 'json', docs: 'https://vega.github.io/vega/docs/' },
-    vegalite: { label: 'Vega-Lite', extensions: ['.vl', '.json'], monacoLang: 'json', docs: 'https://vega.github.io/vega-lite/docs/' },
+    vega: { 
+        label: 'Vega', 
+        extensions: ['.vega', '.json'], 
+        monacoLang: 'json', 
+        docs: 'https://vega.github.io/vega/docs/',
+        hasVisualEditor: true
+    },
+    vegalite: { 
+        label: 'Vega-Lite', 
+        extensions: ['.vl', '.json'], 
+        monacoLang: 'json', 
+        docs: 'https://vega.github.io/vega-lite/docs/',
+        hasVisualEditor: true,
+        example: `{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "description": "A simple bar chart with embedded data.",
+  "data": {
+    "values": [
+      {"category": "A", "value": 28},
+      {"category": "B", "value": 55},
+      {"category": "C", "value": 43},
+      {"category": "D", "value": 91},
+      {"category": "E", "value": 81},
+      {"category": "F", "value": 53}
+    ]
+  },
+  "mark": "bar",
+  "encoding": {
+    "x": {"field": "category", "type": "nominal", "axis": {"labelAngle": 0}},
+    "y": {"field": "value", "type": "quantitative"}
+  }
+}`
+    },
     wavedrom: { label: 'Wavedrom', extensions: ['.json5', '.json'], monacoLang: 'json', docs: 'https://wavedrom.com/tutorial.html' },
     wireviz: { label: 'Wireviz', extensions: ['.yaml', '.yml'], monacoLang: 'yaml', docs: 'https://github.com/formatc1702/WireViz' },
+    likec4: {
+        label: 'LikeC4',
+        extensions: ['.likec4', '.c4'],
+        monacoLang: 'likec4',
+        docs: 'https://likec4.dev',
+        hasVisualEditor: true,
+        example: `specification {
+    element user
+    element component
+}
+
+model {
+    customer = user 'Customer'
+    
+    app = component 'Web App' {
+        description 'A great web application'
+    }
+    
+    customer -> app 'uses'
+}
+
+views {
+    view index of app {
+        include *
+        autoLayout lr
+    }
+}`
+    }
 };
 
 export const PLANTUML_SNIPPETS = {
@@ -561,5 +621,748 @@ title Work Breakdown Structure
 *** 5.2 Monitoring
 
 @endwbs`
+    }
+];
+
+export const MERMAID_SNIPPETS = {
+    flowchart: [
+        { label: 'Start/End', icon: 'fa-circle', code: '([Start/End])' },
+        { label: 'Process', icon: 'fa-square', code: '[Process]' },
+        { label: 'Decision', icon: 'fa-draw-polygon', code: '{?}' },
+        { label: 'Subroutine', icon: 'fa-columns', code: '[[Subroutine]]' },
+        { label: 'Database', icon: 'fa-database', code: '[(Database)]' },
+        { label: 'Circle', icon: 'fa-circle', code: '((Circle))' },
+        { label: 'Link', icon: 'fa-arrow-right', code: '--> ' },
+        { label: 'Label Link', icon: 'fa-tag', code: '-- Text -->' },
+        { label: 'Dotted', icon: 'fa-ellipsis-h', code: '-.->' },
+        { label: 'Thick', icon: 'fa-minus', code: '==>' },
+    ],
+    sequence: [
+        { label: 'Participant', icon: 'fa-user', code: 'participant Alice\n' },
+        { label: 'Actor', icon: 'fa-user-circle', code: 'actor Bob\n' },
+        { label: 'Message', icon: 'fa-arrow-right', code: 'Alice->>Bob: Hello\n' },
+        { label: 'Response', icon: 'fa-arrow-left', code: 'Bob-->>Alice: Hi!\n' },
+        { label: 'Loop', icon: 'fa-redo', code: 'loop Every minute\n    Bob-->>Alice: Ping\nend\n' },
+        { label: 'Alt', icon: 'fa-code-branch', code: 'alt is sick\n    Bob->>Alice: Not coming\nelse is well\n    Bob->>Alice: Coming\nend\n' },
+        { label: 'Opt', icon: 'fa-question-circle', code: 'opt Extra info\n    Bob->>Alice: ...\nend\n' },
+        { label: 'Note', icon: 'fa-sticky-note', code: 'note right of Alice: Thinking...\n' },
+    ],
+    class: [
+        { label: 'Class', icon: 'fa-cube', code: 'class BankAccount{\n    +String owner\n    +BigDecimal balance\n    +deposit(amount)\n    +withdrawal(amount)\n}\n' },
+        { label: 'Interface', icon: 'fa-puzzle-piece', code: 'class ICard{\n    <<interface>>\n    +process()\n}\n' },
+        { label: 'Inheritance', icon: 'fa-arrow-up', code: 'Duck <|-- WhiteDuck\n' },
+        { label: 'Composition', icon: 'fa-link', code: 'Wheel *-- Car\n' },
+        { label: 'Aggregation', icon: 'fa-link', code: 'Student "1" o-- "many" Course\n' },
+        { label: 'Association', icon: 'fa-code-branch', code: 'Student "1" --> "many" Course\n' },
+    ],
+    state: [
+        { label: 'Start', icon: 'fa-circle', code: '[*] --> ' },
+        { label: 'State', icon: 'fa-square', code: 'State1' },
+        { label: 'Transition', icon: 'fa-arrow-right', code: 'State1 --> State2 : event\n' },
+        { label: 'Composite', icon: 'fa-layer-group', code: 'state Composite {\n    [*];\n    --\n    [*];\n}\n' },
+        { label: 'Decision', icon: 'fa-code-branch', code: 'state if_state <<choice>>\n' },
+        { label: 'Fork', icon: 'fa-code-branch', code: 'state fork_state <<fork>>\n' },
+        { label: 'Join', icon: 'fa-compress-arrows-alt', code: 'state join_state <<join>>\n' },
+    ],
+    er: [
+        { label: 'Entity', icon: 'fa-table', code: 'CUSTOMER {\n    string name\n    string custNumber\n    string sector\n}\n' },
+        { label: 'One to One', icon: 'fa-arrows-alt-h', code: 'CAR ||--|| NAMED-DRIVER : allows\n' },
+        { label: 'One to Many', icon: 'fa-arrows-alt-h', code: 'CUSTOMER ||--|{ ORDER : places\n' },
+        { label: 'Many to Many', icon: 'fa-arrows-alt-h', code: 'ORDER }|..|{ ITEM : contains\n' },
+    ],
+    gantt: [
+        { label: 'Section', icon: 'fa-layer-group', code: 'section Section\n' },
+        { label: 'Task', icon: 'fa-tasks', code: 'A task :a1, 2014-01-01, 30d\n' },
+        { label: 'Critical', icon: 'fa-exclamation-circle', code: 'crit :crit1, 2014-01-05, 3d\n' },
+        { label: 'Milestone', icon: 'fa-flag', code: 'Milestone :milestone, m1, 2014-01-25, 0d\n' },
+    ],
+    pie: [
+        { label: 'Data', icon: 'fa-chart-pie', code: '"Category" : 100\n' },
+    ],
+    common: [
+         { label: 'Link', icon: 'fa-arrow-right', code: '--> ' },
+         { label: 'Note', icon: 'fa-sticky-note', code: 'Note right of Node: Text\n' },
+    ]
+};
+
+export const MERMAID_TEMPLATES = [
+    {
+        id: 'flowchart',
+        label: 'Flowchart',
+        icon: 'fa-project-diagram',
+        description: 'Show workflow or process',
+        code: `flowchart TD
+    A[Start] --> B{Is it working?}
+    B -- Yes --> C[Great!]
+    B -- No --> D[Debug]
+    D --> B`
+    },
+    {
+        id: 'sequence',
+        label: 'Sequence Diagram',
+        icon: 'fa-exchange-alt',
+        description: 'Show interactions over time',
+        code: `sequenceDiagram
+    participant Alice
+    participant Bob
+    Alice->>Bob: Hello Bob, how are you?
+    Bob-->>Alice: I am good thanks!
+    Bob->>John: How about you John?
+    John-->>Bob: I am good too!
+    Alice->>John: Hello John!
+    John-->>Alice: Hi Alice!`
+    },
+    {
+        id: 'class',
+        label: 'Class Diagram',
+        icon: 'fa-cubes',
+        description: 'Show class structure',
+        code: `classDiagram
+    Animal <|-- Duck
+    Animal <|-- Fish
+    Animal <|-- Zebra
+    Animal : +int age
+    Animal : +String gender
+    Animal: +isMammal()
+    Animal: +mate()
+    class Duck{
+        +String beakColor
+        +swim()
+        +quack()
+    }
+    class Fish{
+        -int sizeInFeet
+        -canEat()
+    }
+    class Zebra{
+        +bool is_wild
+        +run()
+    }`
+    },
+    {
+        id: 'state',
+        label: 'State Diagram',
+        icon: 'fa-circle-notch',
+        description: 'Show state machine',
+        code: `stateDiagram-v2
+    [*] --> Still
+    Still --> [*]
+    Still --> Moving
+    Moving --> Still
+    Moving --> Crash
+    Crash --> [*]`
+    },
+    {
+        id: 'er',
+        label: 'ER Diagram',
+        icon: 'fa-database',
+        description: 'Show entity relationships',
+        code: `erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    CUSTOMER }|..|{ DELIVERY-ADDRESS : uses`
+    },
+    {
+        id: 'gantt',
+        label: 'Gantt Chart',
+        icon: 'fa-tasks',
+        description: 'Show project schedule',
+        code: `gantt
+    title A Gantt Diagram
+    dateFormat  YYYY-MM-DD
+    section Section
+    A task           :a1, 2014-01-01, 30d
+    Another task     :after a1  , 20d
+    section Another
+    Task in sec      :2014-01-12  , 12d
+    another task      : 24d`
+    },
+    {
+        id: 'pie',
+        label: 'Pie Chart',
+        icon: 'fa-chart-pie',
+        description: 'Show data distribution',
+        code: `pie title Pets adopted by volunteers
+    "Dogs" : 386
+    "Cats" : 85
+    "Rats" : 15`
+    },
+    {
+        id: 'mindmap',
+        label: 'Mind Map',
+        icon: 'fa-brain',
+        description: 'Visualize ideas',
+        code: `mindmap
+  root((mindmap))
+    Origins
+      Long history
+      ::icon(fa fa-book)
+      Popularisation
+        British popular psychology author Tony Buzan
+    Research
+      On effectiveness<br/>and features
+      On Automatic creation
+        Uses
+            Creative techniques
+            Strategic planning
+            Argument mapping`
+    },
+    {
+        id: 'git',
+        label: 'Git Graph',
+        icon: 'fa-code-branch',
+        description: 'Show git history',
+        code: `gitGraph
+    commit
+    commit
+    branch develop
+    checkout develop
+    commit
+    commit
+    checkout main
+    merge develop
+    commit`
+    }
+];
+
+export const BPMN_TEMPLATES = [
+    {
+        id: 'simple-process',
+        label: 'Simple Process',
+        icon: 'fa-project-diagram',
+        description: 'Basic start, task, and end process',
+        code: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_1" name="Perform Action">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="173" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="180" y="145" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1" bpmnElement="Task_1">
+        <dc:Bounds x="260" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1" bpmnElement="EndEvent_1">
+        <dc:Bounds x="420" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="428" y="145" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="209" y="120" />
+        <di:waypoint x="260" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="360" y="120" />
+        <di:waypoint x="420" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`
+    },
+    {
+        id: 'approval',
+        label: 'Approval Flow',
+        icon: 'fa-check-double',
+        description: 'Process with approval gateway',
+        code: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" name="Request Received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_1" name="Review Request">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_1" name="Approve?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_2" name="Process Request">
+      <bpmn:incoming>Flow_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_3" name="Reject Request">
+      <bpmn:incoming>Flow_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Approved" name="Approved">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Rejected" name="Rejected">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="Gateway_1" />
+    <bpmn:sequenceFlow id="Flow_Yes" name="Yes" sourceRef="Gateway_1" targetRef="Task_2" />
+    <bpmn:sequenceFlow id="Flow_No" name="No" sourceRef="Gateway_1" targetRef="Task_3" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_2" targetRef="End_Approved" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_3" targetRef="End_Rejected" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="131" y="145" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1" bpmnElement="Task_1">
+        <dc:Bounds x="240" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1_di" bpmnElement="Gateway_1" isMarkerVisible="true">
+        <dc:Bounds x="395" y="95" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="396" y="71" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_2" bpmnElement="Task_2">
+        <dc:Bounds x="500" y="95" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_3" bpmnElement="Task_3">
+        <dc:Bounds x="500" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_App" bpmnElement="End_Approved">
+        <dc:Bounds x="662" y="117" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="659" y="160" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_Rej" bpmnElement="End_Rejected">
+        <dc:Bounds x="662" y="232" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="660" y="275" width="44" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="240" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="340" y="120" />
+        <di:waypoint x="395" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Y_di" bpmnElement="Flow_Yes">
+        <di:waypoint x="445" y="120" />
+        <di:waypoint x="500" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_di" bpmnElement="Flow_No">
+        <di:waypoint x="420" y="145" />
+        <di:waypoint x="420" y="250" />
+        <di:waypoint x="500" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="600" y="135" />
+        <di:waypoint x="662" y="135" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="600" y="250" />
+        <di:waypoint x="662" y="250" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`
+    }
+];
+
+export const EXCALIDRAW_TEMPLATES = [
+    {
+        id: 'blank',
+        label: 'Blank Canvas',
+        icon: 'fa-square',
+        description: 'Empty Excalidraw canvas',
+        code: `{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "https://excalidraw.com",\n  "elements": [],\n  "appState": {\n    "viewBackgroundColor": "#ffffff",\n    "gridSize": null\n  },\n  "files": {}\n}`
+    },
+    {
+        id: 'flowchart',
+        label: 'Simple Flow',
+        icon: 'fa-project-diagram',
+        description: 'Basic boxes and arrows',
+        code: `{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "https://excalidraw.com",\n  "elements": [\n    {\n      "id": "node1",\n      "type": "rectangle",\n      "x": 100,\n      "y": 100,\n      "width": 100,\n      "height": 50,\n      "strokeColor": "#000000",\n      "backgroundColor": "transparent",\n      "fillStyle": "hachure",\n      "strokeWidth": 1,\n      "strokeStyle": "solid",\n      "roughness": 1,\n      "opacity": 100,\n      "groupIds": [],\n      "roundness": null,\n      "seed": 1,\n      "version": 1,\n      "versionNonce": 0,\n      "isDeleted": false,\n      "boundElements": null,\n      "updated": 1,\n      "link": null,\n      "locked": false,\n      "customData": null\n    },\n    {\n      "id": "node2",\n      "type": "rectangle",\n      "x": 300,\n      "y": 100,\n      "width": 100,\n      "height": 50,\n      "strokeColor": "#000000",\n      "backgroundColor": "transparent",\n      "fillStyle": "hachure",\n      "strokeWidth": 1,\n      "strokeStyle": "solid",\n      "roughness": 1,\n      "opacity": 100,\n      "groupIds": [],\n      "roundness": null,\n      "seed": 2,\n      "version": 1,\n      "versionNonce": 0,\n      "isDeleted": false,\n      "boundElements": null,\n      "updated": 1,\n      "link": null,\n      "locked": false,\n      "customData": null\n    },\n    {\n      "id": "arrow1",\n      "type": "arrow",\n      "x": 200,\n      "y": 125,\n      "width": 100,\n      "height": 0,\n      "angle": 0,\n      "strokeColor": "#000000",\n      "backgroundColor": "transparent",\n      "fillStyle": "hachure",\n      "strokeWidth": 1,\n      "strokeStyle": "solid",\n      "roughness": 1,\n      "opacity": 100,\n      "groupIds": [],\n      "roundness": null,\n      "seed": 3,\n      "version": 1,\n      "versionNonce": 0,\n      "isDeleted": false,\n      "boundElements": null,\n      "updated": 1,\n      "link": null,\n      "locked": false,\n      "customData": null,\n      "points": [[0, 0], [100, 0]]\n    }\n  ],\n  "appState": {\n    "viewBackgroundColor": "#ffffff",\n    "gridSize": null\n  },\n  "files": {}\n}`
+    }
+];
+
+
+
+export const VEGALITE_TEMPLATES = [
+    {
+        id: 'bar',
+        label: 'Bar Chart',
+        icon: 'fa-chart-bar',
+        description: 'Simple bar chart',
+        code: `{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {
+    "values": [
+      {"category": "A", "value": 28},
+      {"category": "B", "value": 55},
+      {"category": "C", "value": 43},
+      {"category": "D", "value": 91},
+      {"category": "E", "value": 81},
+      {"category": "F", "value": 53},
+      {"category": "G", "value": 19},
+      {"category": "H", "value": 87}
+    ]
+  },
+  "mark": "bar",
+  "encoding": {
+    "x": {"field": "category", "type": "nominal", "axis": {"labelAngle": 0}},
+    "y": {"field": "value", "type": "quantitative"}
+  }
+}`
+    },
+    {
+        id: 'line',
+        label: 'Line Chart',
+        icon: 'fa-chart-line',
+        description: 'Time series line chart',
+        code: `{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {
+    "values": [
+      {"date": "2023-01-01", "value": 10},
+      {"date": "2023-01-02", "value": 15},
+      {"date": "2023-01-03", "value": 12},
+      {"date": "2023-01-04", "value": 20},
+      {"date": "2023-01-05", "value": 25},
+      {"date": "2023-01-06", "value": 22},
+      {"date": "2023-01-07", "value": 30}
+    ]
+  },
+  "mark": "line",
+  "encoding": {
+    "x": {"field": "date", "type": "temporal"},
+    "y": {"field": "value", "type": "quantitative"}
+  }
+}`
+    },
+    {
+        id: 'scatter',
+        label: 'Scatter Plot',
+        icon: 'fa-braille',
+        description: 'Correlation scatter plot',
+        code: `{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {
+    "url": "https://vega.github.io/editor/data/cars.json"
+  },
+  "mark": "point",
+  "encoding": {
+    "x": {"field": "Horsepower", "type": "quantitative"},
+    "y": {"field": "Miles_per_Gallon", "type": "quantitative"},
+    "color": {"field": "Origin", "type": "nominal"}
+  }
+}`
+    },
+    {
+        id: 'area',
+        label: 'Area Chart',
+        icon: 'fa-chart-area',
+        description: 'Stacked area chart',
+        code: `{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {
+    "url": "https://vega.github.io/editor/data/unemployment-across-industries.json"
+  },
+  "mark": "area",
+  "encoding": {
+    "x": {
+      "timeUnit": "yearmonth", "field": "date",
+      "axis": {"format": "%Y"}
+    },
+    "y": {
+      "aggregate": "sum", "field": "count"
+    },
+    "color": {
+      "field": "series",
+      "scale": {"scheme": "category20b"}
+    }
+  }
+}`
+    }
+];
+
+export const LIKEC4_TEMPLATES = [
+    {
+        id: 'basic',
+        label: 'Basic Model',
+        icon: 'fa-layer-group',
+        description: 'Simple C4 model with User and System',
+        code: `specification {
+  element user {
+    style {
+      shape person
+    }
+  }
+  element component
+}
+
+model {
+  customer = user 'Customer'
+  
+  app = component 'Web App' {
+    description 'A great web application'
+  }
+  
+  customer -> app 'uses'
+}
+
+views {
+  view index of app {
+    include *
+    autoLayout lr
+  }
+}`
+    },
+    {
+        id: 'ecommerce',
+        label: 'E-Commerce',
+        icon: 'fa-shopping-cart',
+        description: 'E-Commerce system architecture',
+        code: `specification {
+  element user
+  element system
+  element container
+  element component
+  element database
+}
+
+model {
+  customer = user 'Customer'
+  
+  system ecommerce = system 'E-Commerce System' {
+    web = container 'Web Application'
+    api = container 'API Service'
+    db = database 'Database'
+  }
+  
+  customer -> web 'visits'
+  web -> api 'requests'
+  api -> db 'queries'
+}
+
+views {
+  view ecommerce_context of ecommerce {
+    include *
+    autoLayout tb
+  }
+}`
+    }
+];
+
+export const VEGA_TEMPLATES = [
+    {
+        id: 'bar-vega',
+        label: 'Bar Chart (Vega)',
+        icon: 'fa-chart-bar',
+        description: 'Standard bar chart in Vega',
+        code: `{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "width": 400,
+  "height": 200,
+  "padding": 5,
+
+  "data": [
+    {
+      "name": "table",
+      "values": [
+        {"category": "A", "amount": 28},
+        {"category": "B", "amount": 55},
+        {"category": "C", "amount": 43},
+        {"category": "D", "amount": 91},
+        {"category": "E", "amount": 81},
+        {"category": "F", "amount": 53},
+        {"category": "G", "amount": 19},
+        {"category": "H", "amount": 87}
+      ]
+    }
+  ],
+
+  "signals": [
+    {
+      "name": "tooltip",
+      "value": {},
+      "on": [
+        {"events": "rect:mouseover", "update": "datum"},
+        {"events": "rect:mouseout",  "update": "{}"}
+      ]
+    }
+  ],
+
+  "scales": [
+    {
+      "name": "xscale",
+      "type": "band",
+      "domain": {"data": "table", "field": "category"},
+      "range": "width",
+      "padding": 0.05,
+      "round": true
+    },
+    {
+      "name": "yscale",
+      "domain": {"data": "table", "field": "amount"},
+      "nice": true,
+      "range": "height"
+    }
+  ],
+
+  "axes": [
+    { "orient": "bottom", "scale": "xscale" },
+    { "orient": "left", "scale": "yscale" }
+  ],
+
+  "marks": [
+    {
+      "type": "rect",
+      "from": {"data":"table"},
+      "encode": {
+        "enter": {
+          "x": {"scale": "xscale", "field": "category"},
+          "width": {"scale": "xscale", "band": 1},
+          "y": {"scale": "yscale", "field": "amount"},
+          "y2": {"scale": "yscale", "value": 0}
+        },
+        "update": {
+          "fill": {"value": "steelblue"}
+        },
+        "hover": {
+          "fill": {"value": "red"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "encode": {
+        "enter": {
+          "align": {"value": "center"},
+          "baseline": {"value": "bottom"},
+          "fill": {"value": "#333"}
+        },
+        "update": {
+          "x": {"scale": "xscale", "signal": "tooltip.category", "band": 0.5},
+          "y": {"scale": "yscale", "signal": "tooltip.amount", "offset": -2},
+          "text": {"signal": "tooltip.amount"},
+          "fillOpacity": [
+            {"test": "datum === tooltip", "value": 0},
+            {"value": 1}
+          ]
+        }
+      }
+    }
+  ]
+}`
+    }
+];
+
+export const C4PLANTUML_TEMPLATES = [
+    {
+        id: 'c4context',
+        label: 'System Context',
+        icon: 'fa-sitemap',
+        description: 'C4 System Context Diagram',
+        code: `@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+Person(personAlias, "Label", "Optional Description")
+System(systemAlias, "Label", "Optional Description")
+
+Rel(personAlias, systemAlias, "Label", "Optional Technology")
+@enduml`
+    },
+    {
+        id: 'c4container',
+        label: 'Container Diagram',
+        icon: 'fa-layer-group',
+        description: 'C4 Container Diagram',
+        code: `@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(personAlias, "Label", "Optional Description")
+System_Boundary(c1, "Label") {
+    Container(containerAlias, "Label", "Technology", "Optional Description")
+}
+
+Rel(personAlias, containerAlias, "Label", "Optional Technology")
+@enduml`
+    },
+    {
+        id: 'c4component',
+        label: 'Component Diagram',
+        icon: 'fa-cubes',
+        description: 'C4 Component Diagram',
+        code: `@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Container(containerAlias, "Label", "Technology", "Optional Description")
+Container_Boundary(c1, "Label") {
+    Component(componentAlias, "Label", "Technology", "Optional Description")
+}
+
+Rel(containerAlias, componentAlias, "Label", "Optional Technology")
+@enduml`
+    }
+];
+
+export const GRAPHVIZ_TEMPLATES = [
+    {
+        id: 'simple',
+        label: 'Simple Directed',
+        icon: 'fa-project-diagram',
+        description: 'Basic directed graph',
+        code: `digraph G {
+    A -> B;
+    B -> C;
+    C -> A;
+}`
+    },
+    {
+        id: 'clustered',
+        label: 'Clustered',
+        icon: 'fa-object-group',
+        description: 'Graph with subgraphs/clusters',
+        code: `digraph G {
+    subgraph cluster_0 {
+        style=filled;
+        color=lightgrey;
+        node [style=filled,color=white];
+        a0 -> a1 -> a2 -> a3;
+        label = "process #1";
+    }
+
+    subgraph cluster_1 {
+        node [style=filled];
+        b0 -> b1 -> b2 -> b3;
+        label = "process #2";
+        color=blue
+    }
+    start -> a0;
+    start -> b0;
+    a1 -> b3;
+    b2 -> a3;
+    a3 -> a0;
+    a3 -> end;
+    b3 -> end;
+
+    start [shape=Mdiamond];
+    end [shape=Msquare];
+}`
     }
 ];

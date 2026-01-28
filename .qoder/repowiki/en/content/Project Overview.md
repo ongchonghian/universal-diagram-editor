@@ -104,7 +104,6 @@ Root --> Fixes
 - Mermaid visual editor: routes to specialized editors based on AST type and renders previews via Kroki.
 - BPMN visual editor: integrates bpmn-js for visual BPMN editing with XML sync.
 - Error diagnostics: parses raw errors, extracts structured information, categorizes error codes, and generates Monaco markers and quick fixes.
-- Library Update Management System: automated dependency version tracking, iframe-based safe testing, and one-click updates for CDN libraries.
 - UI components: reusable buttons, badges, loaders, empty states, and inline editable fields.
 - Utilities: encoding for Kroki URLs, type detection from filenames and code content, script/CSS loaders, and debouncing.
 
@@ -133,7 +132,6 @@ participant Monaco as "Monaco Editor"
 participant MermaidAST as "Mermaid AST"
 participant MermaidEditor as "Mermaid Visual Editor"
 participant Kroki as "Kroki Service"
-participant UpdateMgr as "Update Manager"
 User->>UI : Select diagram type
 UI->>Monaco : Initialize editor with language
 Monaco-->>UI : Content changes
@@ -144,8 +142,6 @@ MermaidEditor->>Kroki : Request SVG preview
 Kroki-->>MermaidEditor : SVG blob
 MermaidEditor-->>UI : Preview URL
 UI-->>User : Live visual feedback
-User->>UpdateMgr : Check for updates
-UpdateMgr-->>User : Available library updates
 ```
 
 **Diagram sources**

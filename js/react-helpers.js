@@ -3,14 +3,15 @@
 
 import htm from 'https://esm.sh/htm@3.1.1';
 
-// Get React from global (loaded via CDN)
-const React = window.React;
+// Get React from import map (ESM)
+import React from 'react';
 const { 
     useState, 
     useEffect, 
     useRef, 
     useCallback, 
     useMemo,
+    memo,
     forwardRef, 
     useImperativeHandle, 
     useLayoutEffect,
@@ -30,6 +31,7 @@ export {
     useRef, 
     useCallback,
     useMemo,
+    memo,
     forwardRef, 
     useImperativeHandle, 
     useLayoutEffect,

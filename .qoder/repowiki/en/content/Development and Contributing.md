@@ -2,6 +2,7 @@
 
 <cite>
 **Referenced Files in This Document**
+- [RULES.md](file://RULES.md)
 - [index.html](file://index.html)
 - [js/config.js](file://js/config.js)
 - [js/utils.js](file://js/utils.js)
@@ -13,26 +14,86 @@
 - [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
 - [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
 - [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Added comprehensive Project Rules section based on RULES.md
+- Enhanced development workflow documentation with Repowiki maintenance requirements
+- Updated contribution guidelines with mandatory documentation review process
+- Added new section on maintaining Repowiki documentation alongside code changes
+- Integrated Repowiki structure guidance for documentation organization
+
 ## Table of Contents
 1. [Introduction](#introduction)
-2. [Project Structure](#project-structure)
-3. [Core Components](#core-components)
-4. [Architecture Overview](#architecture-overview)
-5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+2. [Project Rules and Guidelines](#project-rules-and-guidelines)
+3. [Project Structure](#project-structure)
+4. [Core Components](#core-components)
+5. [Architecture Overview](#architecture-overview)
+6. [Detailed Component Analysis](#detailed-component-analysis)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
+11. [Appendices](#appendices)
 
 ## Introduction
 This document provides comprehensive guidance for setting up a local development environment, contributing to the project, and extending its capabilities. It covers build processes, testing strategies, debugging approaches, and quality assurance procedures. It also explains the extension development process for adding new diagram types, integrating custom editors, leveraging the plugin architecture, and following community contribution workflows. Practical examples demonstrate common development tasks and contribution scenarios.
+
+**Updated** Enhanced with formal Project Rules and Repowiki maintenance requirements for all contributors.
+
+## Project Rules and Guidelines
+
+### Project Rules Overview
+The project enforces strict guidelines for all contributors working on this workspace. These rules ensure consistency, maintainability, and knowledge preservation across the codebase.
+
+### Rule Categories
+
+#### 1. Consulting Repowiki
+**Before starting any implementation plan or executing tasks**, you MUST consult the documentation in `.qoder/repowiki/en`. This requirement ensures that contributors have access to the most current architectural guidance and implementation patterns.
+
+**Key Requirements:**
+- Path: `.qoder/repowiki/en/content`
+- Purpose: Contains the source of truth for project architecture, patterns, and guides
+- Action: Read relevant files in this directory to understand the existing system before proposing changes
+
+#### 2. Maintaining Repowiki
+**When making key changes to the application**, you MUST update the Repowiki to reflect these changes. This maintains documentation currency and prevents knowledge drift.
+
+**Key Changes That Require Documentation Updates:**
+- New architectural patterns or components
+- New utilities or shared libraries
+- Changes to build/deployment workflows
+- Major refactors
+
+**Action Requirements:**
+- Update existing markdown files in `.qoder/repowiki/en/content`
+- Create new files if introducing new domains
+- Ensure documentation remains accurate and helpful for future contributors
+
+#### 3. Repowiki Structure
+The documentation system follows a structured organization:
+
+**Directory Structure:**
+- `content/`: Markdown files documenting the project
+- `meta/`: Metadata for the wiki system
+
+**Section sources**
+- [RULES.md](file://RULES.md#L1-L24)
+
+### Compliance Workflow
+Contributors must follow this workflow for all development activities:
+
+1. **Research Phase**: Consult Repowiki for existing patterns and architecture
+2. **Design Phase**: Document proposed changes in Repowiki before implementation
+3. **Implementation Phase**: Execute changes while maintaining documentation parity
+4. **Review Phase**: Ensure documentation reflects all code changes
+
+**Section sources**
+- [RULES.md](file://RULES.md#L6-L24)
 
 ## Project Structure
 The project is a browser-based diagramming application that integrates multiple diagramming engines and editors. It is organized into modular JavaScript packages under js/ with HTML and CSS assets at the repository root. Key areas include:
@@ -43,7 +104,6 @@ The project is a browser-based diagramming application that integrates multiple 
 - Editor components for BPMN and Mermaid
 - Error diagnostics and explanations for syntax errors
 - PlantUML-specific UI components for toolbars and templates
-- **NEW**: Library update manager and version registry
 
 ```mermaid
 graph TB
@@ -57,7 +117,6 @@ A --> H["js/editors/mermaid/index.js<br/>Mermaid router and preview"]
 H --> I["js/editors/mermaid/MermaidSyncController.js<br/>AST sync controller"]
 H --> J["js/editors/mermaid/MermaidGenericEditor.js<br/>Generic editor"]
 H --> K["js/editors/mermaid/MermaidFlowchartEditor.js<br/>Flowchart editor"]
-H --> L["js/editors/mermaid/MermaidSequenceEditor.js<br/>Sequence editor"]
 A --> M["js/error-diagnostics/index.js<br/>Error parsing and markers"]
 M --> N["js/error-diagnostics/explanations.js<br/>Human-readable explanations"]
 M --> O["js/error-diagnostics/fixes.js<br/>Quick fixes and suggestions"]
@@ -75,7 +134,6 @@ M --> O["js/error-diagnostics/fixes.js<br/>Quick fixes and suggestions"]
 - [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
 - [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
 - [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
@@ -200,17 +258,6 @@ DIAG_IDX --> DIAG_FIX
 - [index.html](file://index.html#L1-L120)
 - [js/react-helpers.js](file://js/react-helpers.js#L1-L39)
 
-### Library Update Management
-The application includes a built-in system for managing CDN library dependencies.
-- **Checking for Updates**: Open the "Updates" panel (if enabled) or run `updateManager.checkForUpdates()` in the console.
-- **Testing Updates**: The system automatically runs iframe-based tests for selected updates to ensure compatibility.
-- **Applying Updates**: Validated updates are applied by rewriting `index.html` with new CDN URLs.
-- **Ignoring Updates**: You can ignore specific versions if they introduce breaking changes.
-
-**Reference**:
-- [js/update-manager.js](file://js/update-manager.js)
-- [js/library-registry.js](file://js/library-registry.js)
-
 ### Extension Development: Adding a New Diagram Type
 Follow these steps to add support for a new diagram format:
 1. Define the diagram type
@@ -219,7 +266,7 @@ Follow these steps to add support for a new diagram format:
    - Register a new language provider and monarch tokenizer if the format requires syntax highlighting
 3. Implement editor integration
    - Create a new editor component under js/editors/ with a route in the Mermaid router or a dedicated router for the new format
-   - Implement preview generation via Kroki or the target engine’s API
+   - Implement preview generation via Kroki or the target engine's API
 4. Add error diagnostics
    - Extend error parsing and explanations to recognize and explain common errors for the new format
 5. Update configuration and templates
@@ -317,7 +364,27 @@ Hover --> End
   - Enforce consistent formatting and linting rules
   - Keep components modular and testable
 
-[No sources needed since this section provides general guidance]
+### Repowiki Maintenance Workflow
+**Updated** All key changes require concurrent documentation updates in the Repowiki system.
+
+#### Pre-Implementation Requirements
+1. **Consult Repowiki**: Review existing documentation for similar patterns
+2. **Document Proposed Changes**: Create or update wiki pages describing the implementation approach
+3. **Get Approval**: Ensure architectural alignment with existing patterns
+
+#### Post-Implementation Requirements
+1. **Update Documentation**: Reflect all code changes in `.qoder/repowiki/en/content`
+2. **Verify Accuracy**: Ensure documentation matches implementation details
+3. **Maintain Structure**: Organize content according to Repowiki structure guidelines
+
+#### Documentation Categories
+- **Architecture Patterns**: New component designs and integration approaches
+- **Configuration Changes**: Updates to diagram types, editor settings, or system parameters
+- **Workflow Updates**: Changes to build processes, deployment procedures, or development workflows
+- **Utility Documentation**: New helper functions, shared libraries, or tooling enhancements
+
+**Section sources**
+- [RULES.md](file://RULES.md#L12-L24)
 
 ## Dependency Analysis
 The application relies on external libraries loaded via CDN and internal modules that collaborate through configuration and shared utilities.
@@ -400,7 +467,7 @@ Practical example paths:
 ## Conclusion
 This guide outlined how to set up a development environment, extend the application with new diagram types, integrate custom editors, and maintain code quality. By leveraging the modular architecture, configuration-driven routing, and robust error diagnostics, contributors can efficiently add features and improve the developer experience.
 
-[No sources needed since this section summarizes without analyzing specific files]
+**Updated** All contributions must now include concurrent Repowiki documentation updates to ensure knowledge preservation and maintain project standards.
 
 ## Appendices
 
@@ -415,4 +482,14 @@ This guide outlined how to set up a development environment, extend the applicat
   - Use Monaco markers, hover explanations, and quick fixes to diagnose and resolve errors
   - Reference: [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L276), [index.html](file://index.html#L474-L509)
 
-[No sources needed since this section provides general guidance]
+### Repowiki Maintenance Checklist
+**Updated** Essential steps for maintaining documentation quality:
+
+- **Before Implementation**: Review related wiki pages for existing patterns
+- **During Implementation**: Document architectural decisions and design choices
+- **After Implementation**: Update all affected documentation sections
+- **Quality Assurance**: Verify documentation accuracy and completeness
+- **Structure Compliance**: Ensure proper organization within Repowiki structure
+
+**Section sources**
+- [RULES.md](file://RULES.md#L12-L24)

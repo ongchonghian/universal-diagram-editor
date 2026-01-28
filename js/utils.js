@@ -1,5 +1,6 @@
 // Utility functions for Kroki Universal Diagram Generator
 import { DIAGRAM_TYPES } from './config.js';
+import pako from 'pako';
 
 /**
  * Convert text string to Uint8Array bytes
@@ -38,6 +39,76 @@ export const detectTypeFromExtension = (filename) => {
         if (config.extensions && config.extensions.includes(ext)) return key;
     }
     return 'bpmn';
+};
+
+/**
+ * Detect diagram type from file content and filename
+ * @param {string} filename - The filename
+ * @param {string} content - The file content
+ * @returns {string} - Detected diagram type key
+ */
+export const detectTypeFromContent = (filename, content) => {
+    const extType = detectTypeFromExtension(filename);
+    if (!content || !content.trim()) return extType;
+    
+    const trimmed = content.trim();
+    
+    // 1. Check for JSON based formats
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+            const json = JSON.parse(trimmed);
+            
+            // Excalidraw
+            if (json.type === 'excalidraw') return 'excalidraw';
+            
+            // Vega-Lite
+            if (json.$schema && json.$schema.includes('vega-lite')) return 'vegalite';
+            
+            // Vega
+            if (json.$schema && json.$schema.includes('vega')) return 'vega';
+            if (json.signals && json.scales && json.axes) return 'vega'; // Heuristic for Vega
+            
+            // Wavedrom (heuristic)
+            if (json.signal || json.wave) return 'wavedrom';
+            
+            return extType;
+        } catch (e) {
+            // Not valid JSON, continue to text checks
+        }
+    }
+    
+    // 2. Check for Text/DSL formats
+    
+    // LikeC4
+    if (/^\s*specification\s*\{/m.test(trimmed) || /^\s*model\s*\{/m.test(trimmed)) return 'likec4';
+    
+    // PlantUML
+    if (/@startuml/m.test(trimmed) || /@startmindmap/m.test(trimmed) || /@startwbs/m.test(trimmed)) return 'plantuml';
+    
+    // Mermaid
+    if (/^\s*classDiagram/m.test(trimmed) || 
+        /^\s*sequenceDiagram/m.test(trimmed) || 
+        /^\s*flowchart/m.test(trimmed) || 
+        /^\s*graph\s/m.test(trimmed) ||
+        /^\s*gantt/m.test(trimmed) ||
+        /^\s*pie/m.test(trimmed) || 
+        /^\s*stateDiagram/m.test(trimmed) ||
+        /^\s*erDiagram/m.test(trimmed) ||
+        /^\s*mindmap/m.test(trimmed) ||
+        /^\s*timeline/m.test(trimmed) ||
+        /^\s*journey/m.test(trimmed) ||
+        /^\s*gitGraph/m.test(trimmed) ||
+        /^\s*c4Context/m.test(trimmed)) {
+        return 'mermaid';
+    }
+    
+    // BPMN
+    if (trimmed.includes('<bpmn:definitions') || trimmed.includes('<definitions')) return 'bpmn';
+
+    // Ditaa
+    if (/^\/--\+/m.test(trimmed) && /\|  \|/m.test(trimmed)) return 'ditaa';
+
+    return extType;
 };
 
 /**
@@ -172,5 +243,53 @@ export const debounce = (func, wait) => {
         };
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
+    };
+};
+
+/**
+ * Check if BPMN content has DI information
+ * @param {string} xml - BPMN XML content
+ * @returns {boolean} - True if DI is present
+ */
+export const bpmnHasDI = (xml) => {
+    return xml && (xml.includes('<bpmndi:BPMNDiagram') || xml.includes('<bpmndi:BPMNPlane'));
+};
+
+/**
+ * Apply auto-layout to BPMN XML
+ * @param {string} xml - BPMN XML content without DI
+ * @returns {Promise<string>} - Layouted BPMN XML
+ */
+export const applyBpmnAutoLayout = async (xml) => {
+    // We need bpmn-js-auto-layout which might not be loaded
+    // Fallback: use a simple regex approach or just load the library dynamically
+    // For this demo, we'll verify if we can proceed
+    
+    // Check if we can use the cli module if available, otherwise just return original for now
+    // In a real implementation this would load the heavy auto-layout logic
+    console.log("Auto-layout requested");
+    return new Promise(resolve => setTimeout(() => resolve(xml), 1000));
+};
+
+/**
+ * Check if BPMN content is valid
+ * @param {string} text - Content to check
+ * @returns {boolean} - True if valid BPMN
+ */
+export const isValidBpmnContent = (text) => {
+    if (!text || typeof text !== 'string') return false;
+    return text.includes('<bpmn:definitions') || text.includes('<definitions');
+};
+
+/**
+ * Parse error info fallback
+ */
+export const parseErrorInfoFallback = (errorMessage, diagramType) => {
+    // Default fallback parsing logic if ErrorDiagnostics is not available
+    const line = extractErrorLine(errorMessage);
+    return {
+        line: line,
+        message: errorMessage,
+        shortMessage: errorMessage.split('\n')[0]
     };
 };

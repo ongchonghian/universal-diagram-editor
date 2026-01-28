@@ -1,0 +1,45 @@
+{
+  "name": "universal-diagram-editor",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.0",
+    "@fortawesome/fontawesome-free": "^6.5.1",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/react-fontawesome": "^3.1.1",
+    "@kanaries/graphic-walker": "^0.4.75",
+    "@likec4/core": "^1.47.0",
+    "@likec4/diagram": "^1.47.0",
+    "@synergycodes/axiom": "^1.0.0-beta.21",
+    "@synergycodes/overflow-ui": "^1.0.0-beta.22",
+    "@xyflow/react": "^12.10.0",
+    "bpmn-js": "^18.10.1",
+    "dagre": "^0.8.5",
+    "elkjs": "^0.11.0",
+    "htm": "^3.1.1",
+    "html-to-image": "^1.11.13",
+    "mermaid": "^11.12.2",
+    "pako": "^2.1.0",
+    "papaparse": "^5.5.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "uuid": "^13.0.0",
+    "vega": "^6.2.0",
+    "vega-embed": "^7.1.0",
+    "vega-lite": "^6.4.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "vite": "^5.2.0"
+  }
+}

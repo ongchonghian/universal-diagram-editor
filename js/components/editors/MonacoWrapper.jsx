@@ -2,15 +2,15 @@
 // Integrates Monaco Editor with custom language support for PlantUML and Mermaid
 // Enhanced with error diagnostics, quick fixes, and hover explanations
 
-import { html, useState, useEffect, useRef, forwardRef, useImperativeHandle } from '../react-helpers.js';
-import { getErrorExplanation, formatForHover } from '../error-diagnostics/explanations.js';
-import { getFixSuggestions } from '../error-diagnostics/fixes.js';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { getErrorExplanation, formatForHover } from '../../error-diagnostics/explanations.js';
+import { getFixSuggestions } from '../../error-diagnostics/fixes.js';
 
 /**
  * Monaco Editor wrapper with syntax highlighting for diagram languages
  * Uses forwardRef to expose editor methods to parent components
  */
-export const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, theme = "vs-light", height = "100%" }, ref) => {
+const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, theme = "vs-light", height = "100%" }, ref) => {
     const containerRef = useRef(null);
     const editorRef = useRef(null);
     const decorationsRef = useRef([]);
@@ -93,6 +93,12 @@ export const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorCh
         let editor;
         
         // Configure Monaco AMD loader
+        // Note: In Vite, we might need a different loader or use valid CDN paths
+        if (!window.require) {
+             console.warn("Monaco loader (window.require) not found. Ensure loader.js is loaded.");
+             return;
+        }
+
         window.require.config({ 
             paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }
         });
@@ -105,6 +111,9 @@ export const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorCh
             
             // Register Mermaid language
             registerMermaidLanguage();
+            
+            // Register LikeC4 language
+            registerLikeC4Language();
             
             // Register error providers (code actions, hover)
             registerErrorProviders();
@@ -165,14 +174,14 @@ export const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorCh
         }
     }, [language]);
 
-    return html`<div ref=${containerRef} className="monaco-editor-container" style=${{ height }} />`;
+    return <div ref={containerRef} className="monaco-editor-container" style={{ height }} />;
 });
 
 /**
  * Register PlantUML language with Monaco
  */
 function registerPlantUMLLanguage() {
-    if (window.monaco.languages.getLanguages().some(lang => lang.id === 'plantuml')) return;
+    if (!window.monaco || window.monaco.languages.getLanguages().some(lang => lang.id === 'plantuml')) return;
     
     window.monaco.languages.register({ id: 'plantuml' });
     window.monaco.languages.setMonarchTokensProvider('plantuml', {
@@ -245,7 +254,7 @@ function registerPlantUMLLanguage() {
  * Register Mermaid language with Monaco
  */
 function registerMermaidLanguage() {
-    if (window.monaco.languages.getLanguages().some(lang => lang.id === 'mermaid')) return;
+    if (!window.monaco || window.monaco.languages.getLanguages().some(lang => lang.id === 'mermaid')) return;
     
     window.monaco.languages.register({ id: 'mermaid' });
     window.monaco.languages.setMonarchTokensProvider('mermaid', {
@@ -303,15 +312,225 @@ function registerMermaidLanguage() {
 }
 
 /**
+ * Register Structurizr DSL language with Monaco
+ */
+function registerStructurizrLanguage() {
+    if (!window.monaco || window.monaco.languages.getLanguages().some(lang => lang.id === 'structurizr')) return;
+    
+    window.monaco.languages.register({ id: 'structurizr' });
+    window.monaco.languages.setMonarchTokensProvider('structurizr', {
+        defaultToken: '',
+        tokenPostfix: '.structurizr',
+        
+        keywords: [
+            'workspace', 'model', 'views', 'configuration',
+            'person', 'softwareSystem', 'container', 'component', 'deploymentNode', 'infrastructureNode',
+            'group', 'enterprise', 'element',
+            'systemContext', 'containerView', 'componentView', 'dynamicView', 'deploymentView', 'filteredView',
+            'styles', 'themes', 'branding', 'terminology',
+            'include', 'exclude', 'autoLayout', 'default', 'description', 'animation',
+            'properties', 'perspectives', 'documentation', 'adrs', 'decisions',
+            'element', 'relationship', 'tags', 'technology', 'url', 'shape', 'icon',
+            'background', 'color', 'stroke', 'strokeWidth', 'fontSize', 'border', 'opacity', 'metadata',
+            'thickness', 'dashed', 'routing', 'position',
+            'tb', 'bt', 'lr', 'rl', 'dagre', 'graphviz'
+        ],
+        
+        typeKeywords: [
+            'Person', 'Robot', 'Box', 'RoundedBox', 'Circle', 'Ellipse', 'Hexagon', 'Cylinder', 
+            'Pipe', 'Folder', 'WebBrowser', 'MobileDevicePortrait', 'MobileDeviceLandscape', 'Component'
+        ],
+        
+        tokenizer: {
+            root: [
+                // Comments
+                [/\/\/.*$/, 'comment'],
+                [/#.*$/, 'comment'],
+                [/\/\*/, 'comment', '@multiLineComment'],
+                
+                // Strings
+                [/"([^"\\]|\\.)*$/, 'string.invalid'],
+                [/"/, 'string', '@string'],
+                
+                // Relationship operator
+                [/->/, 'operator.arrow'],
+                
+                // Assignment operator
+                [/=/, 'operator'],
+                
+                // Blocks
+                [/\{/, 'delimiter.bracket'],
+                [/\}/, 'delimiter.bracket'],
+                
+                // Include directive
+                [/!include\b/, 'keyword.directive'],
+                [/!docs\b/, 'keyword.directive'],
+                [/!adrs\b/, 'keyword.directive'],
+                [/!constant\b/, 'keyword.directive'],
+                
+                // Colors
+                [/#[0-9A-Fa-f]{6}\b/, 'constant.color'],
+                [/#[0-9A-Fa-f]{3}\b/, 'constant.color'],
+                
+                // Numbers
+                [/\d+/, 'number'],
+                
+                // Keywords
+                [/\b(workspace|model|views|configuration)\b/, 'keyword.section'],
+                [/\b(person|softwareSystem|container|component|deploymentNode|infrastructureNode|group|enterprise)\b/, 'keyword.element'],
+                [/\b(systemContext|containerView|componentView|dynamicView|deploymentView|filteredView)\b/, 'keyword.view'],
+                [/\b(styles|themes|branding|terminology)\b/, 'keyword.style'],
+                [/\b(include|exclude|autoLayout|default|description|animation|properties|perspectives)\b/, 'keyword'],
+                [/\b(tags|technology|url|shape|icon|background|color|stroke|fontSize|border|opacity)\b/, 'keyword.property'],
+                [/\b(tb|bt|lr|rl|dagre|graphviz)\b/, 'keyword.direction'],
+                
+                // Shape keywords
+                [/\b(Person|Robot|Box|RoundedBox|Circle|Ellipse|Hexagon|Cylinder|Pipe|Folder|WebBrowser|MobileDevicePortrait|MobileDeviceLandscape|Component)\b/, 'type'],
+                
+                // Identifiers
+                [/[a-zA-Z_][a-zA-Z0-9_]*/, 'identifier'],
+                
+                // Whitespace
+                [/\s+/, 'white'],
+            ],
+            string: [
+                [/[^\\"]+/, 'string'],
+                [/\\./, 'string.escape'],
+                [/"/, 'string', '@pop']
+            ],
+            multiLineComment: [
+                [/[^/*]+/, 'comment'],
+                [/\*\//, 'comment', '@pop'],
+                [/[/*]/, 'comment']
+            ]
+        }
+    });
+    
+    window.monaco.languages.setLanguageConfiguration('structurizr', {
+        comments: { 
+            lineComment: '//',
+            blockComment: ['/*', '*/']
+        },
+        brackets: [['{', '}']],
+        autoClosingPairs: [
+            { open: '{', close: '}' },
+            { open: '"', close: '"' }
+        ],
+        surroundingPairs: [
+            { open: '{', close: '}' },
+            { open: '"', close: '"' }
+        ],
+        indentationRules: {
+            increaseIndentPattern: /\{[^}]*$/,
+            decreaseIndentPattern: /^\s*\}/
+        }
+    });
+    
+    // Register completion provider for Structurizr DSL
+    window.monaco.languages.registerCompletionItemProvider('structurizr', {
+        provideCompletionItems: (model, position) => {
+            const word = model.getWordUntilPosition(position);
+            const range = {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: word.startColumn,
+                endColumn: word.endColumn
+            };
+            
+            const suggestions = [
+                // Elements
+                {
+                    label: 'person',
+                    kind: window.monaco.languages.CompletionItemKind.Keyword,
+                    insertText: '${1:identifier} = person "${2:Name}" "${3:Description}"',
+                    insertTextRules: window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    documentation: 'Define a person (user/actor)',
+                    range
+                },
+                {
+                    label: 'softwareSystem',
+                    kind: window.monaco.languages.CompletionItemKind.Keyword,
+                    insertText: '${1:identifier} = softwareSystem "${2:Name}" "${3:Description}" {\n\t$0\n}',
+                    insertTextRules: window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    documentation: 'Define a software system',
+                    range
+                },
+                {
+                    label: 'container',
+                    kind: window.monaco.languages.CompletionItemKind.Keyword,
+                    insertText: '${1:identifier} = container "${2:Name}" "${3:Description}" "${4:Technology}"',
+                    insertTextRules: window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    documentation: 'Define a container within a software system',
+                    range
+                },
+                {
+                    label: 'component',
+                    kind: window.monaco.languages.CompletionItemKind.Keyword,
+                    insertText: '${1:identifier} = component "${2:Name}" "${3:Description}" "${4:Technology}"',
+                    insertTextRules: window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    documentation: 'Define a component within a container',
+                    range
+                },
+                // Relationships
+                {
+                    label: 'relationship (->)',
+                    kind: window.monaco.languages.CompletionItemKind.Operator,
+                    insertText: '${1:source} -> ${2:destination} "${3:Description}"',
+                    insertTextRules: window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    documentation: 'Define a relationship between elements',
+                    range
+                },
+                // Views
+                {
+                    label: 'systemContext',
+                    kind: window.monaco.languages.CompletionItemKind.Keyword,
+                    insertText: 'systemContext ${1:softwareSystem} "${2:key}" {\n\tinclude *\n\tautoLayout\n}',
+                    insertTextRules: window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    documentation: 'Define a system context view',
+                    range
+                },
+                {
+                    label: 'container view',
+                    kind: window.monaco.languages.CompletionItemKind.Keyword,
+                    insertText: 'container ${1:softwareSystem} "${2:key}" {\n\tinclude *\n\tautoLayout\n}',
+                    insertTextRules: window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    documentation: 'Define a container view',
+                    range
+                },
+                // Sections
+                {
+                    label: 'workspace',
+                    kind: window.monaco.languages.CompletionItemKind.Snippet,
+                    insertText: 'workspace "${1:Name}" "${2:Description}" {\n\n\tmodel {\n\t\t$0\n\t}\n\n\tviews {\n\t}\n}',
+                    insertTextRules: window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    documentation: 'Create a new workspace',
+                    range
+                },
+                {
+                    label: 'styles',
+                    kind: window.monaco.languages.CompletionItemKind.Keyword,
+                    insertText: 'styles {\n\telement "${1:Tag}" {\n\t\tbackground ${2:#1168BD}\n\t\tcolor ${3:#ffffff}\n\t}\n}',
+                    insertTextRules: window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    documentation: 'Define element styles',
+                    range
+                },
+            ];
+            
+            return { suggestions };
+        }
+    });
+}
+
+/**
  * Register error diagnostic providers (Code Actions and Hover)
  * These provide quick fixes and detailed error explanations
  */
 let providersRegistered = false;
 function registerErrorProviders() {
-    if (providersRegistered) return;
+    if (providersRegistered || !window.monaco) return;
     providersRegistered = true;
     
-    const languages = ['mermaid', 'plantuml', 'xml']; // xml for BPMN
+    const languages = ['mermaid', 'plantuml', 'xml', 'structurizr']; // xml for BPMN
     
     for (const lang of languages) {
         // Register Code Action Provider for quick fixes
@@ -420,6 +639,102 @@ function registerErrorProviders() {
             }
         });
     }
+}
+
+/**
+ * Register LikeC4 language with Monaco
+ */
+function registerLikeC4Language() {
+    if (!window.monaco || window.monaco.languages.getLanguages().some(lang => lang.id === 'likec4')) return;
+    
+    window.monaco.languages.register({ id: 'likec4' });
+    window.monaco.languages.setMonarchTokensProvider('likec4', {
+        defaultToken: '',
+        tokenPostfix: '.likec4',
+        
+        keywords: [
+            'specification', 'model', 'views', 'design',
+            'element', 'extend', 'include', 'exclude',
+            'tag', 'style', 'global',
+            'autoLayout', 'description', 'technology', 'color', 'shape', 'icon',
+            'link', 'doc'
+        ],
+        
+        typeKeywords: [
+            'person', 'system', 'component', 'container', 'storage', 'database', 'queue',
+            'mobile', 'web', 'browser', 'deployment', 'node'
+        ],
+        
+        tokenizer: {
+            root: [
+                // Comments
+                [/\/\/.*$/, 'comment'],
+                [/\/\*/, 'comment', '@multiLineComment'],
+                
+                // Colors/Hex
+                [/#[0-9a-fA-F]{6}\b/, 'constant.color'],
+                
+                // Numbers
+                [/\d+/, 'number'],
+                
+                // Strings
+                [/"([^"\\]|\\.)*$/, 'string.invalid'],
+                [/"/, 'string', '@string'],
+                ['\'', 'string', '@stringSingle'],
+                
+                // Arrow
+                [/->/, 'operator.arrow'],
+                
+                // Blocks
+                [/\{/, 'delimiter.bracket'],
+                [/\}/, 'delimiter.bracket'],
+                
+                // Keywords
+                [/[a-z_][\w$]*/, {
+                    cases: {
+                        '@typeKeywords': 'type',
+                        '@keywords': 'keyword',
+                        '@default': 'identifier'
+                    }
+                }],
+                
+                // Whitespace
+                [/\s+/, 'white'],
+            ],
+            string: [
+                [/[^\\"]+/, 'string'],
+                [/\\./, 'string.escape'],
+                [/"/, 'string', '@pop']
+            ],
+            stringSingle: [
+                [/[^\\']+/, 'string'],
+                [/\\./, 'string.escape'],
+                ['\'', 'string', '@pop']
+            ],
+            multiLineComment: [
+                [/[^/*]+/, 'comment'],
+                [/\*\//, 'comment', '@pop'],
+                [/[/*]/, 'comment']
+            ]
+        }
+    });
+    
+    window.monaco.languages.setLanguageConfiguration('likec4', {
+        comments: { 
+            lineComment: '//',
+            blockComment: ['/*', '*/']
+        },
+        brackets: [['{', '}']],
+        autoClosingPairs: [
+            { open: '{', close: '}' },
+            { open: '"', close: '"' },
+            { open: "'", close: "'" }
+        ],
+        indentationRules: {
+            increaseIndentPattern: /\{[^}]*$/,
+            decreaseIndentPattern: /^\s*\}/
+        }
+    });
 }
 
 export default MonacoWrapper;

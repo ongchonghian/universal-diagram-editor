@@ -13,6 +13,7 @@
 - [MonacoWrapper.js](file://js/components/MonacoWrapper.js)
 - [utils.js](file://js/utils.js)
 - [config.js](file://js/config.js)
+- [C4VisualEditor.jsx](file://js/components/editors/c4/C4VisualEditor.jsx)
 </cite>
 
 ## Table of Contents
@@ -37,6 +38,7 @@ This document explains the visual editor implementations for BPMN and Mermaid wi
 The visual editors are integrated into a single-page application with:
 - A code editor (Monaco) for text-based editing.
 - A visual editor for BPMN and Mermaid.
+- A specialized C4 visual editor using React Flow.
 - A preview pane for rendered diagrams.
 - A toolbar and template gallery for diagram snippets and templates.
 
@@ -54,6 +56,7 @@ Templates["Template Gallery Modal"]
 end
 subgraph "Visual Editing"
 BPMN["BpmnVisualEditor (bpmn-js)"]
+C4["C4VisualEditor (React Flow)"]
 MermaidRouter["MermaidVisualEditor Router"]
 MermaidGeneric["MermaidGenericEditor"]
 MermaidFlow["MermaidFlowchartEditor"]
@@ -77,7 +80,11 @@ MermaidGeneric --> Preview
 MermaidFlow --> Preview
 MermaidSeq --> Preview
 MermaidData --> Preview
+MermaidData --> Preview
 BPMN --> Preview
+ViewToggle --> C4
+C4 --> Monaco
+
 ```
 
 **Diagram sources**

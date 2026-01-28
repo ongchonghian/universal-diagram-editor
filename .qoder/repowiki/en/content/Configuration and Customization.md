@@ -267,15 +267,6 @@ Best practices:
 - Handle load failures gracefully.
 - Revoke object URLs to avoid memory leaks.
 
-### Library Registry Configuration
-To manage tracked libraries in the update system:
-- **Registry Definition**: `js/library-registry.js` defines `LIBRARY_REGISTRY` with CDN patterns and version extraction logic.
-- **Adding a Library**: Add a new entry key with `cdnType`, `package`, and `file`.
-- **Linking Libraries**: Use `linkedTo` to keep packages (like React vs React-DOM) synchronized.
-
-**Section sources**
-- [js/library-registry.js](file://js/library-registry.js)
-
 **Section sources**
 - [utils.js](file://js/utils.js#L116-L158)
 - [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L22-L66)

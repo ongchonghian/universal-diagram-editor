@@ -26,13 +26,12 @@
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive library update management system documentation
-- Documented new library registry with CDN version tracking
-- Added CDN version checker with multi-provider API integration
-- Documented update manager with state management and workflow orchestration
-- Added update tester with iframe-based sandbox testing
-- Documented HTML rewriter with URL pattern matching and validation
-- Integrated update system into main application UI with React components
+- Enhanced library registry with comprehensive version tracking, peer dependency validation, and linked version management
+- Improved update manager with better error handling, state management, and comprehensive testing workflows
+- Expanded update tester with sophisticated iframe-based sandbox testing, URL validation, and visual rendering verification
+- Added comprehensive dependency conflict detection and resolution
+- Enhanced HTML rewriter with precise URL pattern matching and change tracking
+- Integrated update system into main application with React component subscriptions and reactive state updates
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -47,14 +46,14 @@
 10. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the advanced technical implementations and architectural patterns used in the Universal Diagram Editor. It covers the utility function architecture (encoding/decoding, error handling, cross-platform compatibility), React helper utilities for DOM/event/lifecycle management, the Monaco wrapper implementation (syntax highlighting, error markers, custom languages), integration patterns for external libraries and CDNs, configuration and plugin/extensibility points, advanced JavaScript patterns, asynchronous programming, state management strategies, and the new comprehensive library update management system.
+This document explains the advanced technical implementations and architectural patterns used in the Universal Diagram Editor. It covers the utility function architecture (encoding/decoding, error handling, cross-platform compatibility), React helper utilities for DOM/event/lifecycle management, the Monaco wrapper implementation (syntax highlighting, error markers, custom languages), integration patterns for external libraries and CDNs, configuration and plugin/extensibility points, advanced JavaScript patterns, asynchronous programming, state management strategies, and the comprehensive library update management system with enhanced error handling and testing scenarios.
 
 ## Project Structure
 The application is a single-page React application with a hybrid module approach:
 - The main HTML loads React, ReactDOM, Babel, Monaco, and other libraries via CDN.
-- Core logic is split into modular JS files under js/ for utilities, React helpers, Monaco wrapper, configuration, error diagnostics, specialized editors, and the new library update management system.
+- Core logic is split into modular JS files under js/ for utilities, React helpers, Monaco wrapper, configuration, error diagnostics, specialized editors, and the enhanced library update management system.
 - The main application is bootstrapped inside a Babel-enabled script tag in index.html.
-- The library update system is integrated as an ES module with a dedicated UI panel.
+- The library update system is integrated as an ES module with a dedicated UI panel featuring reactive state management.
 
 ```mermaid
 graph TB
@@ -69,9 +68,9 @@ I["js/config.js<br/>Diagram Types, Snippets, Templates"] --> B
 J["js/error-diagnostics/*<br/>Parsing, Fixes, Explanations"] --> C
 K["js/react-helpers.js<br/>htm + React bindings"] --> F
 L["js/editors/*<br/>Specialized editors"] --> B
-M["js/library-registry.js<br/>CDN Dependencies, Version Tracking"] --> N["Update System"]
-N["js/update-manager.js<br/>Workflow Orchestration"] --> O["js/update-tester.js<br/>Sandbox Testing"]
-N --> P["js/html-rewriter.js<br/>URL Replacement, Validation"]
+M["js/library-registry.js<br/>Enhanced CDN Dependencies, Version Tracking"] --> N["Update System"]
+N["js/update-manager.js<br/>Improved Workflow Orchestration"] --> O["js/update-tester.js<br/>Advanced Sandbox Testing"]
+N --> P["js/html-rewriter.js<br/>Precise URL Replacement, Validation"]
 Q["js/cdn-version-checker.js<br/>Multi-Provider API Integration"] --> N
 ```
 
@@ -85,9 +84,9 @@ Q["js/cdn-version-checker.js<br/>Multi-Provider API Integration"] --> N
 - [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
 - [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
 - [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/library-registry.js](file://js/library-registry.js#L1-L409)
-- [js/update-manager.js](file://js/update-manager.js#L1-L343)
-- [js/update-tester.js](file://js/update-tester.js#L1-L505)
+- [js/library-registry.js](file://js/library-registry.js#L1-L487)
+- [js/update-manager.js](file://js/update-manager.js#L1-L461)
+- [js/update-tester.js](file://js/update-tester.js#L1-L706)
 - [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
 
@@ -102,7 +101,7 @@ Q["js/cdn-version-checker.js<br/>Multi-Provider API Integration"] --> N
 - Error diagnostics: Parser for extracting line/column, categorization, and conversion to Monaco markers; fix suggestions and explanations.
 - Configuration: Central registry of diagram types, language mappings, snippets, and templates.
 - Specialized editors: BPMN visual editor (bpmn-js), Mermaid editors (flowchart, sequence, generic), and UI components.
-- **New**: Library update management system: Centralized dependency tracking, CDN version checking, automated testing, and HTML rewriting.
+- **Enhanced**: Library update management system: Comprehensive dependency tracking, CDN version checking, automated testing, and HTML rewriting with advanced validation.
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L1-L177)
@@ -116,9 +115,9 @@ Q["js/cdn-version-checker.js<br/>Multi-Provider API Integration"] --> N
 - [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
 - [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
 - [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/library-registry.js](file://js/library-registry.js#L1-L409)
-- [js/update-manager.js](file://js/update-manager.js#L1-L343)
-- [js/update-tester.js](file://js/update-tester.js#L1-L505)
+- [js/library-registry.js](file://js/library-registry.js#L1-L487)
+- [js/update-manager.js](file://js/update-manager.js#L1-L461)
+- [js/update-tester.js](file://js/update-tester.js#L1-L706)
 - [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
 
@@ -127,7 +126,7 @@ High-level architecture:
 - Frontend: React + Monaco + specialized editors.
 - External integrations: CDN-hosted libraries (React, Monaco, bpmn-js, Mermaid AST), Kroki backend for rendering.
 - Data flow: Code changes trigger debounced preview generation; errors are parsed and surfaced via Monaco markers and hover explanations; visual editors update code and vice versa via a sync controller.
-- **New**: Update system: Automated dependency version tracking, testing, and HTML rewriting with sandboxed validation.
+- **Enhanced**: Update system: Comprehensive dependency version tracking, testing, and HTML rewriting with sandboxed validation and error handling.
 
 ```mermaid
 sequenceDiagram
@@ -313,7 +312,6 @@ SYNC-->>MW : "ast"
 Note over SYNC : "changeSource='visual' during renderToCode"
 SYNC->>AST : "render(ast)"
 AST-->>SYNC : "code"
-SYNC-->>MW : "code"
 ```
 
 **Diagram sources**
@@ -329,7 +327,7 @@ SYNC-->>MW : "code"
 - Local React state: App manages diagram type, detected model, text input, preview URL, stats, loading, errors, cursor position, view mode, and template modal visibility.
 - Editor refs: Imperative methods on MonacoWrapper coordinate with App state.
 - Visual editor state: BPMN visual editor maintains internal modeler state and syncs XML back to code.
-- **New**: Update system state: UpdateManager maintains available updates, test results, and loading states with subscription-based notifications.
+- **Enhanced**: Update system state: UpdateManager maintains available updates, test results, and loading states with subscription-based notifications and comprehensive error handling.
 
 ```mermaid
 stateDiagram-v2
@@ -352,7 +350,7 @@ UpdatePanel --> Downloading : "Apply Updates"
 **Section sources**
 - [index.html](file://index.html#L1398-L1751)
 - [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/update-manager.js](file://js/update-manager.js#L1-L343)
+- [js/update-manager.js](file://js/update-manager.js#L1-L461)
 
 ### Integration Patterns for External Libraries and CDNs
 - React and ReactDOM loaded from CDN; Babel standalone enables JSX without build step.
@@ -360,7 +358,7 @@ UpdatePanel --> Downloading : "Apply Updates"
 - bpmn-js dynamically loaded and initialized; CSS assets injected.
 - Mermaid AST loaded as an ES module; event-driven readiness.
 - Pako for zlib compression used in encoding.
-- **New**: Library update system integrates with CDN APIs for version checking and automated updates.
+- **Enhanced**: Library update system integrates with CDN APIs for version checking and automated updates with comprehensive validation.
 
 ```mermaid
 graph TB
@@ -384,7 +382,7 @@ US --> HT["HTML Rewriter"]
 - [index.html](file://index.html#L1-L80)
 - [js/utils.js](file://js/utils.js#L116-L158)
 - [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/library-registry.js](file://js/library-registry.js#L1-L409)
+- [js/library-registry.js](file://js/library-registry.js#L1-L487)
 
 ### React Helpers, DOM Manipulation, and Lifecycle
 - DOM manipulation: Components use refs to attach to containers and inject SVG content for interactive previews.
@@ -438,106 +436,150 @@ Sync["MermaidSyncController"] --> AST
 
 ## Library Update Management System
 
-### Library Registry
-The library registry serves as the central configuration hub for all CDN dependencies, providing version tracking, URL patterns, and testing configurations.
+### Enhanced Library Registry
+The library registry serves as the central configuration hub for all CDN dependencies, providing comprehensive version tracking, URL patterns, and testing configurations with advanced dependency management.
 
 **Key Features:**
-- Multi-CDN support: Unpkg, CDNJS, ESM.sh, JSR, and Tailwind CSS
-- Version tracking: Current versions and URL patterns for automatic updates
-- Testing configurations: Complex libraries with CSS requirements and import maps
-- Linked versions: React and ReactDOM versions synchronized automatically
-- Skip version checks: Libraries using 'latest' tags or special cases
+- **Multi-CDN support**: Unpkg, CDNJS, ESM.sh, JSR, and Tailwind CSS with specialized handling
+- **Version tracking**: Current versions and URL patterns for automatic updates with semantic version comparison
+- **Testing configurations**: Complex libraries with CSS requirements, import maps, and visual validation
+- **Peer dependency validation**: Automatic conflict detection and resolution for version compatibility
+- **Linked versions**: React and ReactDOM versions synchronized automatically
+- **Skip version checks**: Libraries using 'latest' tags or special cases
+- **Enhanced parsing**: Sophisticated URL pattern matching and version extraction from HTML
+
+**Updated** Enhanced dependency conflict detection with comprehensive validation and error reporting.
 
 **Section sources**
-- [js/library-registry.js](file://js/library-registry.js#L1-L409)
+- [js/library-registry.js](file://js/library-registry.js#L1-L487)
 
 ### CDN Version Checker
-Integrates with multiple CDN APIs to fetch the latest versions of libraries with intelligent caching and error handling.
+Integrates with multiple CDN APIs to fetch the latest versions of libraries with intelligent caching, error handling, and comprehensive version comparison.
 
 **Supported Providers:**
-- **Unpkg**: Package.json endpoint for npm packages
-- **CDNJS**: Official API with version field
-- **ESM.sh**: Mirrors npm packages through npm registry
-- **JSR**: jsr.io package metadata
-- **Tailwind**: Special case - CDN always serves latest
+- **Unpkg**: Package.json endpoint for npm packages with version extraction
+- **CDNJS**: Official API with version field and metadata
+- **ESM.sh**: Mirrors npm packages through npm registry with latest version detection
+- **JSR**: jsr.io package metadata with scope-based package resolution
+- **Tailwind**: Special case - CDN always serves latest with skip version check
 
 **Features:**
-- 5-minute cache TTL for performance optimization
-- Semantic version comparison
-- Major version detection
-- Changelog URL generation
+- **5-minute cache TTL**: Performance optimization with intelligent caching strategy
+- **Semantic version comparison**: Accurate version comparison with major/minor/patch detection
+- **Major version detection**: Identifies breaking changes and warns users appropriately
+- **Changelog URL generation**: Direct links to release notes and change logs
+- **Error handling**: Graceful degradation when API calls fail
+
+**Updated** Improved error handling and caching mechanisms for better reliability.
 
 **Section sources**
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
 
-### Update Manager
-Orchestrates the complete library update workflow with state management, testing, and HTML rewriting.
+### Enhanced Update Manager
+Orchestrates the complete library update workflow with comprehensive state management, testing, and HTML rewriting with advanced error handling and user interaction.
 
 **Core Workflow:**
-1. **Check for Updates**: Parse current HTML, fetch latest versions, filter available updates
-2. **Test Updates**: Validate URLs and test in sandboxed iframe
-3. **Apply Updates**: Rewrite HTML, validate, and generate download
-4. **State Management**: Reactive updates with subscription pattern
+1. **Check for Updates**: Parse current HTML, fetch latest versions, filter available updates with intelligent selection logic
+2. **Test Updates**: Validate URLs and test in sandboxed iframe with comprehensive error reporting
+3. **Apply Updates**: Rewrite HTML, validate, and generate download with change tracking
+4. **State Management**: Reactive updates with subscription pattern, localStorage persistence, and user preferences
 
-**State Management:**
-- Available updates with selection state
-- Test results with pass/fail status
-- Loading states for checking/testing
-- History tracking with localStorage persistence
-- Ignored updates to prevent repeated notifications
+**Enhanced State Management:**
+- **Available updates**: Selection state with auto-selection for non-major updates
+- **Test results**: Detailed pass/fail status with error messages and visual indicators
+- **Loading states**: Comprehensive checking and testing progress indicators
+- **History tracking**: localStorage persistence with truncation to prevent quota issues
+- **Ignored updates**: User preference management with reasons and re-enabling capabilities
+- **Subscription pattern**: Real-time UI updates with listener management
+
+**Enhanced Features:**
+- **Auto-selection logic**: Non-major, non-skipped updates are automatically selected
+- **Ignored update management**: Persistent user preferences with reason tracking
+- **Linked version updates**: Automatic updates for synchronized libraries (e.g., react-esm linked to react)
+- **Comprehensive error handling**: Detailed error reporting with user-friendly messages
+- **Time-based last check**: Human-readable timestamps for update freshness
 
 **Section sources**
-- [js/update-manager.js](file://js/update-manager.js#L1-L343)
+- [js/update-manager.js](file://js/update-manager.js#L1-L461)
 
-### Update Tester
-Provides comprehensive sandboxed testing for library updates using iframe isolation and visual validation.
+### Advanced Update Tester
+Provides comprehensive sandboxed testing for library updates using iframe isolation, visual validation, and sophisticated dependency management.
 
 **Testing Capabilities:**
-- **URL Validation**: HEAD requests to verify accessibility
-- **Import Map Testing**: Complex libraries like Excalidraw with external dependencies
-- **Visual Rendering**: Libraries that require DOM rendering for validation
-- **Timeout Handling**: 20-second timeout for test completion
-- **Result Aggregation**: Detailed pass/fail reports with error messages
+- **URL Validation**: HEAD requests to verify accessibility with CORS handling
+- **Import Map Testing**: Complex libraries like Excalidraw with external dependencies and React integration
+- **Visual Rendering**: Libraries that require DOM rendering for validation with timeout handling
+- **Timeout Handling**: 20-second timeout for test completion with graceful failure reporting
+- **Result Aggregation**: Detailed pass/fail reports with error messages and visual indicators
+- **Dependency Conflict Testing**: Pre-validation of peer dependencies before testing
 
 **Supported Libraries:**
-- **Excalidraw**: Complex ESM module with React dependencies and CSS requirements
-- **BPMN-JS**: Visual modeler testing with diagram instantiation
-- **Monaco Editor**: AMD loader and editor initialization
-- **React/ReactDOM**: Basic rendering validation
-- **Pako**: Compression functionality verification
-- **Dagre**: Graph library validation
-- **Babel**: Transpilation capability testing
+- **Excalidraw**: Complex ESM module with React dependencies, CSS requirements, and visual validation
+- **BPMN-JS**: Visual modeler testing with diagram instantiation and import validation
+- **Monaco Editor**: AMD loader and editor initialization with configuration testing
+- **React/ReactDOM**: Basic rendering validation with ESM fallback support
+- **Pako**: Compression functionality verification with deflate testing
+- **Dagre**: Graph library validation with graphlib testing
+- **Babel**: Transpilation capability testing with preset validation
+- **Mermaid AST**: ES module loading and AST parsing validation
+- **HTM**: JSX-like syntax testing with template literal support
+- **Tailwind CSS**: CDN availability testing with style application verification
+- **Font Awesome**: Icon font loading and styling verification
+- **React Flow**: CSS stylesheet validation and availability checking
+
+**Enhanced Features:**
+- **Pre-validation**: Dependency conflicts are checked before URL validation and testing
+- **URL validation**: Comprehensive HEAD request testing with CORS handling
+- **Visual testing**: Library-specific rendering validation with timeout management
+- **Error aggregation**: Comprehensive error reporting with library-specific details
+- **Console filtering**: Noise reduction in test results with favicon and 404 filtering
 
 **Section sources**
-- [js/update-tester.js](file://js/update-tester.js#L1-L505)
+- [js/update-tester.js](file://js/update-tester.js#L1-L706)
 
-### HTML Rewriter
-Handles precise URL replacement in HTML with pattern matching and validation.
+### Enhanced HTML Rewriter
+Handles precise URL replacement in HTML with sophisticated pattern matching, validation, and comprehensive change tracking.
 
-**URL Pattern Matching:**
-- **Unpkg**: `@version/` pattern in package@version/ paths
-- **CDNJS**: `/package/version/` pattern in library paths  
-- **ESM.sh**: `@version` pattern at end of package names
+**Enhanced URL Pattern Matching:**
+- **Unpkg**: `@version/` pattern in package@version/ paths with regex escaping
+- **CDNJS**: `/package/version/` pattern in library paths with package name validation
+- **ESM.sh**: `@version` pattern at end of package names with import map support
 
-**Features:**
-- Regex-based pattern matching with escape handling
-- Multiple URL replacement per library
-- Change tracking with detailed summaries
-- HTML validation before download
-- Blob-based file download generation
+**Enhanced Features:**
+- **Regex-based pattern matching**: Sophisticated URL pattern extraction with escape handling
+- **Multiple URL replacement**: Support for additional URLs and CSS files per library
+- **Change tracking**: Detailed summaries with library names, version changes, and counts
+- **HTML validation**: Pre-download validation to prevent broken updates
+- **Blob-based file download**: Secure file generation with proper MIME types
+- **Escape regex handling**: Safe pattern construction to prevent regex injection
+
+**Enhanced Capabilities:**
+- **Pattern building**: Dynamic regex construction for different CDN types
+- **Version replacement**: Accurate version string replacement with boundary detection
+- **Change summarization**: Detailed change reports for user review
+- **URL categorization**: CDN provider identification for accurate pattern matching
 
 **Section sources**
 - [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
 
 ### Integration with Main Application
-The update system is seamlessly integrated into the main application with a dedicated UI panel and React component.
+The update system is seamlessly integrated into the main application with a dedicated UI panel, React component subscriptions, and comprehensive user interaction.
 
-**Integration Points:**
-- ES module import in index.html with global exposure
-- React component with subscription-based state updates
-- Modal interface with progress indicators and results display
-- Error handling with user-friendly messaging
-- Download workflow with generated HTML files
+**Enhanced Integration Points:**
+- ES module import in index.html with global exposure and event dispatching
+- React component with subscription-based state updates and real-time UI refresh
+- Modal interface with progress indicators, detailed results display, and user controls
+- Error handling with user-friendly messaging and recovery options
+- Download workflow with generated HTML files and change summaries
+- Update history tracking with localStorage persistence and human-readable timestamps
+
+**Enhanced Features:**
+- **Real-time updates**: Subscription-based state management with automatic UI refresh
+- **User preferences**: Ignored updates with reasons and re-enabling capabilities
+- **Update history**: Comprehensive logging with truncated HTML previews
+- **Human-readable timestamps**: Time since last check with day/hour/minute/second formatting
+- **Progress indicators**: Loading states for checking, testing, and downloading operations
+- **Error recovery**: Comprehensive error handling with user guidance and retry options
 
 **Section sources**
 - [index.html](file://index.html#L117-L132)
@@ -548,24 +590,24 @@ The update system is seamlessly integrated into the main application with a dedi
   - MonacoWrapper depends on React helpers, error diagnostics, and config for language mapping.
   - App orchestrates MonacoWrapper, visual editors, and diagnostics.
   - Specialized editors depend on shared UI components and utils.
-  - **New**: Update system components depend on each other in a coordinated workflow.
+  - **Enhanced**: Update system components depend on each other in a coordinated workflow with comprehensive error handling.
 - External dependencies:
   - CDN-hosted React, ReactDOM, Babel, Monaco, bpmn-js, Mermaid AST, Pako.
-  - **New**: CDN APIs for version checking (unpkg, cdnjs, npm registry, jsr.io).
-  - **New**: Third-party services for library testing and validation.
+  - **Enhanced**: CDN APIs for version checking (unpkg, cdnjs, npm registry, jsr.io) with caching and error handling.
+  - **Enhanced**: Third-party services for library testing and validation with sandboxed iframe isolation.
 
 ```mermaid
 graph TB
 App["App (index.html)"] --> MW["MonacoWrapper"]
 App --> BVE["BpmnVisualEditor"]
 App --> ME["Mermaid Editors"]
-App --> UPS["Update System Panel"]
+App --> UPS["Enhanced Update System Panel"]
 MW --> ED["Error Diagnostics"]
 UPS --> LM["UpdateManager"]
 LM --> CV["CDNVersionChecker"]
 LM --> UT["UpdateTester"]
 LM --> HR["HTMLRewriter"]
-LM --> LR["LibraryRegistry"]
+LM --> LR["Enhanced LibraryRegistry"]
 CV --> LR
 UT --> LR
 HR --> LR
@@ -585,11 +627,11 @@ App --> PU["PlantUML Components"]
 - [js/utils.js](file://js/utils.js#L1-L177)
 - [js/components/ui.js](file://js/components/ui.js#L1-L175)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/update-manager.js](file://js/update-manager.js#L1-L343)
+- [js/update-manager.js](file://js/update-manager.js#L1-L461)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
-- [js/update-tester.js](file://js/update-tester.js#L1-L505)
+- [js/update-tester.js](file://js/update-tester.js#L1-L706)
 - [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
-- [js/library-registry.js](file://js/library-registry.js#L1-L409)
+- [js/library-registry.js](file://js/library-registry.js#L1-L487)
 
 **Section sources**
 - [index.html](file://index.html#L1398-L1751)
@@ -601,29 +643,32 @@ App --> PU["PlantUML Components"]
 - [js/utils.js](file://js/utils.js#L1-L177)
 - [js/components/ui.js](file://js/components/ui.js#L1-L175)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/update-manager.js](file://js/update-manager.js#L1-L343)
+- [js/update-manager.js](file://js/update-manager.js#L1-L461)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
-- [js/update-tester.js](file://js/update-tester.js#L1-L505)
+- [js/update-tester.js](file://js/update-tester.js#L1-L706)
 - [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
-- [js/library-registry.js](file://js/library-registry.js#L1-L409)
+- [js/library-registry.js](file://js/library-registry.js#L1-L487)
 
 ## Performance Considerations
 - Debouncing: Applied to Mermaid AST parsing and preview fetching to reduce network and CPU usage.
 - Lazy loading: Visual editors and libraries are loaded on demand to minimize initial payload.
 - Efficient Monaco updates: Imperative setValue and deltaDecorations used to avoid full re-renders.
 - CDN caching: Leveraging CDN-hosted libraries improves load times and reduces bandwidth.
-- **New**: Update system caching: 5-minute TTL for version checks to minimize API calls.
-- **New**: Sandbox testing: Isolated iframe testing prevents DOM pollution and improves reliability.
-- **New**: Incremental HTML rewriting: Only modified URLs are replaced, reducing processing overhead.
+- **Enhanced**: Update system caching: 5-minute TTL for version checks to minimize API calls with intelligent error handling.
+- **Enhanced**: Sandbox testing: Isolated iframe testing prevents DOM pollution and improves reliability with timeout management.
+- **Enhanced**: Incremental HTML rewriting: Only modified URLs are replaced, reducing processing overhead with comprehensive validation.
+- **Enhanced**: Subscription-based state management: Efficient UI updates with minimal re-renders and optimal memory usage.
 
 ## Troubleshooting Guide
 - Monaco AMD conflicts: Dynamic script loader temporarily removes window.define to avoid conflicts; restores it on load/error.
 - Error markers: If markers do not appear, verify diagram type mapping and ensure error providers are registered.
 - Visual editor failures: Check console logs for bpmn-js load errors; ensure CORS allows external CSS/JS.
 - Encoding issues: If preview fails, confirm encodeKroki returns a non-empty string and URL length does not exceed GET limits.
-- **New**: Update system failures: Check browser console for update system errors; verify CDN accessibility for version checking.
-- **New**: Test failures: Review test results in update panel; check sandbox iframe for rendering errors.
-- **New**: HTML rewrite issues: Verify generated HTML validates; check for blocked downloads or security restrictions.
+- **Enhanced**: Update system failures: Check browser console for update system errors; verify CDN accessibility for version checking with detailed error messages.
+- **Enhanced**: Test failures: Review test results in update panel; check sandbox iframe for rendering errors with specific library details.
+- **Enhanced**: HTML rewrite issues: Verify generated HTML validates; check for blocked downloads or security restrictions with change summaries.
+- **Enhanced**: Dependency conflicts: Review peer dependency validation errors; ensure compatible versions are selected for synchronized libraries.
+- **Enhanced**: Ignored updates: Check localStorage for ignored updates with reasons; use unignore functionality to re-enable updates.
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L116-L146)
@@ -633,4 +678,4 @@ App --> PU["PlantUML Components"]
 - [js/update-tester.js](file://js/update-tester.js#L427-L438)
 
 ## Conclusion
-The Universal Diagram Editor combines a CDN-first architecture with modular React components and a powerful Monaco-based editor. Its error diagnostics system, dynamic loading utilities, and specialized editors deliver a robust authoring experience across multiple diagram types. The new comprehensive library update management system represents a significant architectural enhancement, providing automated dependency version tracking, sandboxed testing, and safe HTML rewriting capabilities. This system ensures the application stays current with library updates while maintaining stability and preventing breaking changes through comprehensive validation and testing workflows. The design emphasizes extensibility (configuration-driven), maintainability (modular JS), and usability (imperative editor APIs, quick fixes, and hover explanations), now augmented with automated dependency management for long-term sustainability.
+The Universal Diagram Editor combines a CDN-first architecture with modular React components and a powerful Monaco-based editor. Its error diagnostics system, dynamic loading utilities, and specialized editors deliver a robust authoring experience across multiple diagram types. The enhanced comprehensive library update management system represents a significant architectural advancement, providing automated dependency version tracking, sophisticated sandboxed testing, and safe HTML rewriting capabilities with comprehensive error handling and user interaction. This system ensures the application stays current with library updates while maintaining stability and preventing breaking changes through comprehensive validation, testing workflows, and dependency conflict resolution. The design emphasizes extensibility (configuration-driven), maintainability (modular JS), and usability (imperative editor APIs, quick fixes, and hover explanations), now augmented with automated dependency management for long-term sustainability and enhanced user experience through comprehensive state management and real-time updates.

@@ -1,0 +1,7 @@
+/* synergy-lib.css */
+/* Overrides and custom styles for Synergy C4 Editor */
+
+/* Ensure NodePanel handles sit above content */
+.react-flow__handle {
+    z-index: 10;
+}
