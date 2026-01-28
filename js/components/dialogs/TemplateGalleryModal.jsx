@@ -7,8 +7,8 @@ import {
     VEGA_TEMPLATES,
     VEGALITE_TEMPLATES,
 
-    LIKEC4_TEMPLATES,
-    C4PLANTUML_TEMPLATES,
+    C4_VISUAL_TEMPLATES,
+    C4_PLANTUML_TEMPLATES,
     GRAPHVIZ_TEMPLATES
 } from '../../config.js';
 
@@ -45,11 +45,9 @@ export const TemplateGalleryModal = ({ isOpen, onClose, onSelect, diagramType })
         if (diagramType === 'vegalite' || diagramType === 'all') {
             all = [...all, ...addTemplates(VEGALITE_TEMPLATES, 'vegalite')];
         }
-        if (diagramType === 'likec4' || diagramType === 'all') {
-            all = [...all, ...addTemplates(LIKEC4_TEMPLATES, 'likec4')];
-        }
-        if (diagramType === 'c4plantuml' || diagramType === 'all') {
-            all = [...all, ...addTemplates(C4PLANTUML_TEMPLATES, 'c4plantuml')];
+        if (diagramType === 'c4' || diagramType === 'all') {
+            all = [...all, ...addTemplates(C4_VISUAL_TEMPLATES, 'c4-visual')];
+            all = [...all, ...addTemplates(C4_PLANTUML_TEMPLATES, 'c4-plantuml')];
         }
         if (diagramType === 'graphviz' || diagramType === 'all') {
             all = [...all, ...addTemplates(GRAPHVIZ_TEMPLATES, 'graphviz')];

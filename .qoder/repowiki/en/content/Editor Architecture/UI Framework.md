@@ -58,6 +58,27 @@ const MyEditor = () => {
     -   Use the `primary: true` flag for the main call-to-action in `actions`.
 3.  **Layout**: Ensure the editor container uses `flex-col` so the toolbar stays at the top and content fills the remaining space.
 
+## Toolbar Principles
+
+To ensure a clear separation of concerns, follow these principles when deciding where to place a button or function:
+
+### 1. Global App Header (Top Bar)
+*   **Scope**: Document-level. Actions here affect the entire file or application state.
+*   **Examples**:
+    *   **I/O**: Open file, Save file.
+    *   **Global Export**: SVG, PNG (generated from the code source of truth).
+    *   **View Modes**: Switching between Code and Design views.
+    *   **Help & Settings**: Documentation, Update checks.
+*   **Disabled State**: Buttons here (like SVG/PNG export) should be disabled if the source code is invalid or cannot be compiled by the backend service.
+
+### 2. Editor Toolbar (Local Component)
+*   **Scope**: Context-specific. Actions here apply to the *active visual editor* and its internal state.
+*   **Examples**:
+    *   **Canvas Operations**: Auto Layout, Reset View.
+    *   **Data Injection**: Import Data (CSV/JSON into a chart), unrelated to opening the diagram file itself.
+    *   **Visual-Specific Export**: "Save to Diagram" (converting visual state to code), or exporting a specific visual artifact that doesn't rely on the global compiler.
+    *   **View Toggles**: Switching sub-views (e.g., Chart Preview vs Data Explorer).
+
 ## Future Enhancements
 
 -   **Theming**: Support for dark mode in the toolbar.

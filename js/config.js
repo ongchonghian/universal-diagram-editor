@@ -87,20 +87,7 @@ Alice <-- Bob: another authentication Response
         hasVisualEditor: true,
         example: `{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "https://excalidraw.com",\n  "elements": [\n    {\n      "type": "rectangle",\n      "id": "rect-1",\n      "x": 100,\n      "y": 100,\n      "width": 100,\n      "height": 100,\n      "strokeColor": "#000000",\n      "backgroundColor": "transparent",\n      "fillStyle": "hachure",\n      "strokeWidth": 1,\n      "strokeStyle": "solid",\n      "roughness": 1,\n      "opacity": 100,\n      "groupIds": [],\n      "strokeSharpness": "sharp",\n      "seed": 1,\n      "version": 1,\n      "versionNonce": 0,\n      "isDeleted": false,\n      "boundElements": null,\n      "updated": 1,\n      "link": null\n    }\n  ]\n}`
     },
-    c4plantuml: {
-        label: 'C4 Model',
-        extensions: ['.c4', '.puml'],
-        monacoLang: 'plantuml',
-        docs: 'https://github.com/plantuml-stdlib/C4-PlantUML',
-        example: `@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
 
-Person(personAlias, "Label", "Optional Description")
-System(systemAlias, "Label", "Optional Description")
-
-Rel(personAlias, systemAlias, "Label", "Optional Technology")
-@enduml`
-    },
     ditaa: { label: 'Ditaa', extensions: ['.ditaa', '.txt'], monacoLang: 'plaintext', docs: 'http://ditaa.sourceforge.net/', example: `\n/--+\n|  |\n+--+` },
     blockdiag: { label: 'BlockDiag', extensions: ['.diag'], monacoLang: 'python', docs: 'http://blockdiag.com/en/' },
     bytefield: { label: 'Bytefield', extensions: ['.bf'], monacoLang: 'clojure', docs: 'https://bytefield-svg.de/' },
@@ -145,33 +132,20 @@ Rel(personAlias, systemAlias, "Label", "Optional Technology")
     },
     wavedrom: { label: 'Wavedrom', extensions: ['.json5', '.json'], monacoLang: 'json', docs: 'https://wavedrom.com/tutorial.html' },
     wireviz: { label: 'Wireviz', extensions: ['.yaml', '.yml'], monacoLang: 'yaml', docs: 'https://github.com/formatc1702/WireViz' },
-    likec4: {
-        label: 'LikeC4',
-        extensions: ['.likec4', '.c4'],
-        monacoLang: 'likec4',
-        docs: 'https://likec4.dev',
+    c4: {
+        label: 'C4 Model',
+        extensions: ['.c4', '.puml', '.json'],
+        monacoLang: 'plantuml', // Default, but handled dynamically in App.jsx
+        docs: 'https://c4model.com/',
         hasVisualEditor: true,
-        example: `specification {
-    element user
-    element component
-}
+        example: `@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
 
-model {
-    customer = user 'Customer'
-    
-    app = component 'Web App' {
-        description 'A great web application'
-    }
-    
-    customer -> app 'uses'
-}
+Person(personAlias, "Label", "Optional Description")
+System(systemAlias, "Label", "Optional Description")
 
-views {
-    view index of app {
-        include *
-        autoLayout lr
-    }
-}`
+Rel(personAlias, systemAlias, "Label", "Optional Technology")
+@enduml`
     }
 };
 
@@ -1100,36 +1074,30 @@ export const VEGALITE_TEMPLATES = [
     }
 ];
 
-export const LIKEC4_TEMPLATES = [
+export const C4_VISUAL_TEMPLATES = [
     {
         id: 'basic',
         label: 'Basic Model',
         icon: 'fa-layer-group',
         description: 'Simple C4 model with User and System',
-        code: `specification {
-  element user {
-    style {
-      shape person
+        code: `{
+  "nodes": [
+    {
+      "id": "1",
+      "type": "person",
+      "position": { "x": 250, "y": 50 },
+      "data": { "label": "Customer", "description": "A user of the system", "type": "person" }
+    },
+    {
+      "id": "2",
+      "type": "system",
+      "position": { "x": 250, "y": 250 },
+      "data": { "label": "Web App", "description": "A great web application", "type": "system" }
     }
-  }
-  element component
-}
-
-model {
-  customer = user 'Customer'
-  
-  app = component 'Web App' {
-    description 'A great web application'
-  }
-  
-  customer -> app 'uses'
-}
-
-views {
-  view index of app {
-    include *
-    autoLayout lr
-  }
+  ],
+  "edges": [
+    { "id": "e1", "source": "1", "target": "2", "label": "uses", "type": "floating" }
+  ]
 }`
     },
     {
@@ -1137,33 +1105,48 @@ views {
         label: 'E-Commerce',
         icon: 'fa-shopping-cart',
         description: 'E-Commerce system architecture',
-        code: `specification {
-  element user
-  element system
-  element container
-  element component
-  element database
-}
-
-model {
-  customer = user 'Customer'
-  
-  system ecommerce = system 'E-Commerce System' {
-    web = container 'Web Application'
-    api = container 'API Service'
-    db = database 'Database'
-  }
-  
-  customer -> web 'visits'
-  web -> api 'requests'
-  api -> db 'queries'
-}
-
-views {
-  view ecommerce_context of ecommerce {
-    include *
-    autoLayout tb
-  }
+        code: `{
+  "nodes": [
+    {
+      "id": "customer",
+      "type": "person",
+      "position": { "x": 250, "y": 50 },
+      "data": { "label": "Customer", "type": "person" }
+    },
+    {
+      "id": "ecommerce",
+      "type": "system",
+      "position": { "x": 250, "y": 200 },
+      "data": { "label": "E-Commerce System", "type": "system" }
+    },
+    {
+      "id": "web",
+      "type": "container",
+      "position": { "x": 100, "y": 200 },
+      "data": { "label": "Web App", "type": "container", "parentId": "ecommerce" },
+      "parentNode": "ecommerce",
+      "extent": "parent"
+    },
+    {
+      "id": "api",
+      "type": "container",
+      "position": { "x": 300, "y": 200 },
+      "data": { "label": "API Service", "type": "container", "parentId": "ecommerce" },
+      "parentNode": "ecommerce",
+      "extent": "parent"
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "position": { "x": 250, "y": 500 },
+      "data": { "label": "Database", "type": "database" }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "customer", "target": "web", "label": "visits" },
+    { "id": "e2", "source": "web", "target": "api", "label": "requests" },
+    { "id": "e3", "source": "api", "target": "db", "label": "queries" }
+  ]
 }`
     }
 ];
@@ -1272,7 +1255,7 @@ export const VEGA_TEMPLATES = [
     }
 ];
 
-export const C4PLANTUML_TEMPLATES = [
+export const C4_PLANTUML_TEMPLATES = [
     {
         id: 'c4context',
         label: 'System Context',

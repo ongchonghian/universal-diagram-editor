@@ -79,8 +79,11 @@ export const detectTypeFromContent = (filename, content) => {
     
     // 2. Check for Text/DSL formats
     
-    // LikeC4
-    if (/^\s*specification\s*\{/m.test(trimmed) || /^\s*model\s*\{/m.test(trimmed)) return 'likec4';
+    // C4 JSON (Visual Editor)
+    if (trimmed.startsWith('{') && trimmed.includes('"type":') && (trimmed.includes('"person"') || trimmed.includes('"system"'))) return 'c4';
+
+    // LikeC4 (Legacy/DSL support if any)
+    if (/^\s*specification\s*\{/m.test(trimmed) || /^\s*model\s*\{/m.test(trimmed)) return 'c4';
     
     // PlantUML
     if (/@startuml/m.test(trimmed) || /@startmindmap/m.test(trimmed) || /@startwbs/m.test(trimmed)) return 'plantuml';
@@ -135,7 +138,17 @@ export const detectSpecificModel = (code, type) => {
         return 'Mermaid Diagram';
     }
 
-    if (type === 'plantuml' || type === 'c4plantuml') {
+    if (type === 'c4') {
+        // Check for JSON (Visual Editor)
+        if (cleanCode.startsWith('{')) return 'C4 Model (Visual)';
+        
+        // Check for PlantUML C4
+        if (/@startuml/m.test(cleanCode) || /!include.*C4/m.test(cleanCode)) return 'C4 Model (PlantUML)';
+        
+        return 'C4 Model';
+    }
+
+    if (type === 'plantuml') {
         if (/@startmindmap/m.test(cleanCode)) return 'Mindmap';
         if (/@startwbs/m.test(cleanCode)) return 'Work Breakdown Structure';
         if (/@startuml/m.test(cleanCode)) {

@@ -11,8 +11,11 @@ import {
   Handle,
   Position,
   NodeResizer,
-  useOnSelectionChange
+  useOnSelectionChange,
+  getViewportForBounds,
+  getNodesBounds
 } from '@xyflow/react';
+import { toPng } from 'html-to-image';
 import '@xyflow/react/dist/style.css';
 
 // Synergy Codes Imports
@@ -31,9 +34,9 @@ import { faServer, faUser, faDatabase, faLayerGroup, faCode, faLink } from '@for
 // Hooks and Components
 import { PropertiesPanel } from './PropertiesPanel.jsx';
 import { useUndoRedo } from './useUndoRedo.js';
-import { AutoLayoutButton } from './AutoLayoutButton.jsx';
 import { SynergySidebar } from './SynergySidebar.jsx';
 import useAutoLayout from './useAutoLayout.js';
+import { EditorToolbar } from '../common/EditorToolbar.jsx';
 
 // Editor Context for passing callbacks to nodes
 const EditorContext = React.createContext({
@@ -152,12 +155,19 @@ const defaultEdges = [
     { id: 'e2-3', source: '2', target: '3', label: 'Reads/Writes', type: 'smoothstep' },
 ];
 
-export const SynergyC4Editor = () => {
-    const [nodes, setNodes, onNodesChange] = useNodesState(defaultNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(defaultEdges);
+export const SynergyC4Editor = ({ initialNodes = defaultNodes, initialEdges = defaultEdges, onChange }) => {
+    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const [selectedElement, setSelectedElement] = useState(null);
     const { screenToFlowPosition, getIntersectingNodes } = useReactFlow();
     const [clipboard, setClipboard] = useState([]); // Clipboard for Copy/Paste
+    
+    // Sync up changes to parent
+    useEffect(() => {
+        if (onChange) {
+            onChange({ nodes, edges });
+        }
+    }, [nodes, edges, onChange]);
     
     // Undo/Redo Hook
     const { takeSnapshot, undo, redo, canUndo, canRedo } = useUndoRedo();
@@ -337,7 +347,37 @@ export const SynergyC4Editor = () => {
         setEdges(layoutedEdges);
     }, [nodes, edges, setNodes, setEdges, takeSnapshot, getLayoutedElements]);
 
-    // Keyboard Shortcuts
+
+
+    const handleDownloadImage = useCallback(() => {
+        const flowElement = document.querySelector('.react-flow');
+        if (!flowElement) return;
+
+        const nodesBounds = getNodesBounds(nodes);
+        const transform = getViewportForBounds(
+            nodesBounds,
+            nodesBounds.width,
+            nodesBounds.height,
+            0.5,
+            10
+        );
+
+        toPng(flowElement, {
+            backgroundColor: '#fff',
+            width: nodesBounds.width,
+            height: nodesBounds.height,
+            style: {
+                width: nodesBounds.width,
+                height: nodesBounds.height,
+                transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
+            },
+        }).then((dataUrl) => {
+            const a = document.createElement('a');
+            a.setAttribute('download', 'c4-diagram.png');
+            a.setAttribute('href', dataUrl);
+            a.click();
+        });
+    }, [nodes]);
     useEffect(() => {
         const handleKeyDown = (event) => {
             if (event.metaKey || event.ctrlKey) {
@@ -487,11 +527,26 @@ export const SynergyC4Editor = () => {
         <div className="flex h-full w-full">
             <SynergySidebar onAddNode={onAddNode} />
             <div 
-                className="flex-1 h-full relative" 
+                className="flex-1 h-full flex flex-col relative" 
                 style={{ background: '#fafafa' }}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
             >
+            <EditorToolbar 
+                title="C4 Editor" 
+                subTitle="Synergy Mode"
+                onAutoLayout={onLayout}
+                actions={[
+                    {
+                        label: 'Export Image',
+                        icon: 'fas fa-image',
+                        onClick: handleDownloadImage,
+                        title: 'Download current view as PNG'
+                    }
+                ]}
+                className="border-b border-slate-200"
+            />
+            <div className="flex-1 relative w-full h-full">
             <EditorContext.Provider value={{
                 onResizeStart: () => takeSnapshot(nodes, edges)
             }}>
@@ -510,7 +565,7 @@ export const SynergyC4Editor = () => {
                 >
                     <Background color="#f1f5f9" gap={16} />
                     <Controls />
-                    <AutoLayoutButton onLayout={onLayout} />
+
                 </ReactFlow>
             </EditorContext.Provider>
             {selectedElement && (
@@ -520,6 +575,7 @@ export const SynergyC4Editor = () => {
                 />
             )}
             </div>
+          </div>
         </div>
     );
 };

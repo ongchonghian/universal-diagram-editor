@@ -48,7 +48,17 @@ const App = () => {
     const mermaidSyncRef = useRef(createMermaidSyncController());
     
     const editorRef = useRef(null);
-    const isVisualSupported = DIAGRAM_TYPES[diagramType]?.hasVisualEditor === true;
+    
+    // Check if visual editor is supported for current type AND content
+    const isC4PlantUML = diagramType === 'c4' && (detectedModel === 'C4 Model (PlantUML)' || (textInput && textInput.includes('@startuml')));
+    const isVisualSupported = DIAGRAM_TYPES[diagramType]?.hasVisualEditor === true && !isC4PlantUML;
+    
+    // Force code view if visual is not supported (e.g. loaded C4 PlantUML)
+    useEffect(() => {
+        if (!isVisualSupported && viewMode === 'visual') {
+            setViewMode('code');
+        }
+    }, [isVisualSupported, viewMode]);
 
     // Listen for MermaidAST load
     useEffect(() => {
@@ -116,7 +126,17 @@ const App = () => {
         setLoading(true);
 
         const fetchPreview = async () => {
+            // Skip preview for:
+            // 1. LikeC4 legacy (if any)
+            // 2. C4 Model in Visual (JSON) mode - we render client side
             if (diagramType === 'likec4') return;
+            if (diagramType === 'c4' && !isC4PlantUML) {
+                // It's visual/JSON C4, so no Kroki preview needed (or supported)
+                setSvgContent(null);
+                setPreviewImage(null);
+                setLoading(false);
+                return; 
+            }
 
             try {
                 let response;
@@ -386,7 +406,7 @@ const App = () => {
                                 </button>
                             </div>
                         )}
-                        {['mermaid', 'plantuml', 'bpmn', 'excalidraw', 'vega', 'vegalite', 'likec4', 'c4plantuml', 'graphviz'].includes(diagramType) && (
+                        {['mermaid', 'plantuml', 'bpmn', 'excalidraw', 'vega', 'vegalite', 'c4', 'graphviz'].includes(diagramType) && (
                             <Button variant="secondary" size="sm" icon="fas fa-th-large" onClick={() => setShowTemplates(true)}>
                                 Templates
                             </Button>
@@ -448,6 +468,12 @@ const App = () => {
                                                     } else if (diagramType === 'excalidraw') {
                                                         const defaultData = { type: "excalidraw", version: 2, source: "https://excalidraw.com", elements: [], appState: { viewBackgroundColor: "#ffffff", gridSize: null }, files: {} };
                                                         setTextInput(JSON.stringify(defaultData, null, 2));
+                                                    } else if (diagramType === 'c4') {
+                                                        // Default to Visual C4 (JSON)
+                                                        const defaultData = { nodes: [], edges: [] };
+                                                        setTextInput(JSON.stringify(defaultData, null, 2));
+                                                        // Auto-switch to design view for better UX?
+                                                        setViewMode('visual');
                                                     } else {
                                                         // Fallback for others
                                                         setTextInput('// Start typing or selecting a template...');
@@ -554,7 +580,7 @@ const App = () => {
                         />
                     )}
 
-                    {diagramType === 'likec4' && viewMode === 'visual' && (
+                    {diagramType === 'c4' && viewMode === 'visual' && (
                         <LikeC4VisualEditor 
                             code={textInput} 
                             onChange={handleVisualChange} 
