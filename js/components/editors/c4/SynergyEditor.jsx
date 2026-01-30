@@ -22,14 +22,15 @@ import '@xyflow/react/dist/style.css';
 import { 
     NodePanel, 
     NodeIcon, 
-    NodeDescription 
+    NodeDescription,
+    Snackbar
 } from '@synergycodes/overflow-ui';
 import './synergy-lib.css'; // Local copy
 import '@synergycodes/overflow-ui/tokens.css'; // Correct export path
 
 // Using FontAwesome for icons as placeholders
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faServer, faUser, faDatabase, faLayerGroup, faCode, faLink } from '@fortawesome/free-solid-svg-icons';
+import { faServer, faUser, faDatabase, faLayerGroup, faCode, faLink, faCheckCircle, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 
 // Hooks and Components
 import { PropertiesPanel } from './PropertiesPanel.jsx';
@@ -161,6 +162,7 @@ export const SynergyC4Editor = ({ initialNodes = defaultNodes, initialEdges = de
     const [selectedElement, setSelectedElement] = useState(null);
     const { screenToFlowPosition, getIntersectingNodes } = useReactFlow();
     const [clipboard, setClipboard] = useState([]); // Clipboard for Copy/Paste
+    const [snackbar, setSnackbar] = useState({ open: false, title: '', subtitle: '', variant: 'success' }); // Snackbar State
     
     // Sync up changes to parent
     useEffect(() => {
@@ -187,46 +189,9 @@ export const SynergyC4Editor = ({ initialNodes = defaultNodes, initialEdges = de
         setSelectedElement(newNode);
     }, [nodes, setNodes]);
 
-    // Custom onNodesChange to handle grouping
-    const onNodesChangeWithGrouping = useCallback(
-        (changes) => {
-            const additionalChanges = [];
 
-            changes.forEach((change) => {
-                if (change.type === 'position' && change.dragging) {
-                    const movingNodeId = change.id;
-                    const children = nodes.filter(n => n.data?.parentId === movingNodeId);
-                    
-                    if (children.length > 0 && change.position) {
-                        const movingNode = nodes.find(n => n.id === movingNodeId);
-                        
-                        if (movingNode && movingNode.position) {
-                             const deltaX = change.position.x - movingNode.position.x;
-                             const deltaY = change.position.y - movingNode.position.y;
-                             
-                             if (deltaX !== 0 || deltaY !== 0) {
-                                 children.forEach(child => {
-                                     additionalChanges.push({
-                                         id: child.id,
-                                         type: 'position',
-                                         position: {
-                                             x: child.position.x + deltaX,
-                                             y: child.position.y + deltaY,
-                                         },
-                                         dragging: true 
-                                     });
-                                 });
-                             }
-                        }
-                    }
-                }
-            });
 
-            onNodesChange([...changes, ...additionalChanges]);
-        },
-        [onNodesChange, nodes]
-    );
-
+    // Group Highlighting Logic
     // Group Highlighting Logic
     useOnSelectionChange({
         onChange: ({ nodes: selectedNodes }) => {
@@ -234,13 +199,13 @@ export const SynergyC4Editor = ({ initialNodes = defaultNodes, initialEdges = de
             
             selectedNodes.forEach(node => {
                 activeGroupIds.add(node.id);
-                if (node.data?.parentId) activeGroupIds.add(node.data.parentId);
+                if (node.parentId) activeGroupIds.add(node.parentId);
             });
 
             setNodes((nds) => nds.map((n) => {
                 const belongsToActiveGroup = 
                     activeGroupIds.has(n.id) || 
-                    (n.data?.parentId && activeGroupIds.has(n.data.parentId));
+                    (n.parentId && activeGroupIds.has(n.parentId));
 
                 if (!!n.data.isGroupHighlighted !== belongsToActiveGroup) {
                     return {
@@ -265,8 +230,316 @@ export const SynergyC4Editor = ({ initialNodes = defaultNodes, initialEdges = de
             takeSnapshot(nodes, edges);
             setEdges((eds) => addEdge({ ...params, type: 'smoothstep' }, eds));
         },
-        [setEdges, nodes, edges, takeSnapshot],
+        [setEdges, nodes, edges, takeSnapshot]
     );
+
+    // Helper: Calculate intersection area
+    const getIntersectionArea = (rect1, rect2) => {
+        const xOverlap = Math.max(0, Math.min(rect1.x + rect1.width, rect2.x + rect2.width) - Math.max(rect1.x, rect2.x));
+        const yOverlap = Math.max(0, Math.min(rect1.y + rect1.height, rect2.y + rect2.height) - Math.max(rect1.y, rect2.y));
+        return xOverlap * yOverlap;
+    };
+
+
+
+    // Helper to check if a node is a descendant of another
+    const isDescendant = (parent, childId) => {
+        if (!parent.parentId) return false;
+        if (parent.parentId === childId) return true;
+        const grandParent = nodes.find(n => n.id === parent.parentId);
+        if (!grandParent) return false;
+        return isDescendant(grandParent, childId);
+    };
+
+    const onNodeDrag = useCallback((event, node) => {
+        // Helper to get absolute position
+        const getAbsolutePosition = (n) => {
+            if (!n.parentId) return n.position;
+            const parent = nodes.find(p => p.id === n.parentId);
+            if (!parent) return n.position;
+            const parentPos = getAbsolutePosition(parent);
+            return {
+                x: n.position.x + parentPos.x,
+                y: n.position.y + parentPos.y
+            };
+        };
+
+        const nodeAbsPos = getAbsolutePosition(node);
+        const nodeWidth = node.measured?.width || node.width || 150;
+        const nodeHeight = node.measured?.height || node.height || 80;
+        
+        const nodeBounds = {
+            x: nodeAbsPos.x,
+            y: nodeAbsPos.y,
+            width: nodeWidth,
+            height: nodeHeight
+        };
+
+        // 1. Highlight Potential Parents
+        const potentialParents = nodes.filter(n => 
+            (n.type === 'system' || n.type === 'container') && 
+            n.id !== node.id &&
+            n.id !== node.parentId &&
+            !isDescendant(n, node.id) // Prevent cycling
+        );
+
+        let bestCandidate = null;
+        let maxOverlap = 0;
+        const nodeArea = nodeBounds.width * nodeBounds.height;
+
+        potentialParents.forEach(parent => {
+            // Basic hierarchy check
+            const isValidParent = (node.type === 'container' && parent.type === 'system') ||
+                                  (node.type === 'component' && parent.type === 'container') ||
+                                  (node.type === 'database' && (parent.type === 'container' || parent.type === 'system'));
+
+            if (!isValidParent) return;
+
+            // Parent is usually top-level or child of another. We need its absolute bounds too.
+            const parentAbsPos = getAbsolutePosition(parent);
+            const parentWidth = parent.measured?.width || parent.width || 150;
+            const parentHeight = parent.measured?.height || parent.height || 80;
+
+            const parentBounds = {
+                x: parentAbsPos.x,
+                y: parentAbsPos.y,
+                width: parentWidth,
+                height: parentHeight
+            };
+
+            const intersection = getIntersectionArea(nodeBounds, parentBounds);
+            // DEBUG LOGGING
+            if (intersection > 0) {
+                 console.log(`Checking overlap: ${node.id} vs ${parent.id}`, {
+                     intersection,
+                     nodeArea,
+                     threshold: nodeArea * 0.5,
+                     ratio: intersection / nodeArea
+                 });
+            }
+
+            if (intersection > (nodeArea * 0.5) && intersection > maxOverlap) {
+                maxOverlap = intersection;
+                bestCandidate = parent;
+            }
+        });
+
+        // Update Highlighting ONLY if changed
+        const currentHighlighted = nodes.find(n => n.data.isGroupHighlighted);
+        const shouldUpdateHighlight = 
+            (bestCandidate && (!currentHighlighted || currentHighlighted.id !== bestCandidate.id)) ||
+            (!bestCandidate && currentHighlighted);
+
+        if (shouldUpdateHighlight) {
+            setNodes((nds) => nds.map((n) => {
+                // Do NOT touch the dragged node's position manually; let onNodesChange handle it.
+                // We only need to update highlighting on OTHER nodes.
+                
+                if (bestCandidate && n.id === bestCandidate.id) {
+                    return { ...n, data: { ...n.data, isGroupHighlighted: true } };
+                }
+                if (n.data.isGroupHighlighted) { 
+                    return { ...n, data: { ...n.data, isGroupHighlighted: false } };
+                }
+                return n;
+            }));
+        }
+
+        // 2. Auto-Expand Logic (if node has parent)
+        if (node.parentId) {
+            const parent = nodes.find(n => n.id === node.parentId);
+            if (parent) {
+                 const padding = 40;
+                 // Use style logic for resizing as that's what renders
+                 const currentWidth = parent.style?.width ? parseInt(parent.style.width) : (parent.width || 150);
+                 const currentHeight = parent.style?.height ? parseInt(parent.style.height) : (parent.height || 80);
+                 
+                 // Node position is RELATIVE to parent
+                 const rightEdge = node.position.x + nodeWidth;
+                 const bottomEdge = node.position.y + nodeHeight;
+
+                 let newWidth = currentWidth;
+                 let newHeight = currentHeight;
+                 let changed = false;
+
+                 if (rightEdge + padding > currentWidth) {
+                     newWidth = rightEdge + padding;
+                     changed = true;
+                 }
+                 if (bottomEdge + padding > currentHeight) {
+                     newHeight = bottomEdge + padding;
+                     changed = true;
+                 }
+
+                 if (changed) {
+                     setNodes(nds => nds.map(n => {
+                         if (n.id === parent.id) {
+                             return {
+                                 ...n,
+                                 style: { ...n.style, width: newWidth, height: newHeight },
+                                 width: newWidth,
+                                 height: newHeight
+                             };
+                         }
+                         return n;
+                     }));
+                 }
+            }
+        }
+
+    }, [nodes, setNodes]);
+
+    const onNodeDragStop = useCallback((event, node) => {
+         // Helper to get absolute position
+         const getAbsolutePosition = (n) => {
+            if (!n.parentId) return n.position;
+            const parent = nodes.find(p => p.id === n.parentId);
+            if (!parent) return n.position;
+            const parentPos = getAbsolutePosition(parent);
+            return {
+                x: n.position.x + parentPos.x,
+                y: n.position.y + parentPos.y
+            };
+        };
+
+         const highlightedParent = nodes.find(n => n.data.isGroupHighlighted);
+         const nodeAbsPos = getAbsolutePosition(node);
+         const nodeWidth = node.measured?.width || node.width || 150;
+         const nodeHeight = node.measured?.height || node.height || 80;
+
+         // CASE 1: Reparenting
+         // CASE 1: Reparenting
+         // CASE 1: Reparenting
+         if (highlightedParent) {
+             // 1. Final Cycle Check (Safety)
+             if (isDescendant(highlightedParent, node.id)) {
+                 console.warn("Attempted to group into descendant. Aborting.");
+                  // Clear highlight
+                  setNodes(nds => nds.map(n => {
+                      if (n.id === highlightedParent.id) return { ...n, data: { ...n.data, isGroupHighlighted: false } };
+                      return n;
+                  }));
+                 return;
+             }
+
+             takeSnapshot(nodes, edges);
+
+             // 2. Safe Dimension Calculation
+             // Ensure we fallback to reasonable defaults if 'measured' is missing
+             const parentAbsPos = getAbsolutePosition(highlightedParent);
+             const newRelX = nodeAbsPos.x - parentAbsPos.x;
+             const newRelY = nodeAbsPos.y - parentAbsPos.y;
+
+             console.log('[Synergy] Grouping Debug:', {
+                 nodeId: node.id,
+                 parentId: highlightedParent.id,
+                 nodeAbsPos,
+                 parentAbsPos,
+                 newRelX,
+                 newRelY,
+                 nodeMeasured: node.measured
+             });
+
+             if (isNaN(newRelX) || isNaN(newRelY)) {
+                 console.error('[Synergy] Invalid relative position calculated. Aborting group.');
+                 return;
+             }
+
+             const safeNodeWidth = node.measured?.width || node.width || 150;
+             const safeNodeHeight = node.measured?.height || node.height || 80;
+
+             setNodes(nds => nds.map(n => {
+                 if (n.id === node.id) {
+                     // Cleanup old data
+                     const { parentId: _, ...restData } = n.data;
+                     return {
+                         ...n,
+                         position: { x: newRelX, y: newRelY },
+                         parentId: highlightedParent.id,
+                         extent: 'parent',
+                         data: restData, 
+                         zIndex: 10
+                     };
+                 }
+                 if (n.id === highlightedParent.id) {
+                     // Auto-expand logic
+                     const currentWidth = n.measured?.width || n.width || 150;
+                     const currentHeight = n.measured?.height || n.height || 80;
+
+                     // Ensure defaults are numbers
+                     const safeW = (typeof currentWidth === 'number' && !isNaN(currentWidth)) ? currentWidth : 150;
+                     const safeH = (typeof currentHeight === 'number' && !isNaN(currentHeight)) ? currentHeight : 80;
+                     
+                     const paddingX = Math.max(40, safeNodeWidth * 0.1);
+                     const paddingY = Math.max(40, safeNodeHeight * 0.1);
+
+                     const rightEdge = newRelX + safeNodeWidth;
+                     const bottomEdge = newRelY + safeNodeHeight;
+
+                     let finalWidth = safeW;
+                     let finalHeight = safeH;
+
+                     if (rightEdge + paddingX > safeW) finalWidth = Math.ceil(rightEdge + paddingX);
+                     if (bottomEdge + paddingY > safeH) finalHeight = Math.ceil(bottomEdge + paddingY);
+
+                     if (isNaN(finalWidth) || isNaN(finalHeight)) {
+                         console.error('[Synergy] Invalid final dimensions calculated:', { finalWidth, finalHeight });
+                         return n; // Abort update for parent
+                     }
+
+                     return { 
+                        ...n, 
+                        style: { ...n.style, width: finalWidth, height: finalHeight },
+                        width: finalWidth,
+                        height: finalHeight,
+                        data: { ...n.data, isGroupHighlighted: false } 
+                     };
+                 }
+                 return n;
+             }));
+             
+             setSnackbar({ open: true, title: 'Grouped', subtitle: `Moved to ${highlightedParent.data.label}`, variant: 'success' });
+             return;
+         }
+
+         // CASE 2: Detaching
+         if (node.parentId) {
+             const parent = nodes.find(n => n.id === node.parentId);
+             if (parent) {
+                 const parentAbsPos = getAbsolutePosition(parent);
+                 const parentWidth = parent.measured?.width || parent.width || 150;
+                 const parentHeight = parent.measured?.height || parent.height || 80;
+
+                 const nodeBounds = { x: nodeAbsPos.x, y: nodeAbsPos.y, width: nodeWidth, height: nodeHeight };
+                 const parentBounds = { x: parentAbsPos.x, y: parentAbsPos.y, width: parentWidth, height: parentHeight };
+                 
+                 const intersection = getIntersectionArea(nodeBounds, parentBounds);
+                 const nodeArea = nodeBounds.width * nodeBounds.height;
+                 
+                 // If overlaps less than 30% OR is completely outside
+                 if (intersection < nodeArea * 0.3) {
+                     takeSnapshot(nodes, edges);
+                     
+                     setNodes(nds => nds.map(n => {
+                         if (n.id === node.id) {
+                            const { parentId: _, ...restData } = n.data;
+                            return {
+                                ...n,
+                                position: { x: nodeAbsPos.x, y: nodeAbsPos.y }, // Go absolute
+                                parentId: undefined, // Native detach
+                                extent: undefined,
+                                data: restData,
+                                zIndex: 0
+                            };
+                         }
+                         return n;
+                     }));
+                     setSnackbar({ open: true, title: 'Detached', subtitle: 'Node is now independent', variant: 'success' });
+                 }
+             }
+         }
+
+    }, [nodes, edges, setNodes, takeSnapshot, setSnackbar]);
 
     const onDragOver = useCallback((event) => {
         event.preventDefault();
@@ -345,6 +618,12 @@ export const SynergyC4Editor = ({ initialNodes = defaultNodes, initialEdges = de
         
         setNodes(layoutedNodes);
         setEdges(layoutedEdges);
+        setSnackbar({
+            open: true,
+            title: 'Layout Applied',
+            subtitle: 'The diagram has been auto-arranged.',
+            variant: 'success'
+        });
     }, [nodes, edges, setNodes, setEdges, takeSnapshot, getLayoutedElements]);
 
 
@@ -553,12 +832,14 @@ export const SynergyC4Editor = ({ initialNodes = defaultNodes, initialEdges = de
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
-                    onNodesChange={onNodesChangeWithGrouping}
+                    onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
                     nodeTypes={nodeTypes}
                     onNodeClick={onNodeClick}
-                    onNodeDragStart={onNodeDragStart} 
+                    onNodeDragStart={onNodeDragStart}
+                    onNodeDrag={onNodeDrag}
+                    onNodeDragStop={onNodeDragStop} 
                     onNodesDelete={() => takeSnapshot(nodes, edges)}
                     onPaneClick={onPaneClick}
                     fitView
@@ -576,6 +857,17 @@ export const SynergyC4Editor = ({ initialNodes = defaultNodes, initialEdges = de
             )}
             </div>
           </div>
+            {snackbar.open && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+                    <Snackbar 
+                        variant={snackbar.variant} 
+                        title={snackbar.title}
+                        subtitle={snackbar.subtitle}
+                        close={true}
+                        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+                    />
+                </div>
+            )}
         </div>
     );
 };

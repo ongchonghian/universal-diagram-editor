@@ -1,4 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { 
+    Input, 
+    TextArea, 
+    Accordion, 
+    NodeIcon 
+} from '@synergycodes/overflow-ui';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPalette } from '@fortawesome/free-solid-svg-icons';
+
 
 export const PropertiesPanel = ({ selectedElement, onChange, onDetach }) => {
     const [formData, setFormData] = useState({ label: '', description: '', technology: '', style: {} });
@@ -44,11 +53,10 @@ export const PropertiesPanel = ({ selectedElement, onChange, onDetach }) => {
             <div className="space-y-4">
                 <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">Label</label>
-                    <input
-                        type="text"
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Label</label>
+                    <Input
                         value={formData.label}
                         onChange={(e) => handleChange('label', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                         placeholder="e.g. User, Backend API"
                     />
                 </div>
@@ -58,11 +66,10 @@ export const PropertiesPanel = ({ selectedElement, onChange, onDetach }) => {
                         {(type === 'container' || type === 'component' || type === 'database') && (
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Technology</label>
-                                <input
-                                    type="text"
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Technology</label>
+                                <Input
                                     value={formData.technology}
                                     onChange={(e) => handleChange('technology', e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                                     placeholder="e.g. Java, PostgreSQL, React"
                                 />
                             </div>
@@ -70,33 +77,42 @@ export const PropertiesPanel = ({ selectedElement, onChange, onDetach }) => {
                         
                         <div>
                             <label className="block text-xs font-semibold text-slate-600 mb-1">Description</label>
-                            <textarea
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Description</label>
+                            <TextArea
                                 value={formData.description}
                                 onChange={(e) => handleChange('description', e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none min-h-[80px]"
                                 placeholder="Description of this element..."
+                                minRows={3}
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Style</label>
-                            <div className="flex gap-2">
-                                <span className="text-xs text-slate-500 flex items-center">Background:</span>
-                                <input 
-                                    type="color" 
-                                    value={formData.style?.backgroundColor || '#ffffff'} // Default fallback if needed
-                                    onChange={(e) => handleChange('style', { ...formData.style, backgroundColor: e.target.value })}
-                                    className="h-8 w-8 cursor-pointer border-0 p-0 rounded overflow-hidden"
-                                />
-                                <span className="text-xs text-slate-500 flex items-center ml-2">Text:</span>
-                                <input 
-                                    type="color" 
-                                    value={formData.style?.color || '#000000'}
-                                    onChange={(e) => handleChange('style', { ...formData.style, color: e.target.value })}
-                                    className="h-8 w-8 cursor-pointer border-0 p-0 rounded overflow-hidden"
-                                />
+                        <Accordion 
+                            label="Appearance"
+                            icon={<NodeIcon icon={<FontAwesomeIcon icon={faPalette} />} />}
+                            defaultOpen={false}
+                            className="bg-transparent"
+                        >
+                            <div className="flex gap-2 p-2">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs text-slate-500">Background</span>
+                                    <input 
+                                        type="color" 
+                                        value={formData.style?.backgroundColor || '#ffffff'} 
+                                        onChange={(e) => handleChange('style', { ...formData.style, backgroundColor: e.target.value })}
+                                        className="h-8 w-16 cursor-pointer border border-slate-200 rounded p-0 overflow-hidden"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs text-slate-500">Text</span>
+                                    <input 
+                                        type="color" 
+                                        value={formData.style?.color || '#000000'}
+                                        onChange={(e) => handleChange('style', { ...formData.style, color: e.target.value })}
+                                        className="h-8 w-16 cursor-pointer border border-slate-200 rounded p-0 overflow-hidden"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        </Accordion>
 
                         {onDetach && (
                             <div className="pt-4 border-t border-slate-100">

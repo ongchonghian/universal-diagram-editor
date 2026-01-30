@@ -139,7 +139,7 @@ Alice <-- Bob: another authentication Response
         docs: 'https://c4model.com/',
         hasVisualEditor: true,
         example: `@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!include <C4/C4_Context>
 
 Person(personAlias, "Label", "Optional Description")
 System(systemAlias, "Label", "Optional Description")
@@ -150,7 +150,7 @@ Rel(personAlias, systemAlias, "Label", "Optional Technology")
 };
 
 export const PLANTUML_SNIPPETS = {
-    'Sequence Diagram': [
+    sequence: [
         { label: 'Participant', icon: 'fa-user', code: 'participant "Name" as P\n' },
         { label: 'Actor', icon: 'fa-user-circle', code: 'actor "Name" as A\n' },
         { label: 'Database', icon: 'fa-database', code: 'database "DB" as DB\n' },
@@ -164,7 +164,7 @@ export const PLANTUML_SNIPPETS = {
         { label: 'Loop', icon: 'fa-redo', code: 'loop N times\n  A -> B: action\nend\n' },
         { label: 'Group', icon: 'fa-object-group', code: 'group Label\n  A -> B: action\nend\n' },
     ],
-    'Class Diagram': [
+    class: [
         { label: 'Class', icon: 'fa-cube', code: 'class ClassName {\n  +publicMethod()\n  -privateField\n}\n' },
         { label: 'Interface', icon: 'fa-puzzle-piece', code: 'interface InterfaceName {\n  +method()\n}\n' },
         { label: 'Enum', icon: 'fa-list', code: 'enum EnumName {\n  VALUE1\n  VALUE2\n}\n' },
@@ -178,7 +178,7 @@ export const PLANTUML_SNIPPETS = {
         { label: 'Package', icon: 'fa-folder', code: 'package PackageName {\n  class MyClass\n}\n' },
         { label: 'Note', icon: 'fa-sticky-note', code: 'note "Note text" as N\n' },
     ],
-    'Use Case Diagram': [
+    usecase: [
         { label: 'Actor', icon: 'fa-user', code: 'actor "User" as U\n' },
         { label: 'Use Case', icon: 'fa-ellipsis-h', code: 'usecase "Use Case" as UC\n' },
         { label: 'Rectangle', icon: 'fa-square', code: 'rectangle System {\n  usecase "UC1" as UC1\n}\n' },
@@ -187,7 +187,7 @@ export const PLANTUML_SNIPPETS = {
         { label: 'Extend', icon: 'fa-expand', code: 'UC2 ..> UC1 : <<extend>>\n' },
         { label: 'Note', icon: 'fa-sticky-note', code: 'note right of UC : Note text\n' },
     ],
-    'Activity Diagram': [
+    activity: [
         { label: 'Start', icon: 'fa-play-circle', code: 'start\n' },
         { label: 'Stop', icon: 'fa-stop-circle', code: 'stop\n' },
         { label: 'Activity', icon: 'fa-square', code: ':Activity;\n' },
@@ -197,7 +197,7 @@ export const PLANTUML_SNIPPETS = {
         { label: 'Partition', icon: 'fa-th-large', code: 'partition "Name" {\n  :activity;\n}\n' },
         { label: 'Note', icon: 'fa-sticky-note', code: 'note right\n  Note text\nend note\n' },
     ],
-    'State Diagram': [
+    state: [
         { label: 'State', icon: 'fa-circle', code: 'state "State Name" as S\n' },
         { label: 'Start', icon: 'fa-play-circle', code: '[*] --> State1\n' },
         { label: 'End', icon: 'fa-stop-circle', code: 'State1 --> [*]\n' },
@@ -207,7 +207,7 @@ export const PLANTUML_SNIPPETS = {
         { label: 'Join', icon: 'fa-compress-arrows-alt', code: 'state join <<join>>\n' },
         { label: 'Note', icon: 'fa-sticky-note', code: 'note right of S : Note text\n' },
     ],
-    'Component Diagram': [
+    component: [
         { label: 'Component', icon: 'fa-cube', code: 'component "Name" as C\n' },
         { label: 'Interface', icon: 'fa-circle', code: 'interface "API" as I\n' },
         { label: 'Package', icon: 'fa-folder', code: 'package "Package" {\n  component C1\n}\n' },
@@ -215,7 +215,62 @@ export const PLANTUML_SNIPPETS = {
         { label: 'Link', icon: 'fa-link', code: 'C1 --> C2\n' },
         { label: 'Note', icon: 'fa-sticky-note', code: 'note right of C : Note text\n' },
     ],
-    'default': [
+    deployment: [
+        { label: 'Node', icon: 'fa-server', code: 'node "Node Name" as N\n' },
+        { label: 'Cloud', icon: 'fa-cloud', code: 'cloud "Cloud Name" as C\n' },
+        { label: 'Database', icon: 'fa-database', code: 'database "DB" as DB\n' },
+        { label: 'Artifact', icon: 'fa-file-code', code: 'artifact "File" as A\n' },
+        { label: 'Folder', icon: 'fa-folder', code: 'folder "Folder" as F\n' },
+        { label: 'Link', icon: 'fa-link', code: 'N --> C\n' },
+    ],
+    timing: [
+        { label: 'Clock', icon: 'fa-clock', code: 'clock "Clock" as C with period 50\n' },
+        { label: 'Binary', icon: 'fa-toggle-on', code: 'binary "Signal" as S\n' },
+        { label: 'Robust', icon: 'fa-wave-square', code: 'robust "State" as R\n' },
+        { label: 'Concise', icon: 'fa-compress', code: 'concise "User" as U\n' },
+        { label: 'Event', icon: 'fa-bolt', code: '@0\n' },
+        { label: 'Change', icon: 'fa-exchange-alt', code: '@100 as :high\n' },
+    ],
+    network: [
+        { label: 'Network', icon: 'fa-network-wired', code: 'nwdiag {\n  network dmz {\n      address = "210.x.x.x/24"\n      web01 [address = "210.x.x.1"];\n      web02 [address = "210.x.x.2"];\n  }\n}\n' },
+        { label: 'Server', icon: 'fa-server', code: 'server [address = "192.168.0.1"];\n' },
+        { label: 'Group', icon: 'fa-object-group', code: 'group {\n  web01;\n  web02;\n}\n' },
+    ],
+    gantt: [
+        { label: 'Task', icon: 'fa-tasks', code: '[Task Name] lasts 10 days\n' },
+        { label: 'Start', icon: 'fa-play', code: '[Task] starts 2020-01-01\n' },
+        { label: 'End', icon: 'fa-stop', code: '[Task] ends 2020-01-10\n' },
+        { label: 'Milestone', icon: 'fa-flag', code: '[Milestone] happens 2020-01-15\n' },
+        { label: 'Dependency', icon: 'fa-arrow-right', code: '[Task2] starts at [Task1]\'s end\n' },
+    ],
+    mindmap: [
+        { label: 'Root', icon: 'fa-circle', code: '* Root Node\n' },
+        { label: 'Level 1', icon: 'fa-circle-notch', code: '** Level 1 Node\n' },
+        { label: 'Level 2', icon: 'fa-dot-circle', code: '*** Level 2 Node\n' },
+        { label: 'Boxless', icon: 'fa-font', code: '**_ Boxless Node\n' },
+    ],
+    wbs: [
+        { label: 'Root', icon: 'fa-sitemap', code: '* Project\n' },
+        { label: 'Branch', icon: 'fa-code-branch', code: '** Phase 1\n' },
+        { label: 'Leaf', icon: 'fa-leaf', code: '*** Task 1\n' },
+        { label: 'Boxless', icon: 'fa-font', code: '**_ Task without box\n' },
+    ],
+    json: [
+        { label: 'String', icon: 'fa-font', code: '"key": "value"\n' },
+        { label: 'Number', icon: 'fa-calculator', code: '"count": 100\n' },
+        { label: 'Object', icon: 'fa-cube', code: '"object": {\n  "key": "value"\n}\n' },
+        { label: 'Array', icon: 'fa-list', code: '"list": [\n  "item1",\n  "item2"\n]\n' },
+    ],
+    yaml: [
+        { label: 'Key-Value', icon: 'fa-font', code: 'key: value\n' },
+        { label: 'List', icon: 'fa-list', code: '- item1\n- item2\n' },
+        { label: 'Object', icon: 'fa-cube', code: 'object:\n  key: value\n' },
+    ],
+    common: [
+        { label: 'Note', icon: 'fa-sticky-note', code: 'note right: Note text\n' },
+        { label: 'Title', icon: 'fa-heading', code: 'title Diagram Title\n' },
+    ],
+    fallback: [
         { label: 'Participant', icon: 'fa-user', code: 'participant "Name" as P\n' },
         { label: 'Actor', icon: 'fa-user-circle', code: 'actor "Name" as A\n' },
         { label: 'Class', icon: 'fa-cube', code: 'class ClassName {\n}\n' },
@@ -595,6 +650,109 @@ title Work Breakdown Structure
 *** 5.2 Monitoring
 
 @endwbs`
+    },
+    {
+        id: 'json',
+        label: 'JSON Data',
+        icon: 'fa-code',
+        description: 'Visualize JSON data',
+        code: `@startjson
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "isAlive": true,
+  "age": 27,
+  "address": {
+    "streetAddress": "21 2nd Street",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10021-3100"
+  },
+  "phoneNumbers": [
+    {
+      "type": "home",
+      "number": "212 555-1234"
+    },
+    {
+      "type": "office",
+      "number": "646 555-4567"
+    }
+  ],
+  "children": [],
+  "spouse": null
+}
+@endjson`
+    },
+    {
+        id: 'yaml',
+        label: 'YAML Data',
+        icon: 'fa-file-code',
+        description: 'Visualize YAML data',
+        code: `@startyaml
+doi: 10.1038/nmat3283
+key:
+  - OA
+  - transparent
+  - device
+author:
+  -
+    name: G. W. C.
+    affiliation: University of Groningen
+  -
+    name: H. G.
+    affiliation: University of Groningen
+@endyaml`
+    },
+    {
+        id: 'timing',
+        label: 'Timing Diagram',
+        icon: 'fa-clock',
+        description: 'Show timing and state changes',
+        code: `@startuml
+robust "DNS Resolver" as DNS
+robust "Web Browser" as WB
+concise "User" as U
+
+@0
+U is Idle
+WB is Idle
+DNS is Idle
+
+@+100
+U -> WB : URL
+U is Waiting
+WB is Processing
+
+@+200
+WB is Waiting
+WB -> DNS@+50 : Resolve URL
+
+@+100
+DNS is Processing
+
+@+300
+DNS is Idle
+DNS -> WB@+50 : Resolved Address
+
+@+100
+WB is Idle
+WB -> U : Page content
+U is Idle
+@enduml`
+    },
+    {
+        id: 'gantt',
+        label: 'Gantt Chart',
+        icon: 'fa-tasks',
+        description: 'Project schedule',
+        code: `@startgantt
+[Prototype design] lasts 13 days and is colored in Lavender/LightBlue
+[Test prototype] lasts 9 days and is colored in Coral/Green and starts 3 days after [Prototype design]'s end
+[Write tests] lasts 5 days and ends at [Prototype design]'s end
+[Hire tests writers] lasts 6 days and ends at [Write tests]'s start
+[Init and write tests report] is colored in Coral/Green
+[Init and write tests report] starts 1 day after [Test prototype]'s start and ends at [Test prototype]'s end
+@endgantt`
     }
 ];
 
@@ -652,6 +810,81 @@ export const MERMAID_SNIPPETS = {
     ],
     pie: [
         { label: 'Data', icon: 'fa-chart-pie', code: '"Category" : 100\n' },
+    ],
+    gitGraph: [
+        { label: 'Commit', icon: 'fa-code-branch', code: 'commit\n' },
+        { label: 'Branch', icon: 'fa-code-branch', code: 'branch newbranch\n' },
+        { label: 'Checkout', icon: 'fa-code-branch', code: 'checkout newbranch\n' },
+        { label: 'Merge', icon: 'fa-code-branch', code: 'merge newbranch\n' },
+        { label: 'Tag', icon: 'fa-tag', code: 'commit tag: "v1.0"\n' },
+    ],
+    mindmap: [
+        { label: 'Root', icon: 'fa-circle', code: 'root((mindmap))\n' },
+        { label: 'Square', icon: 'fa-square', code: '[Text]\n' },
+        { label: 'Round', icon: 'fa-circle', code: '(Text)\n' },
+        { label: 'Bang', icon: 'fa-bomb', code: '))Text((\n' },
+        { label: 'Cloud', icon: 'fa-cloud', code: ')Text(\n' },
+        { label: 'Circle', icon: 'fa-circle', code: '((Text))\n' },
+        { label: 'Hexagon', icon: 'fa-draw-polygon', code: '{{Text}}\n' },
+    ],
+    journey: [
+        { label: 'Title', icon: 'fa-heading', code: 'title My Journey\n' },
+        { label: 'Section', icon: 'fa-layer-group', code: 'section Go to work\n' },
+        { label: 'Task', icon: 'fa-tasks', code: 'Make tea: 5: Me\n' },
+    ],
+    timeline: [
+        { label: 'Title', icon: 'fa-heading', code: 'title Timeline\n' },
+        { label: 'Section', icon: 'fa-layer-group', code: 'section 2023\n' },
+        { label: 'Event', icon: 'fa-calendar-day', code: 'Event 1 : Description\n' },
+    ],
+    quadrantChart: [
+        { label: 'Axis', icon: 'fa-arrows-alt', code: 'x-axis Low --> High\ny-axis Low --> High\n' },
+        { label: 'Quadrant', icon: 'fa-th-large', code: 'quadrant-1 Plan\nquadrant-2 Do\nquadrant-3 Check\nquadrant-4 Act\n' },
+        { label: 'Point', icon: 'fa-dot-circle', code: 'Point A: [0.3, 0.6]\n' },
+    ],
+    requirementDiagram: [
+        { label: 'Requirement', icon: 'fa-clipboard-check', code: 'requirement test_req {\n  id: 1\n  text: the test requirement\n  risk: high\n  verifymethod: test\n}\n' },
+        { label: 'Element', icon: 'fa-cube', code: 'element test_entity {\n  type: simulation\n}\n' },
+        { label: 'Link', icon: 'fa-link', code: 'test_entity - satisfies -> test_req\n' },
+    ],
+    c4: [
+        { label: 'Person', icon: 'fa-user', code: 'Person(user, "User", "Description")\n' },
+        { label: 'System', icon: 'fa-server', code: 'System(system, "System", "Description")\n' },
+        { label: 'Rel', icon: 'fa-arrow-right', code: 'Rel(user, system, "Uses")\n' },
+        { label: 'Container', icon: 'fa-box', code: 'Container(container, "Container", "Tech", "Desc")\n' },
+        { label: 'Component', icon: 'fa-cogs', code: 'Component(comp, "Component", "Tech", "Desc")\n' },
+    ],
+    sankey: [
+        { label: 'Link', icon: 'fa-arrow-right', code: 'Source,Target,Value\n' },
+    ],
+    xyChart: [
+        { label: 'Title', icon: 'fa-heading', code: 'title "XY Chart"\n' },
+        { label: 'X-Axis', icon: 'fa-arrows-alt-h', code: 'x-axis [jan, feb, mar]\n' },
+        { label: 'Y-Axis', icon: 'fa-arrows-alt-v', code: 'y-axis "Revenue" 0 --> 100\n' },
+        { label: 'Bar', icon: 'fa-chart-bar', code: 'bar [10, 20, 30]\n' },
+        { label: 'Line', icon: 'fa-chart-line', code: 'line [15, 25, 35]\n' },
+    ],
+    block: [
+        { label: 'Block', icon: 'fa-cube', code: 'block:id\n' },
+        { label: 'Column', icon: 'fa-columns', code: 'columns 3\n' },
+        { label: 'Space', icon: 'fa-arrows-alt-h', code: 'space\n' },
+        { label: 'Arrow', icon: 'fa-arrow-right', code: 'block1 --> block2\n' },
+    ],
+    packet: [
+        { label: 'Packet', icon: 'fa-box-open', code: 'packet-beta\n' },
+        { label: 'Bit 0-15', icon: 'fa-ruler-horizontal', code: '0-15: "Source Port"\n' },
+        { label: 'Bit 16-31', icon: 'fa-ruler-horizontal', code: '16-31: "Destination Port"\n' },
+    ],
+    kanban: [
+        { label: 'Todo', icon: 'fa-clipboard-list', code: 'todo\n' },
+        { label: 'Done', icon: 'fa-check-square', code: 'done\n' },
+        { label: 'Item', icon: 'fa-sticky-note', code: '[Item Name]\n' },
+    ],
+    architecture: [
+        { label: 'Service', icon: 'fa-server', code: 'service "Name"(icon)\n' },
+        { label: 'Group', icon: 'fa-object-group', code: 'group "Name" {\n}\n' },
+        { label: 'Junction', icon: 'fa-circle', code: 'junction "Name"\n' },
+        { label: 'Link', icon: 'fa-arrow-right', code: 'service1:R -- L:service2\n' },
     ],
     common: [
          { label: 'Link', icon: 'fa-arrow-right', code: '--> ' },
@@ -770,7 +1003,6 @@ export const MERMAID_TEMPLATES = [
   root((mindmap))
     Origins
       Long history
-      ::icon(fa fa-book)
       Popularisation
         British popular psychology author Tony Buzan
     Research
@@ -796,6 +1028,82 @@ export const MERMAID_TEMPLATES = [
     checkout main
     merge develop
     commit`
+    },
+    {
+        id: 'journey',
+        label: 'User Journey',
+        icon: 'fa-map-signs',
+        description: 'Describe user workflows',
+        code: `journey
+    title My working day
+    section Go to work
+      Make tea: 5: Me
+      Go upstairs: 3: Me
+      Do work: 1: Me, Cat
+    section Go home
+      Go downstairs: 5: Me
+      Sit down: 5: Me`
+    },
+    {
+        id: 'timeline',
+        label: 'Timeline',
+        icon: 'fa-stream',
+        description: 'Show events over time',
+        code: `timeline
+    title History of Social Media Platform
+    2002 : LinkedIn
+    2004 : Facebook : Google
+    2005 : Youtube
+    2006 : Twitter`
+    },
+    {
+        id: 'quadrant',
+        label: 'Quadrant Chart',
+        icon: 'fa-th-large',
+        description: 'Visualize data in quadrants',
+        code: `quadrantChart
+    title Reach and engagement of campaigns
+    x-axis Low Reach --> High Reach
+    y-axis Low Engagement --> High Engagement
+    quadrant-1 We should expand
+    quadrant-2 Need to promote
+    quadrant-3 Re-evaluate
+    quadrant-4 May be improved
+    Campaign A: [0.3, 0.6]
+    Campaign B: [0.45, 0.23]
+    Campaign C: [0.57, 0.69]
+    Campaign D: [0.78, 0.34]
+    Campaign E: [0.40, 0.34]
+    Campaign F: [0.35, 0.78]`
+    },
+    {
+        id: 'requirement',
+        label: 'Requirement Diagram',
+        icon: 'fa-clipboard-check',
+        description: 'Show requirements and traces',
+        code: `requirementDiagram
+    requirement test_req {
+    id: 1
+    text: the test requirement
+    risk: high
+    verifymethod: test
+    }
+    element test_entity {
+    type: simulation
+    }
+    test_entity - satisfies -> test_req`
+    },
+    {
+        id: 'c4',
+        label: 'C4 Diagram',
+        icon: 'fa-layer-group',
+        description: 'Context, Container, Component diagrams',
+        code: `C4Context
+    title System Context diagram for Internet Banking System
+    Person(customerA, "Banking Customer A", "A customer of the bank, with personal bank accounts.")
+    System(SystemAA, "Internet Banking System", "Allows customers to view information about their bank accounts, and make payments.")
+    
+    Rel(customerA, SystemAA, "Uses")`
     }
 ];
 
@@ -1262,7 +1570,7 @@ export const C4_PLANTUML_TEMPLATES = [
         icon: 'fa-sitemap',
         description: 'C4 System Context Diagram',
         code: `@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!include <C4/C4_Context>
 
 Person(personAlias, "Label", "Optional Description")
 System(systemAlias, "Label", "Optional Description")
@@ -1276,7 +1584,7 @@ Rel(personAlias, systemAlias, "Label", "Optional Technology")
         icon: 'fa-layer-group',
         description: 'C4 Container Diagram',
         code: `@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include <C4/C4_Container>
 
 Person(personAlias, "Label", "Optional Description")
 System_Boundary(c1, "Label") {
@@ -1292,7 +1600,7 @@ Rel(personAlias, containerAlias, "Label", "Optional Technology")
         icon: 'fa-cubes',
         description: 'C4 Component Diagram',
         code: `@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+!include <C4/C4_Component>
 
 Container(containerAlias, "Label", "Technology", "Optional Description")
 Container_Boundary(c1, "Label") {

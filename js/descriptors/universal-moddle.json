@@ -1,0 +1,38 @@
+{
+  "name": "UniversalDiagram",
+  "uri": "http://universal-diagram/ns",
+  "prefix": "uni",
+  "xml": {
+    "tagAlias": "lowerCase"
+  },
+  "types": [
+    {
+      "name": "LaneExtension",
+      "extends": [
+        "bpmn:Lane"
+      ],
+      "properties": [
+        {
+          "name": "hideTop",
+          "isAttr": true,
+          "type": "Boolean"
+        },
+        {
+          "name": "hideBottom",
+          "isAttr": true,
+          "type": "Boolean"
+        },
+        {
+          "name": "hideLeft",
+          "isAttr": true,
+          "type": "Boolean"
+        },
+        {
+          "name": "hideRight",
+          "isAttr": true,
+          "type": "Boolean"
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import {
     encodeKroki, detectTypeFromExtension, detectTypeFromContent, detectSpecificModel, bpmnHasDI, 
     isValidBpmnContent, applyBpmnAutoLayout, extractErrorLine, parseErrorInfoFallback 
 } from './utils.js';
+import { getCursorContext } from './context-detection.js';
 import { parseError } from './error-diagnostics/index.js';
 import { Button, LogoLoader, StatusBadge } from './components/common.jsx';
 import MonacoWrapper from './components/editors/MonacoWrapper.jsx';
@@ -24,6 +25,7 @@ const App = () => {
     const [textInput, setTextInput] = useState('');
     const [diagramType, setDiagramType] = useState('bpmn');
     const [detectedModel, setDetectedModel] = useState('');
+    const [contextModel, setContextModel] = useState({ model: '', isInsideBlock: false });
     const [url, setUrl] = useState('');
     const [stats, setStats] = useState({ length: 0, method: 'GET' });
     const [loading, setLoading] = useState(false);
@@ -83,6 +85,12 @@ const App = () => {
         );
     }, [textInput, diagramType]);
 
+    // Update cursor context
+    useEffect(() => {
+        const context = getCursorContext(textInput, cursorPos.line, cursorPos.col, diagramType);
+        setContextModel(context);
+    }, [textInput, cursorPos, diagramType]);
+
     // Generate preview
     useEffect(() => {
         if (!textInput.trim()) {
@@ -116,8 +124,14 @@ const App = () => {
             return;
         }
 
+        // Determine correct Kroki endpoint
+        let krokiType = diagramType;
+        if (diagramType === 'c4' && (textInput.includes('@startuml') || textInput.includes('!include'))) {
+            krokiType = 'c4plantuml';
+        }
+
         const baseUrl = KROKI_BASE_URL;
-        const newUrl = `${baseUrl}/${diagramType}/svg/${encoded}`;
+        const newUrl = `${baseUrl}/${krokiType}/svg/${encoded}`;
         setUrl(newUrl);
         setStats({ length: textInput.length, method: newUrl.length > 4000 ? 'POST' : 'GET' });
         setPreviewError(null);
@@ -141,7 +155,7 @@ const App = () => {
             try {
                 let response;
                 if (newUrl.length > 4000) {
-                    response = await fetch(`${baseUrl}/${diagramType}/svg`, {
+                    response = await fetch(`${baseUrl}/${krokiType}/svg`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain' },
                         body: textInput
@@ -434,8 +448,8 @@ const App = () => {
                 <div className={`flex-1 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
                     {/* Editor Panel */}
                     <div className="w-1/2 flex flex-col border-r border-slate-200 relative">
-                        {diagramType === 'plantuml' && <PlantUmlToolbar detectedModel={detectedModel} onInsert={handleSnippetInsert} />}
-                        {diagramType === 'mermaid' && <MermaidToolbar detectedModel={detectedModel} onInsert={handleSnippetInsert} />}
+                        {diagramType === 'plantuml' && <PlantUmlToolbar detectedModel={detectedModel} contextModel={contextModel} onInsert={handleSnippetInsert} />}
+                        {diagramType === 'mermaid' && <MermaidToolbar detectedModel={detectedModel} contextModel={contextModel} onInsert={handleSnippetInsert} />}
                         <div className="flex-1">
                             <MonacoWrapper
                                 ref={editorRef}

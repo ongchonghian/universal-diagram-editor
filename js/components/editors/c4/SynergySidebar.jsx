@@ -2,7 +2,10 @@ import React from 'react';
 import { 
     NodePanel, 
     NodeIcon, 
-    NodeDescription 
+    NodeDescription,
+    Tooltip,
+    TooltipTrigger,
+    TooltipContent
 } from '@synergycodes/overflow-ui';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faServer, faUser, faDatabase, faLayerGroup, faCode } from '@fortawesome/free-solid-svg-icons';
@@ -16,30 +19,39 @@ export const SynergySidebar = ({ onAddNode }) => {
   };
 
   const SidebarItem = ({ type, label, icon, description }) => (
-    <div 
-        className="cursor-grab active:cursor-grabbing mb-3"
-        onDragStart={(event) => onDragStart(event, type, label)}
-        onClick={() => {
-            console.log('[SynergySidebar] Click add:', type);
-            onAddNode && onAddNode(type, label);
-        }}
-        draggable={true}
-    >
-        {/* We use a non-selected NodePanel as a preview */}
-        <NodePanel.Root className="!w-full !h-16 !border !border-slate-300 pointer-events-none">
-            <NodePanel.Header>
-                <div className="flex items-center gap-3 w-full">
-                    <div className="w-8 h-8 flex items-center justify-center">
-                        <NodeIcon icon={<FontAwesomeIcon icon={icon} className="w-full h-full text-slate-700" />} />
-                    </div>
-                    <NodeDescription 
-                        label={label} 
-                        description={description || type} 
-                    />
-                </div>
-            </NodePanel.Header>
-        </NodePanel.Root>
-    </div>
+    <Tooltip placement="right">
+        <TooltipTrigger>
+            <div 
+                className="cursor-grab active:cursor-grabbing mb-3"
+                onDragStart={(event) => onDragStart(event, type, label)}
+                onClick={() => {
+                    console.log('[SynergySidebar] Click add:', type);
+                    onAddNode && onAddNode(type, label);
+                }}
+                draggable={true}
+            >
+                {/* We use a non-selected NodePanel as a preview */}
+                <NodePanel.Root className="!w-full !h-16 !border !border-slate-300 pointer-events-none">
+                    <NodePanel.Header>
+                        <div className="flex items-center gap-3 w-full">
+                            <div className="w-8 h-8 flex items-center justify-center">
+                                <NodeIcon icon={<FontAwesomeIcon icon={icon} className="w-full h-full text-slate-700" />} />
+                            </div>
+                            <NodeDescription 
+                                label={label} 
+                                description={description || type} 
+                            />
+                        </div>
+                    </NodePanel.Header>
+                </NodePanel.Root>
+            </div>
+        </TooltipTrigger>
+        <TooltipContent>
+            <div className="text-xs bg-slate-800 text-white p-2 rounded max-w-[150px]">
+                {description || "Drag to add to canvas"}
+            </div>
+        </TooltipContent>
+    </Tooltip>
   );
 
   return (

@@ -135,6 +135,16 @@ export const detectSpecificModel = (code, type) => {
         if (/^\s*timeline/m.test(cleanCode)) return 'Timeline';
         if (/^\s*mindmap/m.test(cleanCode)) return 'Mindmap';
         if (/^\s*journey/m.test(cleanCode)) return 'User Journey';
+        if (/^\s*gitGraph/m.test(cleanCode)) return 'Git Graph';
+        if (/^\s*quadrantChart/m.test(cleanCode)) return 'Quadrant Chart';
+        if (/^\s*requirementDiagram/m.test(cleanCode)) return 'Requirement Diagram';
+        if (/^\s*c4Context/m.test(cleanCode) || /^\s*c4Container/m.test(cleanCode) || /^\s*c4Component/m.test(cleanCode)) return 'C4 Diagram';
+        if (/^\s*sankey-beta/m.test(cleanCode)) return 'Sankey Diagram';
+        if (/^\s*xychart-beta/m.test(cleanCode)) return 'XY Chart';
+        if (/^\s*block-beta/m.test(cleanCode)) return 'Block Diagram';
+        if (/^\s*packet-beta/m.test(cleanCode)) return 'Packet Diagram';
+        if (/^\s*kanban/m.test(cleanCode)) return 'Kanban Board';
+        if (/^\s*architecture-beta/m.test(cleanCode)) return 'Architecture Diagram';
         return 'Mermaid Diagram';
     }
 
@@ -151,10 +161,38 @@ export const detectSpecificModel = (code, type) => {
     if (type === 'plantuml') {
         if (/@startmindmap/m.test(cleanCode)) return 'Mindmap';
         if (/@startwbs/m.test(cleanCode)) return 'Work Breakdown Structure';
+        if (/@startjson/m.test(cleanCode)) return 'JSON Data';
+        if (/@startyaml/m.test(cleanCode)) return 'YAML Data';
+        if (/@startgantt/m.test(cleanCode)) return 'Gantt Chart';
+        
         if (/@startuml/m.test(cleanCode)) {
-            if (/^\s*actor\s+|^\s*usecase\s+/m.test(cleanCode)) return 'Use Case Diagram';
-            if (/^\s*(interface|class|enum)\s+/m.test(cleanCode)) return 'Class Diagram';
-            if (/^\s*(participant|actor|boundary|control|entity|database)\s+|->/m.test(cleanCode)) return 'Sequence Diagram';
+            // Timing Diagram
+            if (/^(clock|binary|robust|concise)\s+/m.test(cleanCode)) return 'Timing Diagram';
+
+            // Network Diagram (nwdiag within plantuml)
+            if (/^nwdiag\s*\{/m.test(cleanCode)) return 'Network Diagram';
+
+            // Deployment Diagram
+            if (/^(node|cloud|database|artifact|folder|frame|component)\s+/m.test(cleanCode) || /^node\s+/m.test(cleanCode)) return 'Deployment Diagram';
+
+            // State Diagram
+            if (/^(\[\*\]|state\s+)/m.test(cleanCode)) return 'State Diagram';
+            
+            // Activity Diagram
+            if (/^(start|stop|:|if\s*\()/m.test(cleanCode)) return 'Activity Diagram';
+            
+            // Component Diagram (component keyword also used in deployment, but primary use here)
+            if (/^component\s+/m.test(cleanCode) && !/node|cloud/.test(cleanCode)) return 'Component Diagram';
+
+            // Use Case Diagram
+            if (/^(usecase|actor\s+[\w\s"]+as\s+[\w\s"]+$)/m.test(cleanCode) || /^\(/.test(cleanCode)) return 'Use Case Diagram';
+
+            // Class Diagram
+            if (/^(class|interface|enum|abstract)\s+/m.test(cleanCode) || /<\|--/.test(cleanCode)) return 'Class Diagram';
+            
+            // Sequence Diagram
+            if (/^(participant|boundary|control|entity|database)\s+|->/.test(cleanCode)) return 'Sequence Diagram';
+            
             return 'UML Diagram';
         }
     }
@@ -273,16 +311,285 @@ export const bpmnHasDI = (xml) => {
  * @param {string} xml - BPMN XML content without DI
  * @returns {Promise<string>} - Layouted BPMN XML
  */
+/**
+ * Apply auto-layout to BPMN XML using bpmn-auto-layout
+ * Supports Collaborations/Pools by layouting processes individually and stitching them together.
+ * @param {string} xml - BPMN XML content without DI
+ * @returns {Promise<string>} - Layouted BPMN XML
+ */
 export const applyBpmnAutoLayout = async (xml) => {
-    // We need bpmn-js-auto-layout which might not be loaded
-    // Fallback: use a simple regex approach or just load the library dynamically
-    // For this demo, we'll verify if we can proceed
-    
-    // Check if we can use the cli module if available, otherwise just return original for now
-    // In a real implementation this would load the heavy auto-layout logic
-    console.log("Auto-layout requested");
-    return new Promise(resolve => setTimeout(() => resolve(xml), 1000));
+    try {
+        const { layoutProcess } = await import('bpmn-auto-layout');
+        // Dynamic import bpmn-moddle
+        const BpmnModdleModule = await import('bpmn-moddle');
+        const BpmnModdle = BpmnModdleModule.default || BpmnModdleModule;
+        
+        const moddle = new BpmnModdle();
+        const { rootElement: definitions } = await moddle.fromXML(xml);
+        
+        // Check if there is a collaboration
+        const collaboration = definitions.rootElements?.find(e => e.$type === 'bpmn:Collaboration');
+        
+        // If no collaboration or no participants, simple layout is enough
+        if (!collaboration || !collaboration.participants || collaboration.participants.length === 0) {
+            return await layoutProcess(xml);
+        }
+
+        // --- Advanced Layout for Collaboration ---
+        
+        // 1. Identify separate processes
+        const participants = collaboration.participants;
+        const processMap = new Map(); // processId -> { layoutXml, moddleContext }
+        
+        for (const participant of participants) {
+            const processRef = participant.processRef;
+            if (!processRef) continue;
+            
+            // Create a temporary definition for this process to layout it individually
+            // We need to extract the process definition. 
+            // processRef is already the object in moddle tree
+           
+            // Create a clean XML for just this process
+            const tempDefinitions = moddle.create('bpmn:Definitions', {
+                targetNamespace: definitions.targetNamespace,
+                rootElements: [ processRef ]
+            });
+            
+            // Serialize to XML
+            const { xml: tempXml } = await moddle.toXML(tempDefinitions);
+            
+            // Layout this process
+            try {
+                const layoutedXml = await layoutProcess(tempXml);
+                
+                // Parse the layouted result to get the DI
+                const subModdle = new BpmnModdle();
+                const { rootElement: subDefs } = await subModdle.fromXML(layoutedXml);
+                const subDiagram = subDefs.diagrams?.[0];
+                const planeElement = subDiagram?.plane?.planeElement;
+                
+                if (planeElement) {
+                    processMap.set(processRef.id, {
+                        planeElement,
+                        // Calculate bounds of this process
+                        bounds: calculateBounds(planeElement)
+                    });
+                }
+            } catch (e) {
+                console.warn(`Failed to layout process ${processRef.id}`, e);
+                // Continue without layout for this one?
+            }
+        }
+        
+        // 2. Clear existing diagrams if any
+        definitions.diagrams = [];
+        
+        // 3. Create new DI container
+        const newPlane = moddle.create('bpmndi:BPMNPlane', {
+            bpmnElement: collaboration
+        });
+        const newDiagram = moddle.create('bpmndi:BPMNDiagram', {
+            plane: newPlane
+        });
+        definitions.diagrams = [newDiagram];
+        newPlane.planeElement = [];
+        
+        // 4. Arrange Pools (Stack vertically)
+        const POOL_MARGIN = 50;
+        const POOL_HEADER_WIDTH = 30; // Horizontal pool header? usually pools are horizontal, header on left.
+        const POOL_PADDING = 30;
+        
+        let currentY = 0;
+        const processShiftMap = new Map(); // processId -> { x, y }
+        
+        // We will layout pools vertically (Participants)
+        for (const participant of participants) {
+            const processId = participant.processRef?.id;
+            const processLayout = processMap.get(processId);
+            
+            let poolWidth = 600; // Default min width
+            let poolHeight = 200; // Default min height
+            let childElements = [];
+            
+            if (processLayout) {
+                const { bounds, planeElement } = processLayout;
+                const pBounds = bounds;
+                
+                // Pool size wraps the process content
+                const contentWidth = pBounds.maxX - pBounds.minX;
+                const contentHeight = pBounds.maxY - pBounds.minY;
+                
+                poolWidth = Math.max(poolWidth, contentWidth + POOL_PADDING * 2 + POOL_HEADER_WIDTH);
+                poolHeight = Math.max(poolHeight, contentHeight + POOL_PADDING * 2);
+                
+                // Calculate shift needed to place process inside pool (at currentY)
+                // Process local coords usually start near 0,0 or whatever auto-layout did.
+                // We want: Pool X = 0. Pool Y = currentY.
+                // Content starts at Pool X + Header Width + Padding.
+                // Shift X = (Pool X + Header + Padding) - MinX
+                // Shift Y = (Pool Y + Padding) - MinY
+                
+                const shiftX = POOL_HEADER_WIDTH + POOL_PADDING - pBounds.minX;
+                const shiftY = currentY + POOL_PADDING - pBounds.minY;
+                
+                processShiftMap.set(processId, { x: shiftX, y: shiftY });
+                
+                // Clone and shift elements
+                childElements = getShiftedElements(moddle, planeElement, shiftX, shiftY, participant.processRef);
+                
+                // Update pool height/width if needed to fit everything? 
+                // We already calculated based on bounding box, so strictly it fits.
+            }
+            
+            // Create Pool Shape (Participant)
+            const poolShape = moddle.create('bpmndi:BPMNShape', {
+                bpmnElement: participant,
+                isHorizontal: true,
+                bounds: moddle.create('dc:Bounds', {
+                    x: 0,
+                    y: currentY,
+                    width: poolWidth,
+                    height: poolHeight
+                })
+            });
+            
+            newPlane.planeElement.push(poolShape);
+            newPlane.planeElement.push(...childElements);
+            
+            currentY += poolHeight + POOL_MARGIN;
+        }
+        
+        // 5. Handle Message Flows
+        const messageFlows = collaboration.messageFlows || [];
+        for (const flow of messageFlows) {
+            // Simple straight line logic
+            const sourceId = flow.sourceRef?.id;
+            const targetId = flow.targetRef?.id;
+            
+            // We need to find the DI shapes for source and target
+            // We search in newPlane.planeElement
+            // Note: plain bpmnElement reference might be complex, we compare ID? 
+            // moddle references are objects. flow.sourceRef is the semantic object.
+            
+            const sourceShape = newPlane.planeElement.find(e => e.bpmnElement === flow.sourceRef);
+            const targetShape = newPlane.planeElement.find(e => e.bpmnElement === flow.targetRef);
+            
+            if (sourceShape && targetShape) {
+                const p1 = getCenter(sourceShape.bounds);
+                const p2 = getCenter(targetShape.bounds);
+                
+                // Create Edge
+                const edge = moddle.create('bpmndi:BPMNEdge', {
+                    bpmnElement: flow,
+                    waypoint: [
+                        moddle.create('dc:Point', { x: p1.x, y: p1.y }),
+                        moddle.create('dc:Point', { x: p2.x, y: p2.y })
+                    ]
+                });
+                newPlane.planeElement.push(edge);
+            }
+        }
+        
+        // Serialize final result
+        const { xml: finalXml } = await moddle.toXML(definitions, { format: true });
+        return finalXml;
+
+    } catch (err) {
+        console.error("Auto-layout error:", err);
+        throw err;
+    }
 };
+
+// --- Helpers ---
+
+function calculateBounds(planeElements) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    for (const el of planeElements) {
+        if (el.bounds) {
+            minX = Math.min(minX, el.bounds.x);
+            minY = Math.min(minY, el.bounds.y);
+            maxX = Math.max(maxX, el.bounds.x + el.bounds.width);
+            maxY = Math.max(maxY, el.bounds.y + el.bounds.height);
+        }
+         // Edges? For now mainly nodes determine the "body" bounds.
+         // If we have edges extending beyond nodes, we might clip them, but usually they are between nodes.
+         // Let's include waypoints just in case.
+         if (el.waypoint) {
+             for (const p of el.waypoint) {
+                 minX = Math.min(minX, p.x);
+                 minY = Math.min(minY, p.y);
+                 maxX = Math.max(maxX, p.x);
+                 maxY = Math.max(maxY, p.y);
+             }
+         }
+    }
+    
+    if (minX === Infinity) return { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+    return { minX, minY, maxX, maxY };
+}
+
+function getCenter(bounds) {
+    return {
+        x: bounds.x + bounds.width / 2,
+        y: bounds.y + bounds.height / 2
+    };
+}
+
+function getShiftedElements(moddle, planeElements, shiftX, shiftY, processRef) {
+    const newElements = [];
+    
+    // We clone the DI elements to attach them to the new plane constraints
+    // Also we need to ensure the semantic references (bpmnElement) point to the objects in our main 'definitions' tree.
+    // Since 'processRef' was reused from the main tree, the IDs match.
+    // However, when we did 'fromXML' on the 'subModdle', it created NEW semantic objects.
+    // We must map them back to the original semantic objects in 'processRef'.
+    
+    // Create lookups
+    const elementMap = new Map(); // id -> semantic element in processRef
+    
+    function indexElements(el) {
+        if (el.id) elementMap.set(el.id, el);
+        if (el.flowElements) el.flowElements.forEach(indexElements);
+        if (el.laneSets) el.laneSets.forEach(ls => ls.lanes.forEach(indexElements));
+    }
+    indexElements(processRef);
+    
+    for (const el of planeElements) {
+        // Find corresponding semantic element in original tree
+        const originalSemantic = elementMap.get(el.bpmnElement?.id);
+        if (!originalSemantic) continue; // Skip if connection to unknown?
+        
+        let newEl;
+        
+        if (el.$type === 'bpmndi:BPMNShape') {
+             newEl = moddle.create('bpmndi:BPMNShape', {
+                 bpmnElement: originalSemantic,
+                 bounds: moddle.create('dc:Bounds', {
+                     x: el.bounds.x + shiftX,
+                     y: el.bounds.y + shiftY,
+                     width: el.bounds.width,
+                     height: el.bounds.height
+                 }),
+                 isMarkerVisible: el.isMarkerVisible
+             });
+        } else if (el.$type === 'bpmndi:BPMNEdge') {
+             const points = el.waypoint.map(p => moddle.create('dc:Point', {
+                 x: p.x + shiftX,
+                 y: p.y + shiftY
+             }));
+             newEl = moddle.create('bpmndi:BPMNEdge', {
+                 bpmnElement: originalSemantic,
+                 waypoint: points
+             });
+             // Copy label bounds if any?
+        }
+        
+        if (newEl) newElements.push(newEl);
+    }
+    
+    return newElements;
+}
 
 /**
  * Check if BPMN content is valid

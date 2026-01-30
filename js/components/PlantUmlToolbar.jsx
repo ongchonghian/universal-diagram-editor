@@ -1,17 +1,75 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { PLANTUML_SNIPPETS } from '../config.js';
 
-export const PlantUmlToolbar = ({ detectedModel, onInsert }) => {
-    const [activeTab, setActiveTab] = useState('common');
-
+export const PlantUmlToolbar = ({ detectedModel, contextModel, onInsert }) => {
     // Filter snippets based on current context
     const getSnippets = () => {
-        let snippets = [...(PLANTUML_SNIPPETS.common || [])];
-        if (detectedModel.includes('Sequence')) snippets = [...snippets, ...(PLANTUML_SNIPPETS.sequence || [])];
-        else if (detectedModel.includes('Class')) snippets = [...snippets, ...(PLANTUML_SNIPPETS.class || [])];
-        else if (detectedModel.includes('Use Case')) snippets = [...snippets, ...(PLANTUML_SNIPPETS.usecase || [])];
-        // Add more specific categories as needed or default to common
-        return snippets;
+        const common = PLANTUML_SNIPPETS.common || [];
+        
+        // Use context model if available and inside a block, otherwise fallback to detectedModel
+        // If we are strictly checking cursor context:
+        // 1. If inside a block, show ONLY that model's tools + common.
+        // 2. If NOT inside a block, decide what to show. unique "Start Block" tools? 
+        //    Or just fallback to "detectedModel" (which is global file content detection) but maybe prompt to start?
+        
+        // Let's go with:
+        // Use contextModel.model if isInsideBlock is true.
+        // Else, if strict, maybe show nothing specific? Or just show everything?
+        // The user request says: "if cursor before @startuml... tools should not appear or disabled"
+        
+        let effectiveModel = '';
+        
+        if (contextModel && contextModel.isInsideBlock) {
+             effectiveModel = contextModel.model ? contextModel.model.toLowerCase() : '';
+        } else {
+             // Outside block. 
+             // We could show "Start" snippets? 
+             // For now, if we are outside, let's treat it as "unknown" or "none" which falls back to common/fallback.
+             // But existing logic falls back to detectedModel.
+             // If we want to accept the user's "disabled" request, we should NOT use detectedModel here.
+             effectiveModel = 'none'; 
+        }
+
+        let specificSnippets = [];
+
+        if (effectiveModel.includes('sequence')) {
+            specificSnippets = PLANTUML_SNIPPETS.sequence || [];
+        } else if (effectiveModel.includes('class')) {
+            specificSnippets = PLANTUML_SNIPPETS.class || [];
+        } else if (effectiveModel.includes('use case')) {
+            specificSnippets = PLANTUML_SNIPPETS.usecase || [];
+        } else if (effectiveModel.includes('activity')) {
+            specificSnippets = PLANTUML_SNIPPETS.activity || [];
+        } else if (effectiveModel.includes('state')) {
+            specificSnippets = PLANTUML_SNIPPETS.state || [];
+        } else if (effectiveModel.includes('component')) {
+            specificSnippets = PLANTUML_SNIPPETS.component || [];
+        } else if (effectiveModel.includes('deployment')) {
+            specificSnippets = PLANTUML_SNIPPETS.deployment || [];
+        } else if (effectiveModel.includes('timing')) {
+            specificSnippets = PLANTUML_SNIPPETS.timing || [];
+        } else if (effectiveModel.includes('network')) {
+            specificSnippets = PLANTUML_SNIPPETS.network || [];
+        } else if (effectiveModel.includes('gantt')) {
+            specificSnippets = PLANTUML_SNIPPETS.gantt || [];
+        } else if (effectiveModel.includes('mindmap')) {
+            specificSnippets = PLANTUML_SNIPPETS.mindmap || [];
+        } else if (effectiveModel.includes('breakdown')) { // Work Breakdown Structure
+            specificSnippets = PLANTUML_SNIPPETS.wbs || [];
+        } else if (effectiveModel.includes('json')) {
+            specificSnippets = PLANTUML_SNIPPETS.json || [];
+        } else if (effectiveModel.includes('yaml')) {
+            specificSnippets = PLANTUML_SNIPPETS.yaml || [];
+        } else if (effectiveModel === 'none') {
+            // Strictly hide tools if outside a block
+            return [];
+        } else {
+            // Fallback (only reached if effectiveModel is not 'none' but also not specific known one, e.g. 'uml')
+            return [...(PLANTUML_SNIPPETS.fallback || []), ...common];
+        }
+        
+        // Return specific + common (Note/Title)
+        return [...specificSnippets, ...common];
     };
 
     return (

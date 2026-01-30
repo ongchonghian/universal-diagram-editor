@@ -97,6 +97,7 @@ END --> PUC
 **Diagram sources**
 - [js/config.js](file://js/config.js#L1-L566)
 - [index.html](file://index.html#L62-L371)
+- [js/components/PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
 - [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
 - [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
@@ -115,8 +116,16 @@ END --> PUC
 
 ## Core Components
 - Enhanced template gallery and snippet insertion for PlantUML:
-  - Expanded PlantUML template collection with nine diagram types including flowcharts, sequence diagrams, class diagrams, state diagrams, ER diagrams, Gantt charts, pie charts, mindmaps, and user journey maps
-  - Comprehensive Mermaid template gallery with quick-start templates for all supported diagram types
+  - Expanded PlantUML template collection with comprehensive diagram types including:
+    - Standard UML: Sequence, Class, Use Case, Activity, State, Component, Deployment, Timing
+    - Data/Structure: ER Diagrams, JSON Data, YAML Data
+    - Project Management: Gantt Charts, Mind Maps, Work Breakdown Structures (WBS)
+    - Network Architecture: Network Diagrams (nwdiag)
+  - Comprehensive Mermaid template gallery with quick-start templates for all supported diagram types including:
+    - Standard UML: Class, Sequence, State, ER
+    - Flow & Process: Flowchart, User Journey, Gantt, Timeline
+    - Data Viz: Pie Chart, Quadrant Chart, Git Graph
+    - Structure/System: Mindmap, Requirement, C4
   - Dynamic snippet toolbar that adapts to detected model with expandable snippet categories
   - Template gallery modal with responsive grid layout displaying categorized templates with icons and descriptions
 - Mermaid visual editors:
@@ -145,7 +154,10 @@ END --> PUC
 ## Architecture Overview
 The template and snippet system centers around configuration-driven data and enhanced editor components:
 - Configuration defines diagram types, templates, and snippets with expanded PlantUML and Mermaid template collections
-- PlantUML components provide an enhanced toolbar and gallery for quick insertion with improved empty state management
+- PlantUML components provide an enhanced toolbar with context-aware snippet loading:
+  - Exclusive loading of relevant snippets (e.g., Sequence snippets only for sequence diagrams)
+  - Minimal common set (Notes, Titles) appended to all views
+  - Fallback "Basic UML" set for undetected or generic diagram types
 - Mermaid editors parse code into an AST and route to specialized editors with comprehensive template support
 - Monaco provides language support and diagnostics for PlantUML, Mermaid, and BPMN with enhanced error handling
 - Error diagnostics module parses errors and generates actionable suggestions for all diagram types
