@@ -2,6 +2,7 @@
 import { KROKI_BASE_URL, DIAGRAM_TYPES } from '../config.js';
 import { parseError } from '../error-diagnostics/index.js';
 import pako from 'pako';
+import mermaid from 'mermaid';
 
 /**
  * Unified Renderer Adapter
@@ -43,6 +44,50 @@ class RendererAdapter {
         }
         if (type === 'likec4') {
             return { svg: null, url: '', error: null, skipped: true };
+        }
+
+        // --- MERMAID CLIENT-SIDE RENDERING ---
+        if (type === 'mermaid') {
+            const id = `mermaid-${Date.now()}`;
+            try {
+                // Initialize if needed (usually doing it once is enough, but safe to call)
+                // We use lazy initialization/ensure init here
+                mermaid.initialize({ 
+                    startOnLoad: false,
+                    theme: 'default', // or 'dark' based on user preference if we had access
+                    securityLevel: 'loose',
+                });
+
+                // mermaid.render returns strict object { svg }
+                const { svg } = await mermaid.render(id, content);
+                
+                // For CSR, we don't have a URL, but we can generate a blob URL if needed for consistent API
+                // For now, we'll leave URL empty or use a placeholder to indicate local render
+                return { svg, url: '', error: null };
+            } catch (err) {
+                // Mermaid errors are often objects or strings
+                // We need to parse them to extract line numbers if possible
+                
+                // Clean up any potential DOM elements left by mermaid error in some versions
+                const errorElement = document.querySelector(`#d${id}`);
+                if (errorElement) errorElement.remove();
+
+                const errorMessage = err.message || err.str || String(err);
+                
+                // Parse mermaid error for line number
+                // Format often includes "Parse error on line X"
+                const errorInfo = this.parseMermaidError(errorMessage, content);
+                
+                return { 
+                    svg: null, 
+                    url: '', 
+                    error: { 
+                        message: errorInfo.message, 
+                        info: errorInfo 
+                    },
+                    errorLine: errorInfo.line
+                };
+            }
         }
 
         const encoded = this.encodeKroki(content);
@@ -198,6 +243,20 @@ class RendererAdapter {
             line: line,
             message: errorMessage,
             shortMessage: errorMessage.split('\n')[0]
+        };
+    }
+
+    parseMermaidError(errorMessage, content) {
+        // Try to extract line number from message
+        // Common format: "Parse error on line X"
+        const lineMatch = errorMessage.match(/on line (\d+)/i);
+        let line = lineMatch ? parseInt(lineMatch[1], 10) : null;
+        
+        return {
+            message: errorMessage,
+            shortMessage: errorMessage.split('\n')[0],
+            line: line,
+            code: 'mermaid-parse-error'
         };
     }
 
