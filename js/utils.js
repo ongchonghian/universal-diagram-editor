@@ -2,117 +2,11 @@
 import { DIAGRAM_TYPES } from './config.js';
 import pako from 'pako';
 
-/**
- * Convert text string to Uint8Array bytes
- */
-export const textToBytes = (text) => new TextEncoder().encode(text);
 
-/**
- * Encode source code for Kroki URL using pako compression
- * @param {string} source - The diagram source code
- * @returns {string|null} - Base64 URL-safe encoded string or null on error
- */
-export const encodeKroki = (source) => {
-    if (!source || !source.trim()) return '';
-    try {
-        const data = textToBytes(source);
-        const compressed = pako.deflate(data, { level: 9 });
-        const len = compressed.byteLength;
-        let binary = '';
-        for (let i = 0; i < len; i++) binary += String.fromCharCode(compressed[i]);
-        const base64 = btoa(binary);
-        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    } catch (err) {
-        console.error("Compression error:", err);
-        return null;
-    }
-};
 
-/**
- * Detect diagram type from file extension
- * @param {string} filename - The filename to check
- * @returns {string} - Detected diagram type key
- */
-export const detectTypeFromExtension = (filename) => {
-    const ext = '.' + filename.split('.').pop().toLowerCase();
-    for (const [key, config] of Object.entries(DIAGRAM_TYPES)) {
-        if (config.extensions && config.extensions.includes(ext)) return key;
-    }
-    return 'bpmn';
-};
 
-/**
- * Detect diagram type from file content and filename
- * @param {string} filename - The filename
- * @param {string} content - The file content
- * @returns {string} - Detected diagram type key
- */
-export const detectTypeFromContent = (filename, content) => {
-    const extType = detectTypeFromExtension(filename);
-    if (!content || !content.trim()) return extType;
-    
-    const trimmed = content.trim();
-    
-    // 1. Check for JSON based formats
-    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-        try {
-            const json = JSON.parse(trimmed);
-            
-            // Excalidraw
-            if (json.type === 'excalidraw') return 'excalidraw';
-            
-            // Vega-Lite
-            if (json.$schema && json.$schema.includes('vega-lite')) return 'vegalite';
-            
-            // Vega
-            if (json.$schema && json.$schema.includes('vega')) return 'vega';
-            if (json.signals && json.scales && json.axes) return 'vega'; // Heuristic for Vega
-            
-            // Wavedrom (heuristic)
-            if (json.signal || json.wave) return 'wavedrom';
-            
-            return extType;
-        } catch (e) {
-            // Not valid JSON, continue to text checks
-        }
-    }
-    
-    // 2. Check for Text/DSL formats
-    
-    // C4 JSON (Visual Editor)
-    if (trimmed.startsWith('{') && trimmed.includes('"type":') && (trimmed.includes('"person"') || trimmed.includes('"system"'))) return 'c4';
 
-    // LikeC4 (Legacy/DSL support if any)
-    if (/^\s*specification\s*\{/m.test(trimmed) || /^\s*model\s*\{/m.test(trimmed)) return 'c4';
-    
-    // PlantUML
-    if (/@startuml/m.test(trimmed) || /@startmindmap/m.test(trimmed) || /@startwbs/m.test(trimmed)) return 'plantuml';
-    
-    // Mermaid
-    if (/^\s*classDiagram/m.test(trimmed) || 
-        /^\s*sequenceDiagram/m.test(trimmed) || 
-        /^\s*flowchart/m.test(trimmed) || 
-        /^\s*graph\s/m.test(trimmed) ||
-        /^\s*gantt/m.test(trimmed) ||
-        /^\s*pie/m.test(trimmed) || 
-        /^\s*stateDiagram/m.test(trimmed) ||
-        /^\s*erDiagram/m.test(trimmed) ||
-        /^\s*mindmap/m.test(trimmed) ||
-        /^\s*timeline/m.test(trimmed) ||
-        /^\s*journey/m.test(trimmed) ||
-        /^\s*gitGraph/m.test(trimmed) ||
-        /^\s*c4Context/m.test(trimmed)) {
-        return 'mermaid';
-    }
-    
-    // BPMN
-    if (trimmed.includes('<bpmn:definitions') || trimmed.includes('<definitions')) return 'bpmn';
 
-    // Ditaa
-    if (/^\/--\+/m.test(trimmed) && /\|  \|/m.test(trimmed)) return 'ditaa';
-
-    return extType;
-};
 
 /**
  * Detect specific diagram model/subtype from code content
@@ -206,20 +100,7 @@ export const detectSpecificModel = (code, type) => {
     return DIAGRAM_TYPES[type]?.label || 'Diagram';
 };
 
-/**
- * Extract line number from error text
- * @param {string} errorText - Error message text
- * @returns {number|null} - Line number or null if not found
- */
-export const extractErrorLine = (errorText) => {
-    if (!errorText) return null;
-    const patterns = [ /(?:line|row)\s*(\d+)/i, /:\s*(\d+)\s*:/, /error.*?(\d+):/i ];
-    for (const pattern of patterns) {
-        const match = errorText.match(pattern);
-        if (match && match[1]) return parseInt(match[1], 10);
-    }
-    return null;
-};
+
 
 /**
  * Escape special regex characters in a string
@@ -297,14 +178,7 @@ export const debounce = (func, wait) => {
     };
 };
 
-/**
- * Check if BPMN content has DI information
- * @param {string} xml - BPMN XML content
- * @returns {boolean} - True if DI is present
- */
-export const bpmnHasDI = (xml) => {
-    return xml && (xml.includes('<bpmndi:BPMNDiagram') || xml.includes('<bpmndi:BPMNPlane'));
-};
+
 
 /**
  * Apply auto-layout to BPMN XML
@@ -591,25 +465,6 @@ function getShiftedElements(moddle, planeElements, shiftX, shiftY, processRef) {
     return newElements;
 }
 
-/**
- * Check if BPMN content is valid
- * @param {string} text - Content to check
- * @returns {boolean} - True if valid BPMN
- */
-export const isValidBpmnContent = (text) => {
-    if (!text || typeof text !== 'string') return false;
-    return text.includes('<bpmn:definitions') || text.includes('<definitions');
-};
 
-/**
- * Parse error info fallback
- */
-export const parseErrorInfoFallback = (errorMessage, diagramType) => {
-    // Default fallback parsing logic if ErrorDiagnostics is not available
-    const line = extractErrorLine(errorMessage);
-    return {
-        line: line,
-        message: errorMessage,
-        shortMessage: errorMessage.split('\n')[0]
-    };
-};
+
+

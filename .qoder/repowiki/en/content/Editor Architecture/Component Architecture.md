@@ -40,6 +40,7 @@ This document describes the React component system and integration patterns used
 The application is a single-page app that embeds React components and integrates external diagramming libraries. The structure emphasizes:
 - Shared React helpers and utilities
 - Reusable UI components
+- **Custom Hooks** for state management and logic encapsulation
 - Editor-specific components for each diagram type
 - Error diagnostics and fix suggestion systems
 - Configuration-driven diagram type metadata
@@ -153,6 +154,19 @@ CFG --> MMain
 - [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
 - [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
 - [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
+
+### Custom Hooks (State Management)
+To avoid the "God Component" anti-pattern in `App.jsx`, logic is extracted into domain-specific hooks:
+- `useDiagramState`: Manages core state (text, diagram type, view mode), file I/O, and Mermaid AST sync.
+- `useRemoteRenderer`: Encapsulates Kroki interactions, loading states, stats, and error markers.
+- `useAutoLayout`: Handles BPMN auto-layout logic, missing DI detection, and dialogs.
+- `useCopilot`: Manages AI Copilot visibility and code application logic.
+
+**Source Files**
+- [useDiagramState.js](file://js/hooks/useDiagramState.js)
+- [useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js)
+- [useAutoLayout.js](file://js/hooks/useAutoLayout.js)
+- [useCopilot.js](file://js/hooks/useCopilot.js)
 
 ## Architecture Overview
 The system composes React components with external libraries:

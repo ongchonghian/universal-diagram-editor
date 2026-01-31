@@ -8,7 +8,8 @@ export const AICopilot = ({
     onClose, 
     contextCode, 
     diagramType, 
-    onApplyCode 
+    onApplyCode,
+    isSidebar = false 
 }) => {
     // State
     const [messages, setMessages] = useState([]);
@@ -239,15 +240,19 @@ export const AICopilot = ({
     );
 
     return (
-        <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-40 flex flex-col border-l border-slate-200 transform transition-transform duration-300 ease-in-out">
+        <div className={
+            isSidebar 
+            ? "w-full h-full flex flex-col bg-white overflow-hidden relative" 
+            : "fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-40 flex flex-col border-l border-slate-200 transform transition-transform duration-300 ease-in-out"
+        }>
             
             {/* ... Header ... */}
-            <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200 shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200 shrink-0 z-10">
                 <div className="flex items-center gap-2">
                      <button 
                         onClick={() => setShowHistory(!showHistory)}
-                        className={`p-2 rounded-lg transition-colors ${showHistory ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-200'}`}
-                        title="History"
+                        className={`p-2 rounded-full transition-colors ${showHistory ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-200'}`}
+                        title="Conversation History"
                     >
                         <i className="fas fa-history"></i>
                     </button>

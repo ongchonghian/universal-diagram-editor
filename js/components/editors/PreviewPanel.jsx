@@ -202,7 +202,6 @@ export const PreviewPanel = ({
                                             </button>
                                         )}
                                     </div>
-                                )}
                                 {!errorLine && onRetry && (
                                     <div className="flex justify-center mt-3">
                                          <button onClick={onRetry}

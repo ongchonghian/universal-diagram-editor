@@ -3,9 +3,9 @@
  * Handles API keys, model configuration, and prompt generation.
  */
 import { diagramCompiler } from './diagram-compiler.js';
-import { encodeKroki } from '../utils.js';
+import { rendererAdapter } from './RendererAdapter.js';
 import { KROKI_BASE_URL } from '../config.js';
-import BpmnModdle from 'bpmn-moddle';
+
 
 export class AIService {
     constructor() {
@@ -262,6 +262,8 @@ Generate specific JSON AST. No markdown outside the JSON.
             }
 
             if (type === 'bpmn') {
+                const BpmnModdleModule = await import('bpmn-moddle');
+                const BpmnModdle = BpmnModdleModule.default || BpmnModdleModule;
                 const moddle = new BpmnModdle();
                 
                 // moddle.fromXML returns { rootElement, warnings }
@@ -332,7 +334,7 @@ Generate specific JSON AST. No markdown outside the JSON.
         const krokiType = (type === 'c4') ? 'c4plantuml' : type;
 
         // Encode
-        const encoded = encodeKroki(code);
+        const encoded = rendererAdapter.encodeKroki(code);
         if (!encoded) return { valid: false, error: "Validation failed: Could not encode code." };
 
         const url = `${KROKI_BASE_URL}/${krokiType}/svg/${encoded}`;

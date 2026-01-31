@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { DIAGRAM_TYPES, KROKI_BASE_URL, MERMAID_TEMPLATES, PLANTUML_TEMPLATES } from './config.js';
-import { 
-    encodeKroki, detectTypeFromExtension, detectTypeFromContent, detectSpecificModel, bpmnHasDI, 
-    isValidBpmnContent, applyBpmnAutoLayout, extractErrorLine, parseErrorInfoFallback 
-} from './utils.js';
-import { getCursorContext } from './context-detection.js';
-import { parseError } from './error-diagnostics/index.js';
-import { Button, LogoLoader, StatusBadge } from './components/common.jsx';
-import MonacoWrapper from './components/editors/MonacoWrapper.jsx';
+
+import React, { useRef, useCallback, useEffect } from 'react';
+import { DIAGRAM_TYPES } from './config.js';
+import { rendererAdapter } from './services/RendererAdapter.js';
+
+// Hooks
+import { useDiagramState } from './hooks/useDiagramState.js';
+import { useRemoteRenderer } from './hooks/useRemoteRenderer.js';
+import { useAutoLayout } from './hooks/useAutoLayout.js';
+import { useCopilot } from './hooks/useCopilot.js';
+
+// Components
+import { Button, StatusBadge } from './components/common.jsx';
 import { CodeEditorView } from './components/editors/CodeEditorView.jsx';
-import { PlantUmlToolbar } from './components/PlantUmlToolbar.jsx';
-import { MermaidToolbar } from './components/MermaidToolbar.jsx';
 import { TemplateGalleryModal } from './components/dialogs/TemplateGalleryModal.jsx';
 import { BpmnAutoLayoutDialog } from './components/dialogs/BpmnAutoLayoutDialog.jsx';
 import { UpdatePanel } from './components/UpdatePanel.jsx';
@@ -19,262 +20,70 @@ import { MermaidVisualEditor } from './components/editors/mermaid/MermaidVisualE
 import { ExcalidrawVisualEditor } from './components/editors/ExcalidrawVisualEditor.jsx';
 import { LikeC4VisualEditor } from './components/editors/LikeC4VisualEditor.jsx';
 import { VegaVisualEditor } from './components/editors/VegaVisualEditor.jsx';
-
-import { createMermaidSyncController } from './components/editors/mermaid/utils.js';
 import { AICopilot } from './components/AICopilot.jsx';
 
 // MAIN APP COMPONENT
 const App = () => {
-    const [textInput, setTextInput] = useState('');
-    const [diagramType, setDiagramType] = useState('bpmn');
-    const [detectedModel, setDetectedModel] = useState('');
-    const [contextModel, setContextModel] = useState({ model: '', isInsideBlock: false });
-    const [url, setUrl] = useState('');
-    const [stats, setStats] = useState({ length: 0, method: 'GET' });
-    const [loading, setLoading] = useState(false);
-    const [previewError, setPreviewError] = useState(null);
-    const [errorLine, setErrorLine] = useState(null);
-    const [previewImage, setPreviewImage] = useState(null);
-    const [svgContent, setSvgContent] = useState(null);
-    const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
-    const [viewMode, setViewMode] = useState('code');
-    const [showTemplates, setShowTemplates] = useState(false);
-    const [readOnly, setReadOnly] = useState(false);
+    // 1. Diagram State (Core)
+    const {
+        textInput, setTextInput,
+        diagramType, setDiagramType,
+        detectedModel,
+        contextModel,
+        cursorPos, setCursorPos,
+        viewMode, setViewMode,
+        showTemplates, setShowTemplates,
+        readOnly, setReadOnly,
+        mermaidAst,
+        mermaidAstLoaded,
+        mermaidSyncRef,
+        isVisualSupported,
+        handleDownloadSource
+    } = useDiagramState();
 
-    const [showUpdatePanel, setShowUpdatePanel] = useState(false);
-    const [showCopilot, setShowCopilot] = useState(false);
-    
-    // BPMN Auto-Layout dialog state
-    const [showAutoLayoutDialog, setShowAutoLayoutDialog] = useState(false);
-    const [pendingBpmnXml, setPendingBpmnXml] = useState(null);
-    const [autoLayoutProcessing, setAutoLayoutProcessing] = useState(false);
-    const [bpmnMissingDI, setBpmnMissingDI] = useState(false);
-    
-    // Mermaid state
-    const [mermaidAst, setMermaidAst] = useState(null);
-    const [mermaidAstLoaded, setMermaidAstLoaded] = useState(!!window.MermaidASTLoaded);
-    const mermaidSyncRef = useRef(createMermaidSyncController());
-    
     const editorRef = useRef(null);
-    
-    // Check if visual editor is supported for current type AND content
+    const fileInputRef = useRef(null);
+    const [showUpdatePanel, setShowUpdatePanel] = React.useState(false);
+
+    // Derived state for fallback/checks
     const isC4PlantUML = diagramType === 'c4' && (detectedModel === 'C4 Model (PlantUML)' || (textInput && textInput.includes('@startuml')));
-    const isVisualSupported = DIAGRAM_TYPES[diagramType]?.hasVisualEditor === true && !isC4PlantUML;
     
-    // Force code view if visual is not supported (e.g. loaded C4 PlantUML)
-    useEffect(() => {
-        if (!isVisualSupported && viewMode === 'visual') {
-            setViewMode('code');
-        }
-    }, [isVisualSupported, viewMode]);
+    // Check for BPMN without DI (Derived State)
+    // We calculate this on every render so it's always in sync with textInput
+    const bpmnMissingDI = (diagramType === 'bpmn' && rendererAdapter.isValidBpmnContent(textInput) && !rendererAdapter.bpmnHasDI(textInput));
 
-    // Listen for MermaidAST load
-    useEffect(() => {
-        if (window.MermaidASTLoaded) setMermaidAstLoaded(true);
-        else {
-            const handler = () => setMermaidAstLoaded(true);
-            window.addEventListener('mermaid-ast-loaded', handler, { once: true });
-            return () => window.removeEventListener('mermaid-ast-loaded', handler);
-        }
-    }, []);
+    // 2. Remote Renderer (Kroki)
+    const {
+        url,
+        stats,
+        loading,
+        previewError, setPreviewError,
+        errorLine,
+        previewImage,
+        svgContent,
+        handleDownloadSvg,
+        handleDownloadPng
+    } = useRemoteRenderer(textInput, diagramType, editorRef, isC4PlantUML, bpmnMissingDI);
 
-    // Sync Mermaid AST
-    useEffect(() => {
-        if (diagramType !== 'mermaid' || !textInput.trim()) {
-            setMermaidAst(null);
-            return;
-        }
-        mermaidSyncRef.current.parseCode(
-            textInput,
-            (ast) => setMermaidAst(ast),
-            (error) => console.log('Mermaid parse error:', error)
-        );
-    }, [textInput, diagramType]);
+    // 3. Auto Layout (BPMN)
+    const {
+        showAutoLayoutDialog, setShowAutoLayoutDialog,
+        autoLayoutProcessing,
+        handleApplyAutoLayout,
+        handleSkipAutoLayout,
+        handleInlineAutoLayout,
+        promptAutoLayout
+    } = useAutoLayout(textInput, setTextInput, setPreviewError, bpmnMissingDI);
 
-    // Update cursor context
-    useEffect(() => {
-        const context = getCursorContext(textInput, cursorPos.line, cursorPos.col, diagramType);
-        setContextModel(context);
-    }, [textInput, cursorPos, diagramType]);
+    // 4. Copilot (AI)
+    const {
+        showCopilot, setShowCopilot,
+        handleAiCodeApply
+    } = useCopilot(setTextInput, setDiagramType, setViewMode, diagramType);
 
-    // Generate preview
-    useEffect(() => {
-        if (!textInput.trim()) {
-            setUrl('');
-            setPreviewImage(null);
-            setSvgContent(null);
-            setPreviewError(null);
-            setBpmnMissingDI(false);
-            setStats({ length: 0, method: '' });
-            return;
-        }
 
-        const detected = detectSpecificModel(textInput, diagramType);
-        setDetectedModel(detected);
-        
-        // Check for BPMN without DI - detect early and show helpful message
-        if (diagramType === 'bpmn' && isValidBpmnContent(textInput) && !bpmnHasDI(textInput)) {
-            setBpmnMissingDI(true);
-            setPreviewError('This BPMN content is missing diagram layout information (DI). Without it, the diagram cannot be rendered.');
-            setPreviewImage(null);
-            setSvgContent(null);
-            setLoading(false);
-            setStats({ length: textInput.length, method: '' });
-            return;
-        }
-        setBpmnMissingDI(false);
-        
-        const encoded = encodeKroki(textInput);
-        if (!encoded) {
-            setPreviewError('Failed to encode diagram');
-            return;
-        }
-
-        // Determine correct Kroki endpoint
-        let krokiType = diagramType;
-        if (diagramType === 'c4' && (textInput.includes('@startuml') || textInput.includes('!include'))) {
-            krokiType = 'c4plantuml';
-        }
-
-        const baseUrl = KROKI_BASE_URL;
-        const newUrl = `${baseUrl}/${krokiType}/svg/${encoded}`;
-        setUrl(newUrl);
-        setStats({ length: textInput.length, method: newUrl.length > 4000 ? 'POST' : 'GET' });
-        setPreviewError(null);
-        setErrorLine(null);
-        if (editorRef.current?.clearMarkers) editorRef.current.clearMarkers();
-        setLoading(true);
-
-        const fetchPreview = async () => {
-            // Skip preview for:
-            // 1. LikeC4 legacy (if any)
-            // 2. C4 Model in Visual (JSON) mode - we render client side
-            if (diagramType === 'likec4') return;
-            if (diagramType === 'c4' && !isC4PlantUML) {
-                // It's visual/JSON C4, so no Kroki preview needed (or supported)
-                setSvgContent(null);
-                setPreviewImage(null);
-                setLoading(false);
-                return; 
-            }
-
-            try {
-                let response;
-                if (newUrl.length > 4000) {
-                    response = await fetch(`${baseUrl}/${krokiType}/svg`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: textInput
-                    });
-                } else {
-                    response = await fetch(newUrl);
-                }
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(errorText || `HTTP ${response.status}`);
-                }
-
-                const svg = await response.text();
-                setSvgContent(svg);
-                setPreviewImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
-                setPreviewError(null);
-            } catch (err) {
-                setPreviewError(err.message);
-                setSvgContent(null);
-                setPreviewImage(null);
-                // Use consolidated error diagnostics module
-                const errorInfo = parseError(err.message, diagramType, textInput) || parseErrorInfoFallback(err.message, diagramType);
-                const line = errorInfo?.line || extractErrorLine(err.message);
-                if (line) {
-                    setErrorLine(line);
-                    if (editorRef.current?.setMarkers) {
-                        editorRef.current.setMarkers([{
-                            startLineNumber: line,
-                            startColumn: errorInfo?.column || 1,
-                            endLineNumber: line,
-                            endColumn: errorInfo?.endColumn || 1000,
-                            message: errorInfo?.shortMessage || err.message,
-                            severity: 8,
-                            code: errorInfo?.code || 'syntax-error',
-                            source: 'kroki',
-                            relatedInformation: errorInfo ? [{
-                                expected: errorInfo.expected,
-                                found: errorInfo.found,
-                                column: errorInfo.column,
-                                diagramType: diagramType
-                            }] : [{ diagramType: diagramType }]
-                        }]);
-                    }
-                }
-            }
-            setLoading(false);
-        };
-
-        const timer = setTimeout(fetchPreview, 500);
-        return () => clearTimeout(timer);
-    }, [textInput, diagramType]);
-
-    // Handle BPMN file content - check for DI and prompt if missing
-    const handleBpmnFileContent = useCallback((content, detectedType) => {
-        if (detectedType === 'bpmn' && !bpmnHasDI(content)) {
-            // BPMN without DI - show dialog
-            setPendingBpmnXml(content);
-            setShowAutoLayoutDialog(true);
-        } else {
-            // Has DI or not BPMN - load directly
-            setTextInput(content);
-        }
-    }, []);
-
-    // Handle auto-layout dialog actions
-    const handleApplyAutoLayout = useCallback(async () => {
-        if (!pendingBpmnXml) return;
-        setAutoLayoutProcessing(true);
-        try {
-            const layoutedXml = await applyBpmnAutoLayout(pendingBpmnXml);
-            setTextInput(layoutedXml);
-            setShowAutoLayoutDialog(false);
-            setPendingBpmnXml(null);
-        } catch (err) {
-            console.error('Auto-layout failed:', err);
-            setPreviewError('Auto-layout failed: ' + err.message);
-            // Load original XML anyway
-            setTextInput(pendingBpmnXml);
-            setShowAutoLayoutDialog(false);
-            setPendingBpmnXml(null);
-        } finally {
-            setAutoLayoutProcessing(false);
-        }
-    }, [pendingBpmnXml]);
-
-    const handleSkipAutoLayout = useCallback(() => {
-        if (pendingBpmnXml) {
-            setTextInput(pendingBpmnXml);
-        }
-        setShowAutoLayoutDialog(false);
-        setPendingBpmnXml(null);
-    }, [pendingBpmnXml]);
-
-    // Handle inline auto-layout from error panel (for pasted BPMN without DI)
-    const handleInlineAutoLayout = useCallback(async () => {
-        if (!textInput || !bpmnMissingDI) return;
-        setAutoLayoutProcessing(true);
-        setPreviewError('Generating layout...');
-        try {
-            const layoutedXml = await applyBpmnAutoLayout(textInput);
-            setTextInput(layoutedXml);
-            setBpmnMissingDI(false);
-            setPreviewError(null);
-        } catch (err) {
-            console.error('Auto-layout failed:', err);
-            setPreviewError('Auto-layout failed: ' + err.message);
-        } finally {
-            setAutoLayoutProcessing(false);
-        }
-    }, [textInput, bpmnMissingDI]);
-
-    // Handle file drop
+    // Handle file drop 
+    // Logic needs to interact with both useDiagramState (state) and useAutoLayout (logic)
     const handleFileDrop = useCallback((e) => {
         e.preventDefault();
         const file = e.dataTransfer?.files?.[0];
@@ -283,64 +92,18 @@ const App = () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             const content = event.target.result;
-            const detectedType = detectTypeFromContent(file.name, content);
+            const detectedType = rendererAdapter.detectType(file.name, content);
             setDiagramType(detectedType);
-            handleBpmnFileContent(content, detectedType);
+            
+            // Check for BPMN without DI
+            if (detectedType === 'bpmn' && rendererAdapter.isValidBpmnContent(content) && !rendererAdapter.bpmnHasDI(content)) {
+                promptAutoLayout(content);
+            } else {
+                setTextInput(content);
+            }
         };
         reader.readAsText(file);
-    }, [handleBpmnFileContent]);
-
-    // Handle visual editor changes
-    const handleVisualChange = useCallback((newXml) => {
-        if (newXml !== textInput) setTextInput(newXml);
-    }, [textInput]);
-
-    // Handle snippet insert
-
-    const handleSnippetInsert = useCallback((code) => {
-        if (editorRef.current) editorRef.current.insertAtCursor(code);
-    }, []);
-
-    // Handle AI Code Apply
-    const handleAiCodeApply = useCallback((code) => {
-        // Clean markdown code blocks if present
-        let cleanCode = code;
-        if (code.includes('```')) {
-            // Match content between ```...```
-            const match = code.match(/```(?:\w+)?\n([\s\S]*?)```/);
-            if (match && match[1]) {
-                cleanCode = match[1];
-            }
-        }
-        
-        cleanCode = cleanCode.trim();
-
-        // Auto-detect and switch diagram type
-        // We use a generic filename to trigger content-based detection
-        const detectedType = detectTypeFromContent('ai_snippet.txt', cleanCode);
-        
-        // Check if we should switch (only if detected type is valid and supported)
-        if (detectedType && detectedType !== diagramType && DIAGRAM_TYPES[detectedType]) {
-             // Avoid switching to 'bpmn' default if detection wasn't strong, unless it really looks like XML
-             // detectTypeFromContent falls back to extension, which here is .txt -> bpmn (via generic fallback in utils? No, let's verify)
-             // utils.js: detectTypeFromExtension -> .txt -> Not found -> 'bpmn' return default? 
-             // Line 41 utils.js returns 'bpmn' as default. We should avoid switching to bpmn unless it really IS bpmn.
-             
-             const isRealBpmn = cleanCode.includes('<definitions') || cleanCode.includes('bpmn:');
-             if (detectedType === 'bpmn' && !isRealBpmn) {
-                 // Ignore false positive fallbacks
-             } else {
-                 console.log(`[AI Apply] Auto-switching from ${diagramType} to ${detectedType}`);
-                 setDiagramType(detectedType);
-                 setViewMode('code'); 
-             }
-        }
-
-        setTextInput(cleanCode);
-    }, [diagramType]);
-
-    // File input ref for Open button
-    const fileInputRef = useRef(null);
+    }, [promptAutoLayout, setDiagramType, setTextInput]);
 
     // Handle file open via button
     const handleFileOpen = useCallback((e) => {
@@ -350,66 +113,29 @@ const App = () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             const content = event.target.result;
-            const detectedType = detectTypeFromContent(file.name, content);
+            const detectedType = rendererAdapter.detectType(file.name, content);
             setDiagramType(detectedType);
-            handleBpmnFileContent(content, detectedType);
+            
+            // Check for BPMN without DI
+            if (detectedType === 'bpmn' && rendererAdapter.isValidBpmnContent(content) && !rendererAdapter.bpmnHasDI(content)) {
+                promptAutoLayout(content);
+            } else {
+                setTextInput(content);
+            }
         };
         reader.readAsText(file);
         e.target.value = ''; // Reset for same file selection
-    }, [handleBpmnFileContent]);
+    }, [promptAutoLayout, setDiagramType, setTextInput]);
 
-    // Download SVG
-    const handleDownloadSvg = useCallback(() => {
-        if (!svgContent) return;
-        const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `diagram-${diagramType}.svg`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }, [svgContent, diagramType]);
-
-    // Download PNG
-    const handleDownloadPng = useCallback(() => {
-        if (!svgContent) return;
-        const img = new Image();
-        const svgBlob = new Blob([svgContent], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(svgBlob);
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width * 2; // 2x for better quality
-            canvas.height = img.height * 2;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob((blob) => {
-                const pngUrl = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = pngUrl;
-                a.download = `diagram-${diagramType}.png`;
-                a.click();
-                URL.revokeObjectURL(pngUrl);
-            }, 'image/png');
-            URL.revokeObjectURL(url);
-        };
-        img.src = url;
-    }, [svgContent, diagramType]);
-
-    // Download source code
-    const handleDownloadSource = useCallback(() => {
-        if (!textInput.trim()) return;
-        const ext = DIAGRAM_TYPES[diagramType]?.extensions?.[0] || '.txt';
-        const mimeType = ext === '.json' ? 'application/json' : (ext === '.xml' || ext === '.bpmn' ? 'application/xml' : 'text/plain');
-        const blob = new Blob([textInput], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `diagram${ext}`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }, [textInput, diagramType]);
+    // Handle visual editor changes
+    const handleVisualChange = useCallback((newXml) => {
+        if (newXml !== textInput) setTextInput(newXml);
+    }, [textInput, setTextInput]);
+    
+    // Handle snippet insert - requires editorRef
+    const handleSnippetInsert = useCallback((code) => {
+        if (editorRef.current) editorRef.current.insertAtCursor(code);
+    }, []);
 
     return (
         <div className="h-full flex flex-col bg-slate-50"
@@ -511,80 +237,98 @@ const App = () => {
 
             {/* Main Content */}
             <main className="flex-1 flex overflow-hidden relative">
-                {/* Code View (Split) */}
-                <div className={`flex-1 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
-                    <CodeEditorView
-                        textInput={textInput}
-                        setTextInput={setTextInput}
-                        diagramType={diagramType}
-                        detectedModel={detectedModel}
-                        contextModel={contextModel}
-                        cursorPos={cursorPos}
-                        setCursorPos={setCursorPos}
-                        stats={stats}
-                        loading={loading}
-                        previewError={previewError}
-                        setPreviewError={setPreviewError}
-                        previewImage={previewImage}
-                        svgContent={svgContent}
-                        bpmnMissingDI={bpmnMissingDI}
-                        onInlineAutoLayout={handleInlineAutoLayout}
-                        autoLayoutProcessing={autoLayoutProcessing}
-                        errorLine={errorLine}
-                        showTemplates={showTemplates}
-                        setShowTemplates={setShowTemplates}
-                        fileInputRef={fileInputRef}
-                        readOnly={readOnly}
-                    />
-                </div>
-
-                {/* Visual View */}
-                <div className={`flex-1 w-full h-full transition-opacity duration-300 ${viewMode === 'visual' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
-                    {diagramType === 'bpmn' && viewMode === 'visual' && (
-                        <BpmnVisualEditor xml={textInput} onChange={handleVisualChange} onError={setPreviewError} readOnly={readOnly} />
-                    )}
-                    {diagramType === 'mermaid' && viewMode === 'visual' && (
-                        <MermaidVisualEditor
-                            ast={mermaidAst}
-                            code={textInput}
-                            astLoaded={mermaidAstLoaded}
-                            detectedModel={detectedModel}
-                            onChange={(ast) => {
-                                const newCode = mermaidSyncRef.current.renderToCode(ast);
-                                if (newCode) setTextInput(newCode);
-                            }}
-                            onCodeChange={setTextInput}
-                            onError={setPreviewError}
-                            readOnly={readOnly}
-                        />
-                    )}
-                    {diagramType === 'excalidraw' && viewMode === 'visual' && (
-                        <ExcalidrawVisualEditor 
-                            json={textInput} 
-                            onChange={handleVisualChange} 
-                            onError={setPreviewError} 
-                            readOnly={readOnly}
-                        />
-                    )}
-
-                    {diagramType === 'c4' && viewMode === 'visual' && (
-                        <LikeC4VisualEditor 
-                            code={textInput} 
-                            onChange={handleVisualChange} 
-                            onError={setPreviewError} 
-                            readOnly={readOnly}
-                        />
-                    )}
-                    {(diagramType === 'vega' || diagramType === 'vegalite') && viewMode === 'visual' && (
-                        <VegaVisualEditor 
-                            code={textInput}
+                {/* Editor Area Wrapper */}
+                <div className="flex-1 flex flex-col relative overflow-hidden">
+                    {/* Code View (Split) */}
+                    <div className={`flex-1 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
+                        <CodeEditorView
+                            textInput={textInput}
+                            setTextInput={setTextInput}
                             diagramType={diagramType}
-                            onChange={handleVisualChange} 
-                            onError={setPreviewError} 
+                            detectedModel={detectedModel}
+                            contextModel={contextModel}
+                            cursorPos={cursorPos}
+                            setCursorPos={setCursorPos}
+                            stats={stats}
+                            loading={loading}
+                            previewError={previewError}
+                            setPreviewError={setPreviewError}
+                            previewImage={previewImage}
+                            svgContent={svgContent}
+                            bpmnMissingDI={bpmnMissingDI}
+                            onInlineAutoLayout={handleInlineAutoLayout}
+                            autoLayoutProcessing={autoLayoutProcessing}
+                            errorLine={errorLine}
+                            showTemplates={showTemplates}
+                            setShowTemplates={setShowTemplates}
+                            fileInputRef={fileInputRef}
                             readOnly={readOnly}
+                            editorRef={editorRef}
                         />
-                    )}
+                    </div>
+
+                    {/* Visual View */}
+                    <div className={`flex-1 w-full h-full transition-opacity duration-300 ${viewMode === 'visual' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
+                        {diagramType === 'bpmn' && viewMode === 'visual' && (
+                            <BpmnVisualEditor xml={textInput} onChange={handleVisualChange} onError={setPreviewError} readOnly={readOnly} />
+                        )}
+                        {diagramType === 'mermaid' && viewMode === 'visual' && (
+                            <MermaidVisualEditor
+                                ast={mermaidAst}
+                                code={textInput}
+                                astLoaded={mermaidAstLoaded}
+                                detectedModel={detectedModel}
+                                onChange={(ast) => {
+                                    const newCode = mermaidSyncRef.current.renderToCode(ast);
+                                    if (newCode) setTextInput(newCode);
+                                }}
+                                onCodeChange={setTextInput}
+                                onError={setPreviewError}
+                                readOnly={readOnly}
+                            />
+                        )}
+                        {diagramType === 'excalidraw' && viewMode === 'visual' && (
+                            <ExcalidrawVisualEditor 
+                                json={textInput} 
+                                onChange={handleVisualChange} 
+                                onError={setPreviewError} 
+                                readOnly={readOnly}
+                            />
+                        )}
+
+                        {diagramType === 'c4' && viewMode === 'visual' && (
+                            <LikeC4VisualEditor 
+                                code={textInput} 
+                                onChange={handleVisualChange} 
+                                onError={setPreviewError} 
+                                readOnly={readOnly}
+                            />
+                        )}
+                        {(diagramType === 'vega' || diagramType === 'vegalite') && viewMode === 'visual' && (
+                            <VegaVisualEditor 
+                                code={textInput}
+                                diagramType={diagramType}
+                                onChange={handleVisualChange} 
+                                onError={setPreviewError} 
+                                readOnly={readOnly}
+                            />
+                        )}
+                    </div>
                 </div>
+
+                {/* AI Copilot Sidebar */}
+                {showCopilot && (
+                    <aside className="w-96 border-l border-slate-200 bg-white transition-all duration-300 ease-in-out flex flex-col z-20 shadow-xl">
+                        <AICopilot 
+                            isOpen={showCopilot} 
+                            onClose={() => setShowCopilot(false)} 
+                            contextCode={textInput} 
+                            diagramType={diagramType}
+                            onApplyCode={handleAiCodeApply}
+                            isSidebar={true}
+                        />
+                    </aside>
+                )}
             </main>
 
             {/* Template Modal */}
@@ -601,15 +345,6 @@ const App = () => {
             
             {/* Library Update Panel */}
             <UpdatePanel isOpen={showUpdatePanel} onClose={() => setShowUpdatePanel(false)} />
-
-            {/* AI Copilot Sidebar */}
-            <AICopilot 
-                isOpen={showCopilot} 
-                onClose={() => setShowCopilot(false)} 
-                contextCode={textInput} 
-                diagramType={diagramType}
-                onApplyCode={handleAiCodeApply}
-            />
         </div>
     );
 };
