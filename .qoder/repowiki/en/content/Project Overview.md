@@ -36,12 +36,14 @@ Key benefits:
 - Intelligent error detection: real-time parsing, structured error extraction, and actionable quick fixes.
 - Template system: curated snippets and templates for PlantUML and Mermaid to accelerate creation.
 - Export-ready previews: live SVG rendering via Kroki for instant visual feedback.
+- **NEW** [Syntext Smith](file://Advanced Features/Syntext Smith (AI Copilot).md): Neuro-symbolic AI assistant for generating and explaining diagrams.
 
 Supported diagram families include BPMN, Mermaid (flowcharts, sequences, class/state/ER charts, Gantt, pie, timelines, journeys, mindmaps, git graphs, quadrants), PlantUML and C4 PlantUML (UML diagrams, ERDs, component diagrams, deployment diagrams, WBS), GraphViz, Excalidraw, Structurizr, Vega/Vega-Lite, ERD, and more.
 
 Technology stack highlights:
 - React 18 with a lightweight helper for JSX-like syntax.
 - Monaco Editor with custom language support for PlantUML and Mermaid.
+- Google Gemini API for **Syntext Smith** AI services.
 - External rendering via Kroki for Mermaid and other formats.
 - bpmn-js for BPMN visual editing.
 - Tailwind CSS for responsive UI.

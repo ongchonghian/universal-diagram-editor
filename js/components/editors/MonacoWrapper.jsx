@@ -183,7 +183,7 @@ const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, t
                 glyphMargin: true,  // Enable for error icons
                 folding: true,
                 renderLineHighlight: "all",
-                renderLineHighlight: "all",
+
                 lightbulb: { enabled: true },  // Enable lightbulb for quick fixes
                 readOnly: readOnly, // Use prop
             });

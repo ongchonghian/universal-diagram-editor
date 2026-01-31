@@ -312,8 +312,32 @@ const App = () => {
                 cleanCode = match[1];
             }
         }
-        setTextInput(cleanCode.trim());
-    }, []);
+        
+        cleanCode = cleanCode.trim();
+
+        // Auto-detect and switch diagram type
+        // We use a generic filename to trigger content-based detection
+        const detectedType = detectTypeFromContent('ai_snippet.txt', cleanCode);
+        
+        // Check if we should switch (only if detected type is valid and supported)
+        if (detectedType && detectedType !== diagramType && DIAGRAM_TYPES[detectedType]) {
+             // Avoid switching to 'bpmn' default if detection wasn't strong, unless it really looks like XML
+             // detectTypeFromContent falls back to extension, which here is .txt -> bpmn (via generic fallback in utils? No, let's verify)
+             // utils.js: detectTypeFromExtension -> .txt -> Not found -> 'bpmn' return default? 
+             // Line 41 utils.js returns 'bpmn' as default. We should avoid switching to bpmn unless it really IS bpmn.
+             
+             const isRealBpmn = cleanCode.includes('<definitions') || cleanCode.includes('bpmn:');
+             if (detectedType === 'bpmn' && !isRealBpmn) {
+                 // Ignore false positive fallbacks
+             } else {
+                 console.log(`[AI Apply] Auto-switching from ${diagramType} to ${detectedType}`);
+                 setDiagramType(detectedType);
+                 setViewMode('code'); 
+             }
+        }
+
+        setTextInput(cleanCode);
+    }, [diagramType]);
 
     // File input ref for Open button
     const fileInputRef = useRef(null);
@@ -479,7 +503,7 @@ const App = () => {
                             }`}
                         >
                             <i className="fas fa-magic"></i>
-                            <span className="hidden md:inline">Copilot</span>
+                            <span className="hidden md:inline">Syntext Smith</span>
                         </button>
                     </div>
                 </div>

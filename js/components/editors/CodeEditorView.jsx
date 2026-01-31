@@ -4,6 +4,7 @@ import { PreviewPanel } from './PreviewPanel.jsx';
 import { PlantUmlToolbar } from '../PlantUmlToolbar.jsx';
 import { MermaidToolbar } from '../MermaidToolbar.jsx';
 import { SnippetInsertionDialog } from '../dialogs/SnippetInsertionDialog.jsx';
+import { aiService } from '../../services/ai-service.js';
 
 export const CodeEditorView = ({
     textInput,
@@ -25,14 +26,14 @@ export const CodeEditorView = ({
     errorLine,
     showTemplates,
     setShowTemplates,
-    showTemplates,
-    setShowTemplates,
+
     fileInputRef,
     readOnly = false // Added prop
 }) => {
     const editorRef = useRef(null);
     const [selectedElement, setSelectedElement] = useState(null);
     const [snippetDialogSnippet, setSnippetDialogSnippet] = useState(null);
+    const [isFixing, setIsFixing] = useState(false);
 
     // Handle snippet insertion from toolbar
     const handleSnippetInsert = useCallback((code, mode = 'cursor') => {
@@ -79,6 +80,28 @@ export const CodeEditorView = ({
             editorRef.current.insertAtLocation(newText, 'replace');
         }
     }, []);
+
+    // Handle Auto-Fix request
+    const handleAutoFix = async () => {
+        if (!previewError || !textInput) return;
+        
+        setIsFixing(true);
+        try {
+            console.log("Requesting AI Auto-Fix...");
+            
+            // Call AI Service to fix
+            const fixedCode = await aiService.fixDiagram(textInput, previewError, diagramType);
+            
+            if (fixedCode && fixedCode !== textInput) {
+                setTextInput(fixedCode);
+            }
+        } catch (e) {
+            console.error("Auto-Fix failed:", e);
+            alert("Failed to auto-fix diagram: " + e.message);
+        } finally {
+            setIsFixing(false);
+        }
+    };
 
     return (
         <div className="flex-1 flex transition-opacity duration-300 opacity-100 z-10 relative">
@@ -178,6 +201,8 @@ export const CodeEditorView = ({
                 onSnippetSelect={handleSnippetSelect}
                 onInsert={handleSnippetInsert}
                 onRenameRequest={handleRenameRequest}
+                onRetry={handleAutoFix}
+                isFixing={isFixing}
                 diagramType={diagramType}
             />
 

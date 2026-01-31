@@ -19,7 +19,8 @@ export const PreviewPanel = ({
     onSnippetSelect,
     onInsert,
     onRenameRequest,
-    diagramType // Added prop
+    diagramType, // Added prop
+    isFixing = false // Added prop
 }) => {
     const containerRef = useRef(null);
     const [selectedText, setSelectedText] = useState(null);
@@ -184,11 +185,36 @@ export const PreviewPanel = ({
                                 <i className="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
                                 <p className="text-sm text-red-600 font-medium mb-2">Rendering Error</p>
                                 <pre className="text-xs text-slate-600 bg-white p-3 rounded border overflow-auto max-h-48 text-left">{error}</pre>
-                                {errorLine && (
-                                    <button onClick={() => onScrollToLine && onScrollToLine(errorLine)}
-                                        className="mt-2 text-xs text-indigo-600 hover:underline">
-                                        Go to line {errorLine}
-                                    </button>
+                                    <div className="flex gap-2 justify-center mt-3">
+                                        <button onClick={() => onScrollToLine && onScrollToLine(errorLine)}
+                                            className="px-3 py-1.5 text-xs text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded transition-colors flex items-center gap-1">
+                                            <i className="fas fa-arrow-right"></i> Go to line {errorLine}
+                                        </button>
+                                        {onRetry && (
+                                            <button onClick={onRetry}
+                                                disabled={isFixing}
+                                                className={`px-3 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors flex items-center gap-1 ${isFixing ? 'opacity-70 cursor-wait' : ''}`}>
+                                                {isFixing ? (
+                                                    <><i className="fas fa-spinner fa-spin"></i> Fixing...</>
+                                                ) : (
+                                                    <><i className="fas fa-magic"></i> Auto-Fix (AI)</>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                {!errorLine && onRetry && (
+                                    <div className="flex justify-center mt-3">
+                                         <button onClick={onRetry}
+                                            disabled={isFixing}
+                                            className={`px-3 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors flex items-center gap-1 ${isFixing ? 'opacity-70 cursor-wait' : ''}`}>
+                                            {isFixing ? (
+                                                <><i className="fas fa-spinner fa-spin"></i> Fixing...</>
+                                            ) : (
+                                                <><i className="fas fa-magic"></i> Auto-Fix (AI)</>
+                                            )}
+                                        </button>
+                                    </div>
                                 )}
                             </>
                         )}
@@ -293,7 +319,7 @@ export const PreviewPanel = ({
 
     return (
         <div className="w-1/2 flex flex-col bg-slate-100 relative">
-            <style jsx global>{`
+            <style>{`
                 .highlighted-element {
                     outline: 2px solid #6366f1;
                     outline-offset: 2px;

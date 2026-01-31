@@ -473,6 +473,29 @@ D2 --> E2["Offer Alternative Actions"]
   - Extend the testing framework with new library-specific validation logic
   - Reference: [testLibraryUpdates](file://js/update-tester.js#L398-L444)
 
+## AI Service Integration
+**NEW**: The application integrates a neuro-symbolic AI pipeline to assist in diagram generation.
+
+### Components
+- **AICopilot**: The UI component (Sidebar) handling user chat and interaction.
+- **AIService**: The core service managing API communication with Google's Gemini models. It uses a "Neuro-Symbolic" approach:
+    1.  **Prompt Engineering**: Converts user requests into structured prompts for the LLM.
+    2.  **AST Generation**: Requests a JSON Abstract Syntax Tree (AST) from the LLM instead of raw code, ensuring structural validity.
+    3.  **Diagram Compiler**: Deterministically compiles the JSON AST into the target syntax (Mermaid, PlantUML), eliminating syntax errors common in direct LLM generation.
+- **Workflow**:
+    - User enters a request ("Create a login flow").
+    - `AIService` generates JSON AST.
+    - `DiagramCompiler` converts AST to code.
+    - Code is validated and applied to the editor.
+
+### Configuration
+- **API Key**: Users must provide a valid Google Gemini API Key via the Settings modal to enable AI features. The key is stored locally in the browser.
+
+**Section sources**
+- [js/services/ai-service.js](file://js/services/ai-service.js)
+- [js/services/diagram-compiler.js](file://js/services/diagram-compiler.js)
+- [js/components/AICopilot.jsx](file://js/components/AICopilot.jsx)
+
 **Section sources**
 - [js/config.js](file://js/config.js#L6-L116)
 - [js/utils.js](file://js/utils.js#L14-L28)

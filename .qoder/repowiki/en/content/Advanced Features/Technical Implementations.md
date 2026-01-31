@@ -101,6 +101,7 @@ Q["js/cdn-version-checker.js<br/>Multi-Provider API Integration"] --> N
 - Error diagnostics: Parser for extracting line/column, categorization, and conversion to Monaco markers; fix suggestions and explanations.
 - Configuration: Central registry of diagram types, language mappings, snippets, and templates.
 - Specialized editors: BPMN visual editor (bpmn-js), Mermaid editors (flowchart, sequence, generic), and UI components.
+- **Syntext Smith**: Neuro-symbolic AI service with semantic parsing, deterministic compilation, and self-correction loops.
 - **Enhanced**: Library update management system: Comprehensive dependency tracking, CDN version checking, automated testing, and HTML rewriting with advanced validation.
 
 **Section sources**
@@ -433,6 +434,26 @@ Sync["MermaidSyncController"] --> AST
 - [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
 - [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
 - [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
+
+### Syntext Smith (Neuro-Symbolic AI)
+Syntext Smith moves beyond simple LLM text generation by implementing a Neuro-Symbolic pipeline:
+1.  **Semantic Parsing**: The LLM outputs a strict JSON AST based on a defined schema, not raw code.
+2.  **Deterministic Compilation**: A rule-based compiler converts the AST into valid Diagram Code (Mermaid/BPMN).
+3.  **Self-Correction**: A feedback loop validates generated code against parsers (e.g., `mermaid.parse`) and automatically feeds errors back to the LLM for correction.
+
+```mermaid
+graph LR
+User -->|Prompt| LLM
+LLM -->|JSON AST| Compiler
+Compiler -->|Raw Code| Validator
+Validator -->|Success| Editor
+Validator -->|Error| FixLoop
+FixLoop -->|Error + Code| LLM
+```
+
+**Section sources**
+- [js/services/ai-service.js](file://js/services/ai-service.js)
+- [js/services/diagram-compiler.js](file://js/services/diagram-compiler.js)
 
 ## Library Update Management System
 

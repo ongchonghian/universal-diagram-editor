@@ -267,6 +267,23 @@ Preview --> End(["Export / Share"])
 - [js/config.js](file://js/config.js#L1-L116)
 - [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L174-L303)
 
+### Locking and Read-Only Mode
+- Purpose: Prevent accidental edits during presentation or review.
+- Usage:
+  - Click the **Lock** icon in the header to enable Read-Only mode.
+  - When locked:
+    - The code editor becomes read-only.
+    - Snippet toolbars (PlantUML, Mermaid) are hidden.
+    - Visual editors (BPMN, Mermaid, etc.) switch to view-only mode where applicable.
+  - Click **Unlock** to resume editing.
+- Visual Feedback:
+  - The lock button turns red and displays "Locked".
+  - The editor background may shift slightly to indicate the state.
+
+**Section sources**
+- [js/App.jsx](file://js/App.jsx)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+
 ## Dependency Analysis
 The application relies on CDN-hosted libraries and modular JavaScript modules.
 
