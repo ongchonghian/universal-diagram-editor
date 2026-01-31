@@ -21,6 +21,7 @@
     "bpmn-auto-layout": "^1.1.1",
     "bpmn-js": "^18.10.1",
     "bpmn-js-task-resize": "^1.2.0",
+    "bpmn-moddle": "^10.0.0",
     "dagre": "^0.8.5",
     "elkjs": "^0.11.0",
     "htm": "^3.1.1",

@@ -19,6 +19,7 @@ export const EditorToolbar = ({
     onImport, 
     onExport, 
     onAutoLayout, 
+    onAiAssist,
     actions = [], 
     children,
     className = ""
@@ -68,6 +69,18 @@ export const EditorToolbar = ({
                 ))}
 
                 {/* Standard Actions */}
+                {/* AI Assist Button */}
+                {onAiAssist && (
+                    <button
+                        onClick={onAiAssist}
+                        className="flex items-center px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-lg shadow-sm transition-all border border-transparent"
+                        title="AI Copilot"
+                    >
+                        <i className="fas fa-magic mr-1.5"></i>
+                        AI Assist
+                    </button>
+                )}
+
                 {onAutoLayout && (
                     <button
                         onClick={onAutoLayout}

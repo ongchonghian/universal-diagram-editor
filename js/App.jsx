@@ -8,6 +8,7 @@ import { getCursorContext } from './context-detection.js';
 import { parseError } from './error-diagnostics/index.js';
 import { Button, LogoLoader, StatusBadge } from './components/common.jsx';
 import MonacoWrapper from './components/editors/MonacoWrapper.jsx';
+import { CodeEditorView } from './components/editors/CodeEditorView.jsx';
 import { PlantUmlToolbar } from './components/PlantUmlToolbar.jsx';
 import { MermaidToolbar } from './components/MermaidToolbar.jsx';
 import { TemplateGalleryModal } from './components/dialogs/TemplateGalleryModal.jsx';
@@ -18,7 +19,9 @@ import { MermaidVisualEditor } from './components/editors/mermaid/MermaidVisualE
 import { ExcalidrawVisualEditor } from './components/editors/ExcalidrawVisualEditor.jsx';
 import { LikeC4VisualEditor } from './components/editors/LikeC4VisualEditor.jsx';
 import { VegaVisualEditor } from './components/editors/VegaVisualEditor.jsx';
+
 import { createMermaidSyncController } from './components/editors/mermaid/utils.js';
+import { AICopilot } from './components/AICopilot.jsx';
 
 // MAIN APP COMPONENT
 const App = () => {
@@ -36,7 +39,10 @@ const App = () => {
     const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
     const [viewMode, setViewMode] = useState('code');
     const [showTemplates, setShowTemplates] = useState(false);
+    const [readOnly, setReadOnly] = useState(false);
+
     const [showUpdatePanel, setShowUpdatePanel] = useState(false);
+    const [showCopilot, setShowCopilot] = useState(false);
     
     // BPMN Auto-Layout dialog state
     const [showAutoLayoutDialog, setShowAutoLayoutDialog] = useState(false);
@@ -290,8 +296,23 @@ const App = () => {
     }, [textInput]);
 
     // Handle snippet insert
+
     const handleSnippetInsert = useCallback((code) => {
         if (editorRef.current) editorRef.current.insertAtCursor(code);
+    }, []);
+
+    // Handle AI Code Apply
+    const handleAiCodeApply = useCallback((code) => {
+        // Clean markdown code blocks if present
+        let cleanCode = code;
+        if (code.includes('```')) {
+            // Match content between ```...```
+            const match = code.match(/```(?:\w+)?\n([\s\S]*?)```/);
+            if (match && match[1]) {
+                cleanCode = match[1];
+            }
+        }
+        setTextInput(cleanCode.trim());
     }, []);
 
     // File input ref for Open button
@@ -404,6 +425,16 @@ const App = () => {
                         <Button variant="secondary" size="sm" icon="fas fa-download" onClick={handleDownloadSvg} disabled={!svgContent}>SVG</Button>
                         <Button variant="secondary" size="sm" icon="fas fa-image" onClick={handleDownloadPng} disabled={!svgContent}>PNG</Button>
                         <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                        <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            icon={readOnly ? "fas fa-lock" : "fas fa-lock-open"} 
+                            onClick={() => setReadOnly(!readOnly)}
+                            className={readOnly ? "text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100" : ""}
+                        >
+                            {readOnly ? "Locked" : "Unlocked"}
+                        </Button>
+                        <div className="w-px h-6 bg-slate-200 mx-1"></div>
                         {isVisualSupported && (
                             <div className="flex bg-slate-100 rounded-lg p-1">
                                 <button
@@ -438,6 +469,18 @@ const App = () => {
                         >
                             <i className="fas fa-sync-alt"></i>
                         </button>
+                        <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                        <button 
+                            onClick={() => setShowCopilot(!showCopilot)}
+                            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                                showCopilot 
+                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
+                                : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-50'
+                            }`}
+                        >
+                            <i className="fas fa-magic"></i>
+                            <span className="hidden md:inline">Copilot</span>
+                        </button>
                     </div>
                 </div>
             </header>
@@ -446,131 +489,35 @@ const App = () => {
             <main className="flex-1 flex overflow-hidden relative">
                 {/* Code View (Split) */}
                 <div className={`flex-1 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
-                    {/* Editor Panel */}
-                    <div className="w-1/2 flex flex-col border-r border-slate-200 relative">
-                        {diagramType === 'plantuml' && <PlantUmlToolbar detectedModel={detectedModel} contextModel={contextModel} onInsert={handleSnippetInsert} />}
-                        {diagramType === 'mermaid' && <MermaidToolbar detectedModel={detectedModel} contextModel={contextModel} onInsert={handleSnippetInsert} />}
-                        <div className="flex-1">
-                            <MonacoWrapper
-                                ref={editorRef}
-                                value={textInput}
-                                onChange={setTextInput}
-                                language={DIAGRAM_TYPES[diagramType]?.monacoLang || 'xml'}
-                                onCursorChange={(line, col) => setCursorPos({ line, col })}
-                            />
-                        </div>
-                        <div className="flex-none px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-                            <span>Ln {cursorPos.line}, Col {cursorPos.col}</span>
-                            <span>{stats.length} chars {stats.method && `| ${stats.method}`}</span>
-                        </div>
-                        <div className="absolute inset-0 z-20 pointer-events-none">
-                            {/* Empty State Overlay for Code View */}
-                            {(!textInput || !textInput.trim()) && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm pointer-events-auto">
-                                    <div className="text-center p-8 bg-white rounded-xl shadow-xl border border-slate-200 max-w-sm w-full mx-4">
-                                        <i className="fas fa-code text-4xl text-indigo-500 mb-4"></i>
-                                        <h3 className="text-lg font-bold text-slate-900 mb-2">Editor Empty</h3>
-                                        <p className="text-sm text-slate-600 mb-6">Start a new diagram or open an existing file.</p>
-                                        <div className="space-y-3">
-                                            <button 
-                                                onClick={() => {
-                                                    if (['mermaid', 'plantuml', 'vega', 'vegalite'].includes(diagramType)) {
-                                                        setShowTemplates(true);
-                                                    } else if (diagramType === 'bpmn') {
-                                                        const defaultXml = `<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">\n  <bpmn:process id="Process_1" isExecutable="false">\n    <bpmn:startEvent id="StartEvent_1" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id="BPMNDiagram_1">\n    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">\n      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">\n        <dc:Bounds x="412" y="240" width="36" height="36" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>`;
-                                                        setTextInput(defaultXml);
-                                                    } else if (diagramType === 'excalidraw') {
-                                                        const defaultData = { type: "excalidraw", version: 2, source: "https://excalidraw.com", elements: [], appState: { viewBackgroundColor: "#ffffff", gridSize: null }, files: {} };
-                                                        setTextInput(JSON.stringify(defaultData, null, 2));
-                                                    } else if (diagramType === 'c4') {
-                                                        // Default to Visual C4 (JSON)
-                                                        const defaultData = { nodes: [], edges: [] };
-                                                        setTextInput(JSON.stringify(defaultData, null, 2));
-                                                        // Auto-switch to design view for better UX?
-                                                        setViewMode('visual');
-                                                    } else {
-                                                        // Fallback for others
-                                                        setTextInput('// Start typing or selecting a template...');
-                                                    }
-                                                }}
-                                                className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm flex items-center justify-center"
-                                            >
-                                                <i className="fas fa-plus mr-2"></i>
-                                                Create New
-                                            </button>
-                                            <button 
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="w-full px-4 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm flex items-center justify-center"
-                                            >
-                                                <i className="fas fa-folder-open mr-2"></i>
-                                                Open File...
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Preview Panel */}
-                    <div className="w-1/2 flex flex-col bg-slate-100">
-                        <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-600">
-                                <i className="fas fa-image mr-1.5"></i> Preview
-                            </span>
-                            {loading && <LogoLoader size="sm" text="Rendering..." />}
-                        </div>
-                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center" style={{backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px'}}>
-                            {previewError ? (
-                                <div className="text-center max-w-md">
-                                    {bpmnMissingDI ? (
-                                        <>
-                                            <i className="fas fa-diagram-project text-4xl text-amber-500 mb-3"></i>
-                                            <p className="text-sm text-amber-700 font-medium mb-2">Missing Diagram Layout</p>
-                                            <p className="text-xs text-slate-600 mb-3">This BPMN content doesn't contain visual layout information (DI). Without it, the diagram cannot be rendered.</p>
-                                            <button 
-                                                onClick={handleInlineAutoLayout}
-                                                disabled={autoLayoutProcessing}
-                                                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 mx-auto"
-                                            >
-                                                {autoLayoutProcessing ? (
-                                                    <><i className="fas fa-spinner fa-spin"></i> Processing...</>
-                                                ) : (
-                                                    <><i className="fas fa-magic"></i> Auto-Generate Layout</>
-                                                )}
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <i className="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                            <p className="text-sm text-red-600 font-medium mb-2">Rendering Error</p>
-                                            <pre className="text-xs text-slate-600 bg-white p-3 rounded border overflow-auto max-h-48">{previewError}</pre>
-                                            {errorLine && (
-                                                <button onClick={() => editorRef.current?.scrollToLine(errorLine)}
-                                                    className="mt-2 text-xs text-indigo-600 hover:underline">
-                                                    Go to line {errorLine}
-                                                </button>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            ) : previewImage ? (
-                                <img src={previewImage} alt="Diagram Preview" className="max-w-full h-auto bg-white shadow-lg rounded" />
-                            ) : (
-                                <div className="text-center text-slate-400">
-                                    <i className="fas fa-image text-4xl mb-3 opacity-30"></i>
-                                    <p className="text-sm">Enter diagram code to see preview</p>
-                                    <p className="text-xs mt-1">or drag & drop a file</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <CodeEditorView
+                        textInput={textInput}
+                        setTextInput={setTextInput}
+                        diagramType={diagramType}
+                        detectedModel={detectedModel}
+                        contextModel={contextModel}
+                        cursorPos={cursorPos}
+                        setCursorPos={setCursorPos}
+                        stats={stats}
+                        loading={loading}
+                        previewError={previewError}
+                        setPreviewError={setPreviewError}
+                        previewImage={previewImage}
+                        svgContent={svgContent}
+                        bpmnMissingDI={bpmnMissingDI}
+                        onInlineAutoLayout={handleInlineAutoLayout}
+                        autoLayoutProcessing={autoLayoutProcessing}
+                        errorLine={errorLine}
+                        showTemplates={showTemplates}
+                        setShowTemplates={setShowTemplates}
+                        fileInputRef={fileInputRef}
+                        readOnly={readOnly}
+                    />
                 </div>
 
                 {/* Visual View */}
                 <div className={`flex-1 w-full h-full transition-opacity duration-300 ${viewMode === 'visual' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
                     {diagramType === 'bpmn' && viewMode === 'visual' && (
-                        <BpmnVisualEditor xml={textInput} onChange={handleVisualChange} onError={setPreviewError} />
+                        <BpmnVisualEditor xml={textInput} onChange={handleVisualChange} onError={setPreviewError} readOnly={readOnly} />
                     )}
                     {diagramType === 'mermaid' && viewMode === 'visual' && (
                         <MermaidVisualEditor
@@ -584,6 +531,7 @@ const App = () => {
                             }}
                             onCodeChange={setTextInput}
                             onError={setPreviewError}
+                            readOnly={readOnly}
                         />
                     )}
                     {diagramType === 'excalidraw' && viewMode === 'visual' && (
@@ -591,6 +539,7 @@ const App = () => {
                             json={textInput} 
                             onChange={handleVisualChange} 
                             onError={setPreviewError} 
+                            readOnly={readOnly}
                         />
                     )}
 
@@ -599,6 +548,7 @@ const App = () => {
                             code={textInput} 
                             onChange={handleVisualChange} 
                             onError={setPreviewError} 
+                            readOnly={readOnly}
                         />
                     )}
                     {(diagramType === 'vega' || diagramType === 'vegalite') && viewMode === 'visual' && (
@@ -607,6 +557,7 @@ const App = () => {
                             diagramType={diagramType}
                             onChange={handleVisualChange} 
                             onError={setPreviewError} 
+                            readOnly={readOnly}
                         />
                     )}
                 </div>
@@ -626,6 +577,15 @@ const App = () => {
             
             {/* Library Update Panel */}
             <UpdatePanel isOpen={showUpdatePanel} onClose={() => setShowUpdatePanel(false)} />
+
+            {/* AI Copilot Sidebar */}
+            <AICopilot 
+                isOpen={showCopilot} 
+                onClose={() => setShowCopilot(false)} 
+                contextCode={textInput} 
+                diagramType={diagramType}
+                onApplyCode={handleAiCodeApply}
+            />
         </div>
     );
 };

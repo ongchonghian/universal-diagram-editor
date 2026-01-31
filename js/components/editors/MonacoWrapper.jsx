@@ -10,7 +10,7 @@ import { getFixSuggestions } from '../../error-diagnostics/fixes.js';
  * Monaco Editor wrapper with syntax highlighting for diagram languages
  * Uses forwardRef to expose editor methods to parent components
  */
-const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, theme = "vs-light", height = "100%" }, ref) => {
+const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, theme = "vs-light", height = "100%", readOnly = false }, ref) => {
     const containerRef = useRef(null);
     const editorRef = useRef(null);
     const decorationsRef = useRef([]);
@@ -53,6 +53,56 @@ const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, t
                     forceMoveMarkers: true
                 }]);
                 editor.focus();
+            }
+        },
+        insertAtLocation: (text, mode) => {
+            if (editorRef.current) {
+                const editor = editorRef.current;
+                const selection = editor.getSelection();
+                let range;
+
+                if (mode === 'replace' && selection) {
+                    range = selection;
+                } else if (mode === 'before' && selection) {
+                    range = new window.monaco.Range(
+                        selection.startLineNumber, 1,
+                        selection.startLineNumber, 1
+                    );
+                    text = text + '\n';
+                } else if (mode === 'after' && selection) {
+                    range = new window.monaco.Range(
+                        selection.endLineNumber + 1, 1,
+                        selection.endLineNumber + 1, 1
+                    );
+                    text = text + '\n';
+                } else {
+                    // cursor
+                    const position = editor.getPosition();
+                    range = new window.monaco.Range(
+                        position.lineNumber, position.column,
+                        position.lineNumber, position.column
+                    );
+                }
+
+                editor.executeEdits('insert-snippet-at', [{
+                    range: range,
+                    text: text,
+                    forceMoveMarkers: true
+                }]);
+                editor.focus();
+            }
+        },
+        findAndSelect: (text) => {
+            if (editorRef.current && text) {
+                const model = editorRef.current.getModel();
+                const matches = model.findMatches(text, false, false, false, null, true);
+                if (matches && matches.length > 0) {
+                    // Select the first match
+                    const match = matches[0];
+                    editorRef.current.setSelection(match.range);
+                    editorRef.current.revealRangeInCenter(match.range);
+                    editorRef.current.focus();
+                }
             }
         },
         // Set error markers with squiggly underlines
@@ -133,7 +183,9 @@ const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, t
                 glyphMargin: true,  // Enable for error icons
                 folding: true,
                 renderLineHighlight: "all",
+                renderLineHighlight: "all",
                 lightbulb: { enabled: true },  // Enable lightbulb for quick fixes
+                readOnly: readOnly, // Use prop
             });
             
             editorRef.current = editor;
@@ -173,6 +225,13 @@ const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, t
             window.monaco.editor.setModelLanguage(model, language);
         }
     }, [language]);
+
+    // Update readOnly dynamically
+    useEffect(() => {
+        if (editorRef.current) {
+            editorRef.current.updateOptions({ readOnly: readOnly });
+        }
+    }, [readOnly]);
 
     return <div ref={containerRef} className="monaco-editor-container" style={{ height }} />;
 });
