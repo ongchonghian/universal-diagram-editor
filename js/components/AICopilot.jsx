@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { aiService } from '../services/ai-service.js';
 import { Button, LogoLoader } from './common.jsx';
 import { AISettingsModal } from './dialogs/AISettingsModal.jsx';
+import { SemanticDiffModal } from './dialogs/SemanticDiffModal.jsx';
 
 export const AICopilot = ({ 
     isOpen, 
@@ -19,6 +20,10 @@ export const AICopilot = ({
     const [showHistory, setShowHistory] = useState(false);
     const [currentConversationId, setCurrentConversationId] = useState(null);
     const [conversations, setConversations] = useState({});
+    
+    // Diff State
+    const [showDiffModal, setShowDiffModal] = useState(false);
+    const [pendingCode, setPendingCode] = useState('');
     
     const messagesEndRef = useRef(null);
 
@@ -385,7 +390,10 @@ export const AICopilot = ({
                             {msg.role === 'assistant' && !msg.isError && (
                                 <div className="mt-1 flex gap-2">
                                     <button 
-                                        onClick={() => onApplyCode(content)} // Use cleaned content
+                                        onClick={() => {
+                                            setPendingCode(content);
+                                            setShowDiffModal(true);
+                                        }} // Use cleaned content
                                         className="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
                                     >
                                         <i className="fas fa-reply"></i>
@@ -473,6 +481,21 @@ export const AICopilot = ({
                 onClose={() => setShowSettings(false)} 
                 aiService={aiService} 
             />
+
+            {/* Semantic Diff Modal */}
+            {showDiffModal && (
+                <SemanticDiffModal
+                    isOpen={showDiffModal}
+                    onClose={() => setShowDiffModal(false)}
+                    onConfirm={() => {
+                        onApplyCode(pendingCode);
+                        setShowDiffModal(false);
+                    }}
+                    oldCode={contextCode}
+                    newCode={pendingCode}
+                    diagramType={diagramType}
+                />
+            )}
         </div>
     );
 };

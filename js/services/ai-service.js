@@ -120,61 +120,26 @@ export class AIService {
             throw new Error('API Key is missing. Please configure it in settings.');
         }
 
-        const MAX_RETRIES = 2; // Allow up to 2 self-correction attempts
-        let attempt = 0;
-        let lastError = null;
-        let currentCode = null;
-
-        // 1. Initial Generation (LLM -> AST -> Code)
-        try {
-             currentCode = await this._generateInitialCode(prompt, contextCode, diagramType);
-        } catch (e) {
-            console.error("Initial generation failed:", e);
-            throw e;
+        if (!contextCode) {
+            // New diagram
+            const code = await this._generateInitialCode(prompt, '', diagramType);
+            return code;
         }
 
-        // 2. Validation & Self-Correction Loop
-        while (attempt <= MAX_RETRIES) {
-             console.log(`[AI] Validation Attempt ${attempt + 1}/${MAX_RETRIES + 1}`);
-             
-             // Check Syntax
-             const validation = await this.validateSyntax(currentCode, diagramType);
-             
-             if (validation.valid) {
-                 console.log("[AI] Validation Passed!");
-                 return currentCode;
-             }
-
-             console.warn("[AI] Validation Failed:", validation.error);
-             lastError = validation.error;
-             
-             if (attempt === MAX_RETRIES) {
-                 break; // Give up
-             }
-
-             // Self-Correct
-             try {
-                // If we have a validation error, we ask the AI to fix specifically that error
-                // We use the 'fixDiagram' method but with the specific context
-                const fixPrompt = `The checked code failed validation.\nError: ${validation.error}\n\nPlease fix the syntax errors. Return only the corrected code.`;
-                currentCode = await this.fixDiagram(currentCode, validation.error, diagramType);
-                
-                // Strip possible markdown from fix response if needed
-                if (currentCode.includes('```')) {
-                    currentCode = currentCode.replace(/```\w*\n/g, '').replace(/```/g, '').trim();
-                }
-
-                attempt++;
-             } catch (e) {
-                 console.error("[AI] Self-correction failed:", e);
-                 break; // If fixing fails, stop
-             }
-        }
-
-        // If we exhausted retries, verify one last time or just return with a warning?
-        // We will return what we have, but maybe prepend a warning comment if supported?
-        console.warn("[AI] Exhausted retries. Returning last result.");
-        return currentCode; 
+        // Modification
+        // We can use the chat capability for this
+        const systemPrompt = this.getSystemPrompt(diagramType);
+        const userMessage = `Current Code:\n\`\`\`${diagramType}\n${contextCode}\n\`\`\`\n\nRequest: ${prompt}`;
+        
+        const response = await this.callLLM(systemPrompt, userMessage);
+        
+        // Attempt auto-fix on the generated code if it's invalid
+        // This connects the generation loop to our new AutoFix engine
+        const { autoFixService } = await import('./auto-fix-service.js');
+        // Pass diagramType as hint, no initial error
+        const fixResult = await autoFixService.attemptAutoFix(response, diagramType, null);
+        
+        return fixResult.code;
     }
 
     /**
@@ -562,26 +527,12 @@ Please explain what this diagram represents.
      /**
      * Fix errors in the diagram
      */
-     async fixDiagram(code, error, diagramType) {
-        if (!this.hasApiKey()) {
-             throw new Error('API Key is missing. Please configure it in settings.');
-        }
- 
-        const systemPrompt = "You are an expert at debugging diagram code. Fix the syntax error in the provided code. Return ONLY the fixed code.";
-        const userMessage = `
- Diagram Type: ${diagramType}
- Error Message: ${error}
- Broken Code:
- \`\`\`
- ${code}
- \`\`\`
- 
- Fix the code structure/syntax so it renders correctly. Return only the code block.
- `;
-         const response = await this.callLLM(systemPrompt, userMessage);
-         // Clean up response if it wraps in markdown
-         return response.replace(/```\w*\n/g, '').replace(/```/g, '').trim();
-     }
+    async fixDiagram(code, error, diagramType) {
+        const { autoFixService } = await import('./auto-fix-service.js');
+        // We pass the existing error to the service to save a validation cycle if possible
+        const result = await autoFixService.attemptAutoFix(code, diagramType, error);
+        return result.code;
+    }
 
     /**
      * Get specialized system prompt based on diagram type

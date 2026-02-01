@@ -139,6 +139,21 @@ class RendererAdapter {
     }
 
     /**
+     * Validate syntax without necessarily returning the full SVG (alias to render for now)
+     * @param {string} content
+     * @param {string} type
+     * @returns {Promise<{valid: boolean, error: string|null, line: number|null}>}
+     */
+    async validateSyntax(content, type) {
+        const result = await this.render(content, type);
+        return {
+            valid: !result.error,
+            error: result.error ? result.error.message : null,
+            line: result.errorLine || (result.error ? result.error.line : null)
+        };
+    }
+
+    /**
      * Encode source code for Kroki
      */
     encodeKroki(source) {
