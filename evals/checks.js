@@ -4,6 +4,9 @@
  * A case lists its checks, for example:
  *   ["parses", "renders", { "contains": "Bank" }, { "keeps": ["User", "Auth"] }, "no-removals"]
  *
+ * "no-removals" may name the ids the requested change is allowed to remove, for example
+ * { "no-removals": ["Flow_3"] } when a new gateway replaces the flow between two tasks.
+ *
  * Each check returns { name, status: 'pass' | 'fail' | 'unverified', detail }.
  * 'unverified' means the check could not run (for example the diagram server was unreachable).
  */
@@ -44,12 +47,16 @@ export function readBpmnShapeBounds(xml) {
     return bounds;
 }
 
-/** Element ids that the semantic diff reports as removed, for the types the diff supports. */
-async function removedElements(oldCode, newCode, type) {
+/**
+ * Element ids that the semantic diff reports as removed, for the types the diff supports.
+ * The Mermaid and PlantUML diffs compare lines: a changed line marks the first id on that line as
+ * removed, even when the element is still in the new code. Only ids missing from the new code count.
+ */
+export async function removedElements(oldCode, newCode, type) {
     const { diffData, visualDiffSupported } = await diffUtils.generateSemanticDiff(oldCode, newCode, type);
     if (!visualDiffSupported || !diffData) return null;
     if (type === 'bpmn') return Object.keys(diffData._removed || {});
-    return diffData.removed || [];
+    return (diffData.removed || []).filter(id => !codeHasTerm(newCode, id));
 }
 
 /**
@@ -95,7 +102,8 @@ export async function runChecks(caseDef, output) {
                     break;
                 }
                 case 'no-removals': {
-                    const removed = await removedElements(caseDef.startCode, code, type);
+                    const allowed = new Set(Array.isArray(arg) ? arg : []);
+                    const removed = (await removedElements(caseDef.startCode, code, type))?.filter(id => !allowed.has(id)) ?? null;
                     if (removed === null) results.push(unverified(name, `The semantic diff does not support ${type}.`));
                     else results.push(removed.length ? fail(name, `Removed: ${removed.join(', ')}`) : pass(name));
                     break;

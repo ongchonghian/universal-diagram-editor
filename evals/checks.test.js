@@ -95,4 +95,21 @@ describe('runChecks', () => {
         expect(result).toMatchObject({ status: 'fail' });
         expect(result.detail).toMatch(/T2/);
     });
+
+    it('lets no-removals allow the ids the requested change replaces', async () => {
+        const start = bpmn('Review', 10);
+        const without = start.replace('<bpmn:task id="T2" name="Other" />', '').replace(shape('T2', 200), '');
+        const [result] = await runChecks({ startCode: start, checks: [{ 'no-removals': ['T2'] }] }, { code: without, type: 'bpmn' });
+        expect(result.status).toBe('pass');
+    });
+
+    it('does not count a Mermaid node as removed while the node is still in the code', async () => {
+        const start = 'flowchart TD\n    Start([Order received]) --> Check{In stock?}\n    Check --> Ship[Ship order]';
+        const inserted = 'flowchart TD\n    Start([Order received]) --> Pay{Paid?}\n    Pay --> Check{In stock?}\n    Check --> Ship[Ship order]';
+        const [kept] = await runChecks({ startCode: start, checks: ['no-removals'] }, { code: inserted, type: 'mermaid' });
+        expect(kept.status).toBe('pass');
+        const dropped = 'flowchart TD\n    Check{In stock?} --> Ship[Ship order]';
+        const [lost] = await runChecks({ startCode: start, checks: ['no-removals'] }, { code: dropped, type: 'mermaid' });
+        expect(lost).toMatchObject({ status: 'fail', detail: 'Removed: Start' });
+    });
 });

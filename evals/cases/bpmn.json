@@ -170,7 +170,11 @@
       {
         "contains": "Query supplier"
       },
-      "no-removals"
+      {
+        "no-removals": [
+          "Flow_3"
+        ]
+      }
     ]
   },
   {

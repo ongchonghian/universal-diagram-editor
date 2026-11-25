@@ -34,6 +34,8 @@ PlantUML, C4, Graphviz and the other Kroki types are sent to the diagram server 
 
 The text-only `chat` path from before the tool loop, with the older auto-fix service and its rule-based patches, was removed on 25 November 2026. On `gemini-3.8-flash` the `chat` path passed 54 of 60 cases and the `loop` path passed 57 of 60. The `loop` path matched or beat the `chat` path in every group once a cut-off fix brought BPMN to 12 of 12. The three reports from that comparison are in `results/` and record the gate.
 
+Those reports were scored before the `no-removals` check was corrected. With the corrected check, `bpmn-add-gateway` and `mermaid-flowchart-edit` pass on both paths: the `chat` path scores 56 of 60, and the `loop` path 59 of 60, where the one remaining case is the cut-off that the BPMN re-run passed.
+
 ## Cases
 
 `cases/` holds one JSON file per diagram group: 60 cases in all.
@@ -66,7 +68,7 @@ Each case has a `task`:
 | `{ "contains": "text" }` | The code contains the text (case-insensitive) |
 | `{ "keeps": ["A", "B"] }` | Each term still appears as a whole word |
 | `{ "typeIn": ["mermaid", "plantuml"] }` | The reply chose one of the listed notations |
-| `no-removals` | The semantic diff reports zero removed elements (Mermaid, PlantUML, BPMN) |
+| `no-removals` | The semantic diff reports zero removed elements (Mermaid, PlantUML, BPMN). For Mermaid and PlantUML, an element counts as removed only when its id is missing from the new code. `{ "no-removals": ["Flow_3"] }` allows the ids that the requested change replaces. |
 | `bpmn-layout` | The BPMN holds layout data |
 | `bpmn-no-warnings` | bpmn-moddle reports zero warnings |
 | `bounds-unchanged` | Every BPMN shape from `startCode` keeps its position and size |
