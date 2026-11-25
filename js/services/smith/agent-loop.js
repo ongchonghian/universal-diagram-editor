@@ -7,6 +7,8 @@ import { TOOL_DEFINITIONS, createDraft, runTool } from './tools.js';
 
 export const MAX_STEPS = 8;
 
+export const CUT_OFF_NOTE = 'Your last reply reached the length limit before the tool call was complete, so the call was lost and the draft is unchanged. Make the change in smaller steps: write a shorter first version with write_diagram, then add the rest with edit_diagram.';
+
 /**
  * @param {object} options
  *   config       model config { provider, model, apiKey, baseUrl? }
@@ -36,6 +38,7 @@ export async function runAgentLoop({
     const textParts = [];
     let steps = 0;
     let limitReached = false;
+    let cutOffRetried = false;
 
     const emitText = (current) => onEvent?.({ type: 'text', text: [...textParts, current].filter(Boolean).join('\n\n') });
 
@@ -68,6 +71,15 @@ export async function runAgentLoop({
             throw new LLMError(`The AI declined to answer (${done.finishReason || 'blocked'}). Try rewording the request.`, { provider: config.provider, code: 'BLOCKED' });
         }
         if (!calls.length) {
+            if (done?.stopReason === 'max_tokens' && !cutOffRetried) {
+                // The reply hit the length limit before a tool call was complete, so the call was lost.
+                // Ask once for the change in smaller steps.
+                cutOffRetried = true;
+                const message = done.message;
+                if (message?.parts?.length || message?.raw?.content?.length) messages.push(message);
+                messages.push(textMessage('user', CUT_OFF_NOTE));
+                continue;
+            }
             if (done?.stopReason === 'max_tokens') {
                 throw new LLMError('The AI reply was cut off because the reply reached the length limit. Ask for the change in smaller steps.', { provider: config.provider, code: 'MAX_TOKENS' });
             }

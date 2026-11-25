@@ -10,7 +10,7 @@ This page describes the code as of 25 November 2026, after Phase 3 of the Smith 
 2. `askSmith()` runs the agent loop (`js/services/smith/agent-loop.js`). The loop sends the model a short system prompt (`js/services/smith/prompt.js`), the earlier turns as text, and a user turn that holds the editor's diagram type, the current code and the request.
 3. The model changes a **draft**, a working copy of the diagram, through tools. The editor stays untouched until the user applies the change.
 4. Every `edit_diagram` and `write_diagram` call validates the draft and returns the parser's verdict to the model in the same step. When the verdict is "invalid", the model reads the error and fixes the draft with another call.
-5. The loop ends when the model stops calling tools, or after eight model steps.
+5. The loop ends when the model stops calling tools, or after eight model steps. When a reply reaches the length limit before a tool call is complete, the loop asks the model once to make the change in smaller steps; a second cut-off ends the turn with an error.
 6. The reply streams into the panel as the model writes it. While Smith works, the send button becomes a **Stop** button. Stop ends the turn and keeps the text so far, marked "(Stopped before the end.)"; the model never sees a stopped reply again.
 
 ### The tools
@@ -55,7 +55,7 @@ Model calls go through a provider-neutral layer in `js/services/llm/`. The layer
 
 | Provider | Adapter | API | Notes |
 |---|---|---|---|
-| Google Gemini (default) | `providers/gemini.js` | `streamGenerateContent` with server-sent events | The key travels in the `x-goog-api-key` header. Default model `gemini-3.8-flash`. Thought signatures are sent back unchanged within a turn. |
+| Google Gemini (default) | `providers/gemini.js` | `streamGenerateContent` with server-sent events | The key travels in the `x-goog-api-key` header. Default model `gemini-3.8-flash`. Thought signatures are sent back unchanged within a turn. The output cap is the model's own `outputTokenLimit`, read once per page load, because Gemini counts thinking within the cap; when the lookup fails, the cap is 16,384 tokens. |
 | Anthropic | `providers/anthropic.js` | Messages API with streaming | Sends `anthropic-dangerous-direct-browser-access: true`. Organisations with zero data retention cannot use browser access. Temperature is never sent, because current Claude models reject the setting. For the models that support the server-side fallback, the request asks Anthropic to re-run a declined request on a fallback model (`fallbacks: "default"`). Default model `claude-opus-5-5`. |
 | OpenAI-compatible endpoint | `providers/openai-compatible.js` | Chat Completions with streaming, at a base address the user sets | For OpenRouter, Ollama, LM Studio and similar servers. The key is optional. When the endpoint rejects temperature, the adapter retries once without temperature. |
 

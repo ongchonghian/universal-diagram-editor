@@ -1,10 +1,12 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
-import { streamTurn, listModels } from './gemini.js';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+import { streamTurn, listModels, outputLimit, outputLimits, FALLBACK_MAX_TOKENS } from './gemini.js';
 import { streamResponse, sse, jsonResponse, mockFetch, collect, pieces } from '../test-helpers.js';
 
 const config = { provider: 'gemini', model: 'gemini-3.8-flash', apiKey: 'g-key' };
 const tools = [{ name: 'edit_diagram', description: 'Edit', parameters: { type: 'object', properties: { code: { type: 'string' } } } }];
 
+// The stream tests use a known limit, so each test needs only its stream response
+beforeEach(() => { outputLimits.clear(); outputLimits.set(config.model, 65536); });
 afterEach(() => vi.unstubAllGlobals());
 
 // Written from Google's documented streamGenerateContent format
@@ -87,4 +89,22 @@ describe('Gemini adapter', () => {
         ] }));
         expect(await listModels(config)).toEqual([{ id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' }]);
     });
+
+    it('asks for the model\'s own output limit once, and falls back when the lookup fails', async () => {
+        outputLimits.clear();
+        const fetch = mockFetch(
+            jsonResponse({ name: 'models/gemini-3.8-flash', outputTokenLimit: 65536 }),
+            streamResponse([sse([{ candidates: [{ content: { parts: [{ text: 'ok' }] }, finishReason: 'STOP' }] }])]),
+            streamResponse([sse([{ candidates: [{ content: { parts: [{ text: 'ok' }] }, finishReason: 'STOP' }] }])])
+        );
+        await collect(streamTurn(config, { messages: [] }));
+        await collect(streamTurn(config, { messages: [] }));
+        expect(fetch).toHaveBeenCalledTimes(3);
+        expect(fetch.mock.calls[0][0]).toMatch(/\/models\/gemini-3\.8-flash$/);
+        expect(JSON.parse(fetch.mock.calls[2][1].body).generationConfig.maxOutputTokens).toBe(65536);
+
+        mockFetch(jsonResponse({ error: { message: 'not found' } }, 404));
+        expect(await outputLimit({ ...config, model: 'gemini-x' })).toBe(FALLBACK_MAX_TOKENS);
+    });
 });
+

@@ -6,6 +6,7 @@ vi.mock('./RendererAdapter.js', () => ({
 
 import { AIService, DEFAULT_MODEL } from './ai-service.js';
 import { streamResponse, sse, mockFetch } from './llm/test-helpers.js';
+import { outputLimits } from './llm/providers/gemini.js';
 
 const STORAGE_KEY = 'universal_diagram_ai_settings';
 const SESSION_KEYS = 'universal_diagram_ai_keys';
@@ -14,6 +15,8 @@ const stored = () => JSON.parse(localStorage.getItem(STORAGE_KEY));
 beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
+    // A known output limit, so each test needs only its stream response
+    outputLimits.set(DEFAULT_MODEL, 65536);
 });
 afterEach(() => vi.unstubAllGlobals());
 

@@ -4,7 +4,7 @@ vi.mock('../RendererAdapter.js', () => ({
     rendererAdapter: { render: vi.fn().mockResolvedValue({ svg: '<svg><rect/></svg>', error: null }) }
 }));
 
-import { runAgentLoop, proposalOf } from './agent-loop.js';
+import { runAgentLoop, proposalOf, CUT_OFF_NOTE } from './agent-loop.js';
 import { applyEdits, runTool, createDraft, numberLines } from './tools.js';
 
 const config = { provider: 'gemini', model: 'm', apiKey: 'k' };
@@ -124,6 +124,21 @@ describe('runAgentLoop', () => {
         expect(requests[1].at(-1).parts[0]).toMatchObject({ isError: true, content: expect.stringContaining('not found') });
         expect(result.trail[0].status).toBe('rejected');
         expect(result.proposal).toBeNull();
+    });
+
+    it('asks once for smaller steps after a cut-off reply, then gives up on a second one', async () => {
+        const recovering = fakeProvider([
+            { text: 'Writing the full diagram', stopReason: 'max_tokens' },
+            { calls: [{ name: 'write_diagram', args: { type: 'mermaid', code: 'flowchart TD\n A --> B' } }] },
+            { text: 'Done.' }
+        ]);
+        const result = await runAgentLoop({ config, userTurn: 'x', code: '', type: 'mermaid', streamTurn: recovering.streamTurn, validate: validDummy });
+        expect(recovering.requests[1].at(-1)).toMatchObject({ role: 'user', parts: [{ type: 'text', text: CUT_OFF_NOTE }] });
+        expect(recovering.requests[1].at(-2).role).toBe('assistant');
+        expect(result.proposal).toMatchObject({ verified: true });
+
+        const cutTwice = fakeProvider([{ text: 'a', stopReason: 'max_tokens' }, { text: 'b', stopReason: 'max_tokens' }]);
+        await expect(runAgentLoop({ config, userTurn: 'x', code: '', type: 'mermaid', streamTurn: cutTwice.streamTurn })).rejects.toMatchObject({ code: 'MAX_TOKENS' });
     });
 
     it('throws when the provider declines, and when the signal aborts', async () => {

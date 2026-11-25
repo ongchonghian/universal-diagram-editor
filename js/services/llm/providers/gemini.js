@@ -42,7 +42,31 @@ function toContents(messages) {
     });
 }
 
-export function buildRequest(config, { system, messages, tools, temperature, maxTokens = 16384 }) {
+// Used when the model's own output limit cannot be read
+export const FALLBACK_MAX_TOKENS = 16384;
+
+// Each model's output limit (outputTokenLimit), read once per page load. Gemini counts thinking within this limit,
+// so a fixed lower cap can cut off a long tool call, such as a BPMN diagram with layout data.
+export const outputLimits = new Map();
+
+/** The model's output token limit from GET /models/{id}, or the fallback when the lookup fails. */
+export async function outputLimit(config, signal) {
+    if (outputLimits.has(config.model)) return outputLimits.get(config.model);
+    let limit = FALLBACK_MAX_TOKENS;
+    try {
+        const response = await fetch(`${BASE}/models/${encodeURIComponent(config.model)}`, { headers: { 'x-goog-api-key': config.apiKey }, signal });
+        if (response.ok) {
+            const body = await response.json();
+            if (Number.isInteger(body.outputTokenLimit) && body.outputTokenLimit > 0) limit = body.outputTokenLimit;
+        }
+    } catch (e) {
+        if (e?.name === 'AbortError') throw e;
+    }
+    outputLimits.set(config.model, limit);
+    return limit;
+}
+
+export function buildRequest(config, { system, messages, tools, temperature, maxTokens = FALLBACK_MAX_TOKENS }) {
     const body = {
         contents: toContents(messages),
         generationConfig: { maxOutputTokens: maxTokens }
@@ -74,7 +98,8 @@ function appendPart(parts, part) {
 }
 
 export async function* streamTurn(config, request) {
-    const { url, init } = buildRequest(config, request);
+    const maxTokens = request.maxTokens ?? await outputLimit(config, request.signal);
+    const { url, init } = buildRequest(config, { ...request, maxTokens });
     let response;
     try {
         response = await fetch(url, { ...init, signal: request.signal });
@@ -151,6 +176,7 @@ export async function listModels(config, { signal } = {}) {
             if (!(m.supportedGenerationMethods || []).includes('generateContent')) continue;
             const id = String(m.name || '').replace(/^models\//, '');
             if (!id.startsWith('gemini')) continue;
+            if (Number.isInteger(m.outputTokenLimit) && m.outputTokenLimit > 0) outputLimits.set(id, m.outputTokenLimit);
             models.push({ id, name: m.displayName || id });
         }
         pageToken = body.nextPageToken;
