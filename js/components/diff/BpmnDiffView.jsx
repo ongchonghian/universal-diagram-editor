@@ -8,6 +8,14 @@ import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
  * BpmnDiffView
  * Renders the "New" diagram and applies overlays for added/removed/changed elements.
  */
+/** The overlay class for each changed element id, from a bpmn-js-differ result. */
+export function diffMarkers(diffData) {
+    if (!diffData) return [];
+    const ids = (map) => Object.keys(map || {});
+    const changed = new Set([...ids(diffData._changed), ...ids(diffData._layoutChanged)]);
+    return [['diff-added', ids(diffData._added)], ['diff-changed', [...changed]]];
+}
+
 export const BpmnDiffView = ({ xml, diffData }) => {
     const containerRef = useRef(null);
     const viewerRef = useRef(null);
@@ -26,50 +34,19 @@ export const BpmnDiffView = ({ xml, diffData }) => {
 
             if (!diffData) return;
 
-            // Apply Diffs
-            // diffData keys are element IDs. Value { changeType: 'added'|'removed'|'changed' }
-            
-            Object.entries(diffData).forEach(([id, change]) => {
-                const element = elementRegistry.get(id);
-                if (!element) return; // Might be removed or not found
-
-                // We can't easily visualize "removed" elements if we only render the new XML.
-                // bpmn-js-differ usually works by rendering BOTH or using a visual differ that computes specific delta visualization.
-                // However, for single-view overlay:
-                // - Added: Green overlay.
-                // - Changed: Amber overlay.
-                // - Removed: We can't show them if they are not in the XML.
-                
-                // Strategy: We are rendering the NEW XML.
-                // So we can show "Added" and "Changed". 
-                // "Removed" elements are gone. 
-                // To show removed elements, we would need to merge the diagrams or show the Old diagram as background?
-                // For now, let's highlight Added and Changed/Moved.
-                
-                let className = '';
-                if (change.changeType === 'added') className = 'diff-added';
-                else if (change.changeType === 'changed' || change.changeType === 'layout-changed') className = 'diff-changed';
-                
-                if (className) {
+            // bpmn-js-differ returns four maps keyed by element id: _added, _changed, _layoutChanged
+            // and _removed. This view draws the new diagram, so removed elements have no shape here.
+            for (const [className, ids] of diffMarkers(diffData)) {
+                for (const id of ids) {
+                    const element = elementRegistry.get(id);
+                    // Shapes get a frame; sequence flows (which have waypoints, not a size) are skipped
+                    if (!element || element.waypoints) continue;
                     overlays.add(id, {
-                        position: {
-                            bottom: 0,
-                            right: 0
-                        },
-                        html: `<div class="${className}-marker"></div>`
-                    });
-                    
-                    // Also color the shape itself?
-                    // We can use modeling/graphics, but NavigatedViewer is read-only.
-                    // Overlays are safer.
-                    
-                    // Let's add a full bounding box overlay
-                     overlays.add(id, {
-                        position: { top: -5, left: -5, right: -5, bottom: -5 },
-                        html: `<div class="${className}-border"></div>`
+                        position: { top: -5, left: -5 },
+                        html: `<div class="${className}-border" style="width:${element.width + 10}px;height:${element.height + 10}px"></div>`
                     });
                 }
-            });
+            }
 
         }).catch(err => {
             console.error("BPMN Viewer Error", err);
@@ -88,16 +65,12 @@ export const BpmnDiffView = ({ xml, diffData }) => {
                     border: 2px solid #22c55e;
                     background: rgba(34, 197, 94, 0.1);
                     border-radius: 4px;
-                    width: 100%;
-                    height: 100%;
                     pointer-events: none;
                 }
                 .diff-changed-border {
                     border: 2px dashed #f59e0b;
                     background: rgba(245, 158, 11, 0.05);
                     border-radius: 4px;
-                    width: 100%;
-                    height: 100%;
                     pointer-events: none;
                 }
             `}</style>

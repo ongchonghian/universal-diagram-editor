@@ -160,7 +160,7 @@ To avoid the "God Component" anti-pattern in `App.jsx`, logic is extracted into 
 - `useDiagramState`: Manages core state (text, diagram type, view mode), file I/O, and Mermaid AST sync.
 - `useRemoteRenderer`: Encapsulates Kroki interactions, loading states, stats, and error markers.
 - `useAutoLayout`: Handles BPMN auto-layout logic, missing DI detection, and dialogs.
-- `useCopilot`: Manages AI Copilot visibility and code application logic.
+- `useCopilot`: Manages Syntext Smith's panel visibility, and applies a proposal written in another notation by switching the editor's diagram type. Proposals in the same notation are reviewed one change at a time in `DiffReviewPane`, inside the code view.
 
 **Source Files**
 - [useDiagramState.js](file://js/hooks/useDiagramState.js)

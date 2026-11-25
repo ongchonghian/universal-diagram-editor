@@ -1,5 +1,5 @@
 
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { DIAGRAM_TYPES } from './config.js';
 import { rendererAdapter } from './services/RendererAdapter.js';
 
@@ -42,6 +42,8 @@ const App = () => {
     } = useDiagramState();
 
     const editorRef = useRef(null);
+    // The Smith proposal open for review in the code pane
+    const [pendingProposal, setPendingProposal] = useState(null);
     const fileInputRef = useRef(null);
     const [showUpdatePanel, setShowUpdatePanel] = React.useState(false);
 
@@ -240,7 +242,7 @@ const App = () => {
                 {/* Editor Area Wrapper */}
                 <div className="flex-1 flex flex-col relative overflow-hidden">
                     {/* Code View (Split) */}
-                    <div className={`flex-1 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
+                    <div className={`flex-1 min-h-0 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
                         <CodeEditorView
                             textInput={textInput}
                             setTextInput={setTextInput}
@@ -264,6 +266,9 @@ const App = () => {
                             fileInputRef={fileInputRef}
                             readOnly={readOnly}
                             editorRef={editorRef}
+                            proposal={pendingProposal}
+                            onProposalDone={() => setPendingProposal(null)}
+                            onApplyRetyped={handleAiCodeApply}
                         />
                     </div>
 
@@ -324,7 +329,10 @@ const App = () => {
                             onClose={() => setShowCopilot(false)} 
                             contextCode={textInput} 
                             diagramType={diagramType}
-                            onApplyCode={handleAiCodeApply}
+                            onReviewProposal={(proposal) => {
+                                setPendingProposal(proposal);
+                                setViewMode('code');
+                            }}
                             isSidebar={true}
                         />
                     </aside>

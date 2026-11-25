@@ -2,7 +2,7 @@
 
 **Syntext Smith** is the assistant built into the Universal Diagram Generator. Smith helps users create, edit and fix diagrams through natural language. Smith writes native diagram code (Mermaid, PlantUML, BPMN XML and so on) with tools, and the real parser checks every edit before the user sees the result.
 
-This page describes the code as of 25 November 2026, after Phase 3 of the Smith rebuild and the removal of the older text-only path. Later phases add per-hunk review with undo, image input and a BPMN layout pipeline.
+This page describes the code as of 25 November 2026, after Phase 4 of the Smith rebuild (review of each change, with undo). Later phases add image input and a BPMN layout pipeline.
 
 ## How a chat request works
 
@@ -42,7 +42,7 @@ Every type except Mermaid is sent to the Kroki server, both for the code preview
 
 The **Auto-Fix (AI)** button in the preview's error panel calls `fixWithSmith()`, which runs the same tool loop with the preview error, at temperature 0 and without the suggestions tool. The button works for every diagram type.
 
-- A verified repair in the same notation is written straight into the editor, without a review step.
+- A verified repair in the same notation is written straight into the editor, without a review step. The repair is one undo step, so Ctrl+Z (Cmd+Z on Mac) in the editor restores the earlier code.
 - Every other outcome leaves the code unchanged and shows a message in the error panel: a repair that still fails, a check that could not run, a rewrite into another notation, or a turn with no change.
 
 ## Measured results
@@ -67,7 +67,7 @@ Model calls go through a provider-neutral layer in `js/services/llm/`. The layer
 ## The chat panel
 
 - **Validation trail:** under each reply, a short list shows what Smith checked, for example "Wrote Mermaid: parse error" then "Edited: parsed".
-- **Proposal card:** a reply that changed the diagram shows a card with the notation, the check result ("Checked: the diagram is valid", "Not checked" or "Not verified" with the last error), and a **Review and apply** button. When the editor has changed since the proposal, the card says so.
+- **Proposal card:** a reply that changed the diagram shows a card with the notation, the check result ("Checked: the diagram is valid", "Not checked" or "Not verified" with the last error), and a **Review and apply** button. When the editor has changed since the proposal, the card says so, and the review compares the proposal with the current code.
 - **Suggestion chips:** the chips under the latest reply come from `suggest_next_steps`. Replies saved before the tool loop held a `[SUGGESTIONS]` line; the store turns that line into chips when a conversation loads. Those older replies offer no Apply button.
 - **Regenerate:** on the latest reply, asks again for that answer and replaces the answer in the stored conversation.
 - **Expand:** click "Expand" to enlarge the input area for long prompts.
@@ -82,14 +82,21 @@ Model calls go through a provider-neutral layer in `js/services/llm/`. The layer
 1. **Open:** click the "Syntext Smith" button in the header.
 2. **Prompt:** type a request, for example "Create a sequence diagram for a login flow".
 3. **Refine:** use the suggestion chips or a follow-up prompt to adjust the result.
-4. **Apply:** press **Review and apply** on the proposal card. The "Verify Changes" dialog shows the current and proposed diagrams. Accepting replaces the whole editor content with the proposal, and switches the editor to the proposal's notation when the notation differs.
+4. **Review:** press **Review and apply** on the proposal card. The code pane shows a review over the editor (`js/components/editors/DiffReviewPane.jsx`):
+    - A Monaco diff editor shows the current code against the proposal, with removed lines in red and added lines in green.
+    - A list names each change (hunk), for example "Line 4 changed" or "1 line added after line 5". Each change has **Accept** and **Reject**; clicking the name scrolls to the change. A rejected change leaves the diff at once, so the diff always shows what **Apply** writes.
+    - When a change is rejected, the review notes that Smith checked only the full proposal. The preview shows whether the result still works once applied.
+    - **Visual diff** (BPMN, Mermaid and PlantUML) opens the "Verify Changes" dialog for the same result. In that dialog, BPMN shapes that were added get a green frame, and changed shapes an amber frame.
+5. **Apply:** writes the accepted changes into the editor as one undo step. Ctrl+Z (Cmd+Z on Mac) restores the earlier diagram, and redo applies the changes again. A proposal in another notation replaces the whole diagram and switches the editor's type; per-change review does not apply to that case.
 
 ## File map
 
 | File | Role |
 |---|---|
 | `js/components/AICopilot.jsx` | Chat panel, validation trail and proposal card |
-| `js/hooks/useCopilot.js` | Panel visibility and applying a proposal with its diagram type |
+| `js/hooks/useCopilot.js` | Panel visibility, and applying a proposal in another notation |
+| `js/components/editors/DiffReviewPane.jsx` | Review of each change in the code pane |
+| `js/utils/hunks.js` | Merging accepted changes, and the smallest edit between two texts |
 | `js/services/smith/index.js` | `askSmith()` and `fixWithSmith()` |
 | `js/services/smith/agent-loop.js` | The agent loop |
 | `js/services/smith/tools.js` | Tool definitions, the draft and exact-text edits |

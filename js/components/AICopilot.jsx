@@ -4,7 +4,6 @@ import { askSmith } from '../services/smith/index.js';
 import { conversationStore } from '../services/smith/conversation-store.js';
 import { aiService } from '../services/ai-service.js';
 import { AISettingsModal } from './dialogs/AISettingsModal.jsx';
-import { SemanticDiffModal } from './dialogs/SemanticDiffModal.jsx';
 
 const typeName = (type) => DIAGRAM_TYPES[type]?.name || type;
 
@@ -66,7 +65,7 @@ const ProposalCard = ({ proposal, editorCode, editorType, onReview }) => {
             </div>
             {stale && (
                 <div className="px-3 py-1.5 text-[11px] text-slate-500 bg-slate-50 border-t border-slate-100">
-                    The editor has changed since Smith made this proposal. Applying the proposal replaces the current code.
+                    The editor has changed since Smith made this proposal. The review compares the proposal with the current code.
                 </div>
             )}
         </div>
@@ -78,7 +77,8 @@ export const AICopilot = ({
     onClose,
     contextCode,
     diagramType,
-    onApplyCode,
+    // Opens a proposal in the code pane's review
+    onReviewProposal,
     isSidebar = false
 }) => {
     const [messages, setMessages] = useState([]);
@@ -91,7 +91,6 @@ export const AICopilot = ({
     const [showHistory, setShowHistory] = useState(false);
     const [currentConversationId, setCurrentConversationId] = useState(null);
     const [conversations, setConversations] = useState({});
-    const [reviewProposal, setReviewProposal] = useState(null);
     const [isInputExpanded, setIsInputExpanded] = useState(false);
 
     const messagesEndRef = useRef(null);
@@ -409,7 +408,7 @@ export const AICopilot = ({
                                     proposal={msg.proposal}
                                     editorCode={contextCode}
                                     editorType={diagramType}
-                                    onReview={() => setReviewProposal(msg.proposal)}
+                                    onReview={() => onReviewProposal?.(msg.proposal)}
                                 />
                             )}
 
@@ -529,20 +528,6 @@ export const AICopilot = ({
                 onClose={() => setShowSettings(false)}
                 aiService={aiService}
             />
-
-            {reviewProposal && (
-                <SemanticDiffModal
-                    isOpen={true}
-                    onClose={() => setReviewProposal(null)}
-                    onConfirm={() => {
-                        onApplyCode(reviewProposal.code, reviewProposal.type);
-                        setReviewProposal(null);
-                    }}
-                    oldCode={contextCode}
-                    newCode={reviewProposal.code}
-                    diagramType={reviewProposal.type}
-                />
-            )}
         </div>
     );
 };

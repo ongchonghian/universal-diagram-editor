@@ -5,6 +5,30 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { getErrorExplanation, formatForHover } from '../../error-diagnostics/explanations.js';
 import { getFixSuggestions } from '../../error-diagnostics/fixes.js';
+import { minimalEdit } from '../../utils/hunks.js';
+
+/**
+ * Replace the editor's text as one undo step, changing only the span that differs.
+ * The edit goes through the model, so the step stays undoable when the editor is read-only, and
+ * Ctrl+Z (Cmd+Z on Mac) restores the earlier text. setValue() would clear the undo history.
+ * @returns {boolean} true when the text changed
+ */
+function replaceAsOneStep(editor, newText) {
+    const model = editor?.getModel();
+    if (!model) return false;
+    const edit = minimalEdit(model.getValue(), newText ?? '');
+    if (!edit) return false;
+    const start = model.getPositionAt(edit.start);
+    const end = model.getPositionAt(edit.end);
+    model.pushStackElement();
+    model.pushEditOperations(
+        editor.getSelections() || [],
+        [{ range: new window.monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column), text: edit.text, forceMoveMarkers: true }],
+        () => null
+    );
+    model.pushStackElement();
+    return true;
+}
 
 /**
  * Monaco Editor wrapper with syntax highlighting for diagram languages
@@ -35,10 +59,11 @@ const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, t
             }
         },
         setValue: (newValue) => {
-            if (editorRef.current && newValue !== editorRef.current.getValue()) {
-                editorRef.current.setValue(newValue);
-            }
+            replaceAsOneStep(editorRef.current, newValue);
         },
+        // Replace the text as one undo step, for example to apply a reviewed Smith proposal
+        applyEdits: (newValue) => replaceAsOneStep(editorRef.current, newValue),
+        focus: () => editorRef.current?.focus(),
         insertAtCursor: (text) => {
             if (editorRef.current) {
                 const editor = editorRef.current;
@@ -211,10 +236,11 @@ const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, t
         return () => { if (editor) editor.dispose(); };
     }, []);
 
-    // Sync value when editor is ready or value changes externally
+    // Sync value when it changes outside the editor (Fix button, templates, auto-layout, the visual
+    // editors). The change is one undo step, so Ctrl+Z restores the earlier text.
     useEffect(() => {
         if (editorReady && editorRef.current && value !== editorRef.current.getValue()) {
-            editorRef.current.setValue(value);
+            replaceAsOneStep(editorRef.current, value);
         }
     }, [value, editorReady]);
 

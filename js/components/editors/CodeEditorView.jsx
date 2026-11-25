@@ -5,6 +5,7 @@ import { PlantUmlToolbar } from '../PlantUmlToolbar.jsx';
 import { MermaidToolbar } from '../MermaidToolbar.jsx';
 import { SnippetInsertionDialog } from '../dialogs/SnippetInsertionDialog.jsx';
 import { fixWithSmith } from '../../services/smith/index.js';
+import { DiffReviewPane, monacoLanguageOf } from './DiffReviewPane.jsx';
 
 export const CodeEditorView = ({
     textInput,
@@ -28,9 +29,16 @@ export const CodeEditorView = ({
     setShowTemplates,
 
     fileInputRef,
-    readOnly = false // Added prop
+    readOnly = false,
+    // App's ref, so App, the error markers and the review pane reach the same Monaco editor
+    editorRef: externalEditorRef,
+    // The Smith proposal under review, if any
+    proposal = null,
+    onProposalDone,
+    onApplyRetyped
 }) => {
-    const editorRef = useRef(null);
+    const localEditorRef = useRef(null);
+    const editorRef = externalEditorRef || localEditorRef;
     const [selectedElement, setSelectedElement] = useState(null);
     const [snippetDialogSnippet, setSnippetDialogSnippet] = useState(null);
     const [isFixing, setIsFixing] = useState(false);
@@ -99,7 +107,9 @@ export const CodeEditorView = ({
             } else if (proposal.type !== diagramType) {
                 setFixMessage({ tone: 'error', text: 'Smith rewrote the diagram in another notation, so the fix was not applied. Ask Smith in the chat to convert the diagram instead.' });
             } else if (proposal.verified) {
-                setTextInput(proposal.code);
+                // Written as one undo step, so Ctrl+Z in the editor restores the broken code
+                if (editorRef.current?.applyEdits) editorRef.current.applyEdits(proposal.code);
+                else setTextInput(proposal.code);
             } else if (proposal.status === 'unverified') {
                 setFixMessage({ tone: 'warning', text: 'Smith could not check the repair because the diagram server could not be reached. The code is unchanged.' });
             } else {
@@ -116,7 +126,7 @@ export const CodeEditorView = ({
     };
 
     return (
-        <div className="flex-1 flex transition-opacity duration-300 opacity-100 z-10 relative">
+        <div className="flex-1 min-h-0 flex transition-opacity duration-300 opacity-100 z-10 relative">
             {/* Editor Panel */}
             <div className="w-1/2 flex flex-col border-r border-slate-200 relative">
                 {!readOnly && diagramType === 'plantuml' && (
@@ -134,17 +144,12 @@ export const CodeEditorView = ({
                         onInsert={(code) => handleSnippetInsert(code, 'cursor')} 
                     />
                 )}
-                <div className="flex-1">
+                <div className="flex-1 min-h-0">
                     <MonacoWrapper
                         ref={editorRef}
                         value={textInput}
                         onChange={setTextInput}
-                        language={
-                            diagramType === 'bpmn' ? 'xml' : 
-                            diagramType === 'vega' || diagramType === 'vegalite' || diagramType === 'excalidraw' ? 'json' :
-                            diagramType === 'c4' ? 'plantuml' : // default
-                            diagramType
-                        }
+                        language={monacoLanguageOf(diagramType)}
                         onCursorChange={(line, col) => setCursorPos({ line, col })}
                         readOnly={readOnly}
                     />
@@ -154,8 +159,31 @@ export const CodeEditorView = ({
                     <span>{stats.length} chars {stats.method && `| ${stats.method}`}</span>
                 </div>
                 
+                {/* Smith's proposal, reviewed one change at a time over the editor. The editor stays
+                    mounted underneath, so its undo history survives the review. */}
+                {proposal && (
+                    <DiffReviewPane
+                        original={textInput}
+                        proposal={proposal}
+                        currentType={diagramType}
+                        readOnly={readOnly}
+                        onCancel={onProposalDone}
+                        onApply={(code) => {
+                            if (proposal.type !== diagramType) {
+                                onApplyRetyped?.(code, proposal.type);
+                            } else if (editorRef.current?.applyEdits) {
+                                editorRef.current.applyEdits(code);
+                                editorRef.current.focus?.();
+                            } else {
+                                setTextInput(code);
+                            }
+                            onProposalDone?.();
+                        }}
+                    />
+                )}
+
                 {/* Empty State Overlay */}
-                {(!textInput || !textInput.trim()) && (
+                {!proposal && (!textInput || !textInput.trim()) && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm pointer-events-auto z-20">
                     <div className="text-center p-8 bg-white rounded-xl shadow-xl border border-slate-200 max-w-sm w-full mx-4">
                         <i className="fas fa-code text-4xl text-indigo-500 mb-4"></i>
