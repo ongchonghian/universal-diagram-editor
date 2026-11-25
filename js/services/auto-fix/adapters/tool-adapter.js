@@ -24,7 +24,7 @@ export class ToolAdapter {
      */
     normalizeError(rawError) {
         return {
-            message: String(rawError),
+            message: typeof rawError === 'string' ? rawError : (rawError?.message || String(rawError)),
             line: null,
             column: null,
             kind: 'UNKNOWN',

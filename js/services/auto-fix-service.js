@@ -6,6 +6,7 @@ import { aiService } from './ai-service.js';
 import { LanguageDetector, LANGUAGES } from './auto-fix/language-detector.js'; // Note path fix
 import { ErrorClassifier } from './auto-fix/error-classifier.js';
 import { PatchProposer } from './auto-fix/patch-proposer.js';
+import { extractCodeBlock } from '../utils/code-extract.js';
 
 import { PlantUmlAdapter } from './auto-fix/adapters/plantuml-adapter.js';
 import { MermaidAdapter } from './auto-fix/adapters/mermaid-adapter.js';
@@ -33,12 +34,15 @@ class AutoFixService {
      */
     async attemptAutoFix(code, hintedType = null, existingError = null) {
         // 1. Detect Language
-        let language = LanguageDetector.detectLanguage(code);
-        if (language === LANGUAGES.UNKNOWN && hintedType) {
-            // Map hinted type to our internal constants if needed
-            if (hintedType.includes('plantuml')) language = LANGUAGES.PLANTUML;
+        // The caller's type is the most reliable signal. Content detection runs only when the caller gives no type.
+        let language = LANGUAGES.UNKNOWN;
+        if (hintedType) {
+            // C4 in this app is written in PlantUML
+            if (hintedType.includes('plantuml') || hintedType === 'c4') language = LANGUAGES.PLANTUML;
             else if (hintedType.includes('mermaid')) language = LANGUAGES.MERMAID;
             else if (hintedType.includes('bpmn')) language = LANGUAGES.BPMN;
+        } else {
+            language = LanguageDetector.detectLanguage(code);
         }
 
         const fixLog = [`Detected Language: ${language}`];
@@ -47,10 +51,11 @@ class AutoFixService {
 
         if (!adapter) {
             fixLog.push(`No adapter found for language: ${language}`);
-            return { fixed: false, code, log: fixLog };
+            return { fixed: false, code, reason: 'unsupported', log: fixLog };
         }
 
         let validation = { valid: false };
+        let reason = 'failed';
 
         for (let attempt = 1; attempt <= this.MAX_ATTEMPTS; attempt++) {
             fixLog.push(`\nAttempt ${attempt}: Validating...`);
@@ -94,6 +99,7 @@ class AutoFixService {
                 } catch (e) {
                      fixLog.push(`LLM fix failed: ${e.message}`);
                      console.error("[AutoFix] LLM failed:", e);
+                     if (!aiService.hasApiKey()) reason = 'no-key';
                      break; 
                 }
                 continue;
@@ -123,11 +129,21 @@ class AutoFixService {
             }
         }
 
-        console.log("[AutoFix] Finished. Fixed:", validation?.valid, "Log:", fixLog);
-        return { fixed: false, code: currentCode, log: fixLog };
+        // The last attempt may have changed the code, so check the final code once more
+        if (currentCode !== code) {
+            validation = await adapter.validate(currentCode);
+            fixLog.push(validation.valid ? "Final validation passed." : "Final validation failed.");
+        }
+
+        console.log("[AutoFix] Finished. Fixed:", validation.valid, "Log:", fixLog);
+        return { fixed: !!validation.valid, code: currentCode, reason: validation.valid ? undefined : reason, log: fixLog };
     }
 
     async _llmFix(code, errors, language) {
+        if (!aiService.hasApiKey()) {
+            throw new Error('API Key is missing. Please configure it in settings.');
+        }
+
         const errorMsg = errors.map(e => `${e.kind}: ${e.message} (Line ${e.line})`).join('\n');
         
         const systemPrompt = `
@@ -139,17 +155,9 @@ Fix the code. Return ONLY the fixed code. No markdown blocks.
 `;
         const result = await aiService.callLLM(systemPrompt, code);
         
-        // Robustly extract code block if present
-        let fixedCode = result.trim();
-        const codeBlockMatch = fixedCode.match(/```(?:[a-z]+)?\n([\s\S]*?)\n```/i);
-        if (codeBlockMatch) {
-            fixedCode = codeBlockMatch[1].trim();
-        } else {
-            // Also handle case where it might just be the code without blocks, 
-            // maybe strip leading "Here is the code:" text if common.
-            // But usually the prompt "Return ONLY the fixed code" works well enough.
-            fixedCode = fixedCode.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '');
-        }
+        // Use the fenced block when the model adds one despite the instruction
+        const block = extractCodeBlock(result);
+        const fixedCode = block ? block.code : result.trim();
 
         return { code: fixedCode };
     }

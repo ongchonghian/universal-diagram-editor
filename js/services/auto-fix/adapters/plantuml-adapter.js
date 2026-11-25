@@ -19,11 +19,14 @@ export class PlantUmlAdapter extends ToolAdapter {
     }
 
     normalizeError(result, code) {
-        const msg = result.error || 'Unknown PlantUML Error';
+        // The caller may pass a plain string, a validation result, or a preview error object
+        const msg = typeof result === 'string'
+            ? result
+            : (result?.error?.message || (typeof result?.error === 'string' ? result.error : null) || result?.message || 'Unknown PlantUML Error');
         return {
             kind: 'PARSE', // Usually syntax error
             message: msg,
-            line: result.line,
+            line: result?.line ?? null,
             col: null,
             raw: msg
         };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { aiService } from '../services/ai-service.js';
+import { extractCodeBlock } from '../utils/code-extract.js';
 import { Button, LogoLoader } from './common.jsx';
 import { AISettingsModal } from './dialogs/AISettingsModal.jsx';
 import { SemanticDiffModal } from './dialogs/SemanticDiffModal.jsx';
@@ -26,6 +27,12 @@ export const AICopilot = ({
     const [pendingCode, setPendingCode] = useState('');
     
     const messagesEndRef = useRef(null);
+    // Tracks the open conversation, so a late reply is not shown in another conversation
+    const currentConversationRef = useRef(null);
+
+    useEffect(() => {
+        currentConversationRef.current = currentConversationId;
+    }, [currentConversationId]);
 
     // Load conversations and initial chat
     useEffect(() => {
@@ -91,8 +98,10 @@ export const AICopilot = ({
 
     const handleSend = async (textOverride = null) => {
         const textToSend = textOverride || input;
-        if (!textToSend.trim() || !currentConversationId) return;
+        if (isTyping || !textToSend.trim() || !currentConversationId) return;
 
+        const conversationId = currentConversationId;
+        const isStillOpen = () => currentConversationRef.current === conversationId;
         const userMessage = { role: 'user', content: textToSend };
         
         // Update UI immediately
@@ -101,7 +110,7 @@ export const AICopilot = ({
         setIsTyping(true);
 
         // Save to persistence
-        aiService.addMessageToConversation(currentConversationId, userMessage);
+        aiService.addMessageToConversation(conversationId, userMessage);
         // Update title/list in background
         setConversations(aiService.getConversations());
 
@@ -115,8 +124,8 @@ export const AICopilot = ({
             const responseText = await aiService.chat(userMessage.content, history, contextCode, diagramType);
 
             const botMessage = { role: 'assistant', content: responseText };
-            setMessages(prev => [...prev, botMessage]);
-            aiService.addMessageToConversation(currentConversationId, botMessage);
+            if (isStillOpen()) setMessages(prev => [...prev, botMessage]);
+            aiService.addMessageToConversation(conversationId, botMessage);
 
         } catch (error) {
             const errorMessage = { 
@@ -124,9 +133,9 @@ export const AICopilot = ({
                 content: `Error: ${error.message}`, 
                 isError: true 
             };
-            setMessages(prev => [...prev, errorMessage]);
-            // Don't save errors to history? Or maybe yes. saving for now.
-            aiService.addMessageToConversation(currentConversationId, errorMessage);
+            if (isStillOpen()) setMessages(prev => [...prev, errorMessage]);
+            // Saved so the user sees the error after a reload. The service leaves errors out of model history.
+            aiService.addMessageToConversation(conversationId, errorMessage);
             
             if (error.message.includes('API Key is missing')) {
                 setShowSettings(true);
@@ -139,6 +148,9 @@ export const AICopilot = ({
 
     const handleRegenerate = async () => {
         if (!currentConversationId || isTyping) return;
+
+        const conversationId = currentConversationId;
+        const isStillOpen = () => currentConversationRef.current === conversationId;
         
         // Remove last assistant message from UI
         setMessages(prev => {
@@ -153,7 +165,7 @@ export const AICopilot = ({
         try {
             // Get history (excluding valid system prompt stuff if needed)
             // We need to fetch the actual conversation from service to be sure
-            const convo = aiService.getConversation(currentConversationId);
+            const convo = aiService.getConversation(conversationId);
             if (!convo || convo.messages.length === 0) return;
 
              // Remove the last message if it was assistant
@@ -177,13 +189,10 @@ export const AICopilot = ({
             const responseText = await aiService.chat('__REGENERATE__', history, contextCode, diagramType);
 
             const botMessage = { role: 'assistant', content: responseText };
-            setMessages(prev => [...prev, botMessage]);
+            if (isStillOpen()) setMessages(prev => [...prev, botMessage]);
             
-            // Update persistence: Remove the old last assistant message (if any) and add new one
-            // This is a bit tricky with simple append-only persistence. 
-            // For now, valid history is just appended. We might have duplicates in history? 
-            // Let's just append the new response.
-            aiService.addMessageToConversation(currentConversationId, botMessage);
+            // Replace the old answer in storage with the new answer
+            aiService.updateConversation(conversationId, { messages: [...history, botMessage] });
 
         } catch (error) {
              const errorMessage = { 
@@ -191,7 +200,7 @@ export const AICopilot = ({
                 content: `Error: ${error.message}`, 
                 isError: true 
             };
-            setMessages(prev => [...prev, errorMessage]);
+            if (isStillOpen()) setMessages(prev => [...prev, errorMessage]);
         } finally {
             setIsTyping(false);
         }
@@ -342,13 +351,19 @@ export const AICopilot = ({
                             const suggestionMatch = content.match(/\[SUGGESTIONS\]:\s*(\[.*\])/);
                             if (suggestionMatch) {
                                 try {
-                                    suggestions = JSON.parse(suggestionMatch[1]);
+                                    const parsed = JSON.parse(suggestionMatch[1]);
+                                    if (Array.isArray(parsed)) {
+                                        suggestions = parsed.filter(s => typeof s === 'string' && s.trim());
+                                    }
                                     content = content.replace(suggestionMatch[0], '').trim();
                                 } catch (e) {
                                     console.warn("Failed to parse suggestions JSON", e);
                                 }
                             }
                         }
+
+                        // Apply Code is offered only when the reply holds a code block
+                        const codeBlock = (msg.role === 'assistant' && !msg.isError) ? extractCodeBlock(content) : null;
 
                         return (
                         <div 
@@ -389,16 +404,18 @@ export const AICopilot = ({
                             {/* Actions for Assistant Messages */}
                             {msg.role === 'assistant' && !msg.isError && (
                                 <div className="mt-1 flex gap-2">
+                                    {codeBlock && (
                                     <button 
                                         onClick={() => {
-                                            setPendingCode(content);
+                                            setPendingCode(codeBlock.code);
                                             setShowDiffModal(true);
-                                        }} // Use cleaned content
+                                        }}
                                         className="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
                                     >
                                         <i className="fas fa-reply"></i>
                                         Apply Code
                                     </button>
+                                    )}
                                     <button 
                                         onClick={() => handleRegenerate()}
                                         className="text-xs flex items-center gap-1 text-slate-500 hover:text-indigo-600 px-2 py-1 rounded hover:bg-slate-100 transition-colors"

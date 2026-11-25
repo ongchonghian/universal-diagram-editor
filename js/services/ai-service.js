@@ -4,7 +4,8 @@
  */
 import { diagramCompiler } from './diagram-compiler.js';
 import { rendererAdapter } from './RendererAdapter.js';
-import { KROKI_BASE_URL } from '../config.js';
+import { LanguageDetector } from './auto-fix/language-detector.js';
+import { extractCodeBlock } from '../utils/code-extract.js';
 
 
 export class AIService {
@@ -17,16 +18,29 @@ export class AIService {
      * Load settings from local storage or set defaults
      */
     loadSettings() {
-        const stored = localStorage.getItem(this.STORAGE_KEY);
-        if (stored) {
-            return JSON.parse(stored);
-        }
-        return {
+        const defaults = {
             provider: 'gemini',
             model: 'gemini-1.5-flash',
             apiKey: '',
             temperature: 0.7
         };
+        const stored = this.readStoredJSON(this.STORAGE_KEY);
+        return stored ? { ...defaults, ...stored } : defaults;
+    }
+
+    /**
+     * Read a JSON value from local storage.
+     * Returns null when the entry is missing or holds invalid JSON, so a corrupt entry cannot stop the app from loading.
+     */
+    readStoredJSON(key) {
+        try {
+            const stored = localStorage.getItem(key);
+            const parsed = stored ? JSON.parse(stored) : null;
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (e) {
+            console.warn(`[AI] Ignoring unreadable stored value for ${key}`, e);
+            return null;
+        }
     }
 
     /**
@@ -50,12 +64,16 @@ export class AIService {
     // --- Conversation Management ---
 
     getConversations() {
-        const stored = localStorage.getItem('universal_diagram_ai_conversations');
-        return stored ? JSON.parse(stored) : {};
+        return this.readStoredJSON('universal_diagram_ai_conversations') || {};
     }
 
     saveConversations(conversations) {
-        localStorage.setItem('universal_diagram_ai_conversations', JSON.stringify(conversations));
+        try {
+            localStorage.setItem('universal_diagram_ai_conversations', JSON.stringify(conversations));
+        } catch (e) {
+            // Usually a storage quota error. The chat keeps working; the conversation is not saved.
+            console.warn('[AI] Could not save conversations', e);
+        }
     }
 
     createConversation() {
@@ -295,35 +313,19 @@ Generate specific JSON AST. No markdown outside the JSON.
      * This is used when no client-side parser is available (PlantUML, C4, etc.)
      */
     async validateWithKroki(code, type) {
-        // Map app types to Kroki types
-        const krokiType = (type === 'c4') ? 'c4plantuml' : type;
+        // The renderer already maps C4 to the right Kroki endpoint and sends long diagrams by POST
+        const result = await rendererAdapter.validateSyntax(code, type);
+        if (result.valid) return { valid: true, error: null };
 
-        // Encode
-        const encoded = rendererAdapter.encodeKroki(code);
-        if (!encoded) return { valid: false, error: "Validation failed: Could not encode code." };
-
-        const url = `${KROKI_BASE_URL}/${krokiType}/svg/${encoded}`;
-
-        try {
-            const response = await fetch(url);
-            if (response.ok) {
-                return { valid: true, error: null };
-            } else {
-                // Kroki returns 400 for syntax errors, usually with plain text explanation
-                const text = await response.text();
-                return { valid: false, error: `Syntax Error (Kroki): ${text.slice(0, 300)}...` }; // Truncate long HTML errors
-            }
-        } catch (e) {
-            console.warn("[AI] Kroki validation fetch failed:", e);
-            // If network fails (offline), we can't validate strictly.
-            // Fallback to heuristic or assume valid to allow offline usage?
-            // User likely online if using AI.
-            // But let's fallback to heuristic for PlantUML just in case.
-            if (type === 'plantuml' || type === 'c4') {
-                return this.validatePlantUML(code);
-            }
-            return { valid: true, error: null, warning: "Validation skipped (Network error)" };
+        const message = result.error || 'Unknown error';
+        if (/failed to fetch|networkerror|load failed/i.test(message)) {
+            // Kroki could not be reached, so fall back to the local heuristic check
+            console.warn("[AI] Kroki validation fetch failed:", message);
+            return this.validatePlantUML(code);
         }
+
+        const shortMessage = message.length > 300 ? `${message.slice(0, 300)}...` : message;
+        return { valid: false, error: `Syntax Error (Kroki): ${shortMessage}` };
     }
 
     /**
@@ -435,17 +437,19 @@ ${this.getSpecificInstructions(diagramType)}
         }
 
         // Check if message is a regeneration request
-        if (message === '__REGENERATE__' && history.length > 0) {
-            // Find last user message
-            const lastUserMsg = [...history].reverse().find(m => m.role === 'user');
-            if (lastUserMsg) {
-                message = lastUserMsg.content;
-                // Remove the last assistant response from history to avoid confusion
-                if (history[history.length - 1].role === 'assistant') {
-                    history.pop();
-                }
+        if (message === '__REGENERATE__') {
+            const lastUserIndex = history.map(m => m.role).lastIndexOf('user');
+            if (lastUserIndex === -1) {
+                throw new Error('There is no earlier message to regenerate.');
             }
+            // Re-send the last user message, and drop that message and every later turn from the history,
+            // so the request holds the question once.
+            message = history[lastUserIndex].content;
+            history = history.slice(0, lastUserIndex);
         }
+
+        // Error notices shown in the chat are not model turns
+        history = history.filter(m => !m.isError);
 
         const systemPrompt = this.getSystemPrompt(diagramType);
         const userContent = `
@@ -464,13 +468,13 @@ User: ${message}
         // --- VALIDATION LOOP FOR CHAT ---
         // If response contains code block, valid it.
         // We only validate if it looks like there is code.
-        const codeBlockRegex = /```[\w]*\n([\s\S]*?)```/;
-        const match = responseText.match(codeBlockRegex);
+        const block = extractCodeBlock(responseText);
         
-        if (match) {
-            let extractedCode = match[1].trim();
-            // Try to validate
-            let validation = await this.validateSyntax(extractedCode, diagramType);
+        if (block) {
+            let extractedCode = block.code;
+            // The reply can be in a different language from the editor's current type
+            const language = this.resolveLanguage(block, diagramType);
+            let validation = await this.validateSyntax(extractedCode, language);
             
             // If invalid, try to fix (Self-Correction Loop)
             const MAX_CHAT_RETRIES = 1; // Keep it fast for chat
@@ -480,12 +484,13 @@ User: ${message}
                 console.log(`[AI Chat] Auto-correcting syntax error: ${validation.error}`);
                 
                 try {
-                     extractedCode = await this.fixDiagram(extractedCode, validation.error, diagramType);
-                     validation = await this.validateSyntax(extractedCode, diagramType);
+                     extractedCode = await this.fixDiagram(extractedCode, validation.error, language);
+                     validation = await this.validateSyntax(extractedCode, language);
                      
                      if (validation.valid) {
                          // Replace the code block in the original text with the fixed code
-                         responseText = responseText.replace(match[0], `\`\`\`${diagramType}\n${extractedCode}\n\`\`\``);
+                         const fixedBlock = `\`\`\`${language}\n${extractedCode}\n\`\`\``;
+                         responseText = responseText.replace(block.raw, () => fixedBlock);
                      }
                 } catch (e) {
                     console.error("[AI Chat] Auto-correction failed:", e);
@@ -501,6 +506,22 @@ User: ${message}
         }
         
         return responseText;
+    }
+
+    /**
+     * Work out which language a fenced block is written in.
+     * Order: the fence label, then strong signals in the code, then the editor's current type.
+     */
+    resolveLanguage(block, diagramType) {
+        const labels = { mermaid: 'mermaid', plantuml: 'plantuml', puml: 'plantuml', bpmn: 'bpmn', vega: 'vega', vegalite: 'vegalite', 'vega-lite': 'vegalite' };
+        const code = block.code;
+        const isPlantUml = /@start[a-z]+/i.test(code);
+
+        if (isPlantUml) return diagramType === 'c4' ? 'c4' : 'plantuml';
+        if (labels[block.lang]) return labels[block.lang];
+        if (code.startsWith('<?xml') || code.includes('<bpmn:definitions') || code.includes('<definitions')) return 'bpmn';
+        if (LanguageDetector.isMermaidKeyword(LanguageDetector.getFirstSignificantLine(code))) return 'mermaid';
+        return diagramType;
     }
 
     /**
@@ -528,10 +549,18 @@ Please explain what this diagram represents.
      * Fix errors in the diagram
      */
     async fixDiagram(code, error, diagramType) {
+        const result = await this.fixDiagramWithResult(code, error, diagramType);
+        return result.code;
+    }
+
+    /**
+     * Fix errors in the diagram and report the outcome.
+     * @returns {Promise<{fixed: boolean, code: string, reason?: string, log: string[]}>}
+     */
+    async fixDiagramWithResult(code, error, diagramType) {
         const { autoFixService } = await import('./auto-fix-service.js');
         // We pass the existing error to the service to save a validation cycle if possible
-        const result = await autoFixService.attemptAutoFix(code, diagramType, error);
-        return result.code;
+        return autoFixService.attemptAutoFix(code, diagramType, error);
     }
 
     /**
@@ -580,8 +609,8 @@ Please explain what this diagram represents.
     async callLLM(systemInstructions, userContent, history = []) {
         const { apiKey, model, temperature } = this.settings;
         
-        // Gemini API Endpoint
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        // Gemini API Endpoint. The key travels in a header, so the key stays out of the URL.
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
         // Map internal roles to Gemini roles
         const contents = history.map(msg => ({
@@ -592,7 +621,7 @@ Please explain what this diagram represents.
         // Add current user message
         contents.push({
             role: 'user',
-            parts: [{ text: systemInstructions + "\n\n" + userContent }]
+            parts: [{ text: userContent }]
         });
 
         const payload = {
@@ -603,11 +632,16 @@ Please explain what this diagram represents.
             }
         };
 
+        if (systemInstructions && systemInstructions.trim()) {
+            payload.systemInstruction = { parts: [{ text: systemInstructions }] };
+        }
+
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': apiKey
                 },
                 body: JSON.stringify(payload)
             });
@@ -620,10 +654,20 @@ Please explain what this diagram represents.
             const data = await response.json();
             
             if (!data.candidates || data.candidates.length === 0) {
-                 throw new Error('No response generated from AI.');
+                 const blockReason = data.promptFeedback?.blockReason;
+                 throw new Error(blockReason ? `The AI blocked the request (${blockReason}).` : 'No response generated from AI.');
             }
 
-            const text = data.candidates[0].content.parts[0].text;
+            const candidate = data.candidates[0];
+            const text = (candidate.content?.parts || []).map(part => part.text || '').join('');
+
+            if (candidate.finishReason === 'MAX_TOKENS') {
+                throw new Error('The AI reply was cut off before the end because the reply reached the length limit. Ask for a smaller diagram, or ask for the change in smaller steps.');
+            }
+            if (!text) {
+                throw new Error(`The AI returned no text (finish reason: ${candidate.finishReason || 'unknown'}).`);
+            }
+
             return text;
 
         } catch (error) {

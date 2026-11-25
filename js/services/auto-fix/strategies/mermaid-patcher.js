@@ -7,7 +7,8 @@ export async function proposeMermaidPatches(code, errors, config) {
     // 1. Check for missing 'end'
     const missingEnd = errors.some(e => 
         e.kind === ERROR_KINDS.PARSE && 
-        (e.message.includes('EOF') || e.message.includes('end') || e.message.includes('Expecting'))
+        // Only an unexpected end of file points to a missing 'end'. Most other parse errors also say "Expecting".
+        (e.message || '').includes('EOF')
     );
 
     if (missingEnd) {

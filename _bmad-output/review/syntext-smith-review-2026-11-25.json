@@ -1,0 +1,270 @@
+[
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:118-195, js/services/diagram-compiler.js:1-249",
+    "trigger_condition": "The neuro-symbolic path (generateDiagram, _generateInitialCode, getJSONSystemPrompt, diagramCompiler) has no caller; the chat panel only calls aiService.chat().",
+    "guard_snippet": "Delete the AST path and the compiler, or wire the path in and measure it. Correct the wiki page either way.",
+    "potential_consequence": "The wiki promises '100% runnable code' from a pipeline that users never reach. About 330 lines of code stay unmaintained and mislead the next developer."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:373-427",
+    "trigger_condition": "The AST schema holds only flat nodes and edges, so the schema cannot express subgraphs, alt/loop blocks, class members, BPMN lanes or gateways.",
+    "guard_snippet": "Let the model write native syntax and check the output with the real parser (mermaid.parse, bpmn-moddle, Kroki). Keep a symbolic stage only for BPMN layout.",
+    "potential_consequence": "If the AST path were switched on, Smith would draw simpler diagrams than a current model writes unaided."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:26, js/components/dialogs/AISettingsModal.jsx:7-21,94-112",
+    "trigger_condition": "The default model is gemini-1.5-flash and the model menu is a hard-coded list from early 2026.",
+    "guard_snippet": "Fetch the model list from the provider's models endpoint, and default to the provider's current alias. Confirm the retirement date of the 1.5 series before release.",
+    "potential_consequence": "A new user's first message fails with a provider error once the default model is retired, and every new model needs a code change."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:587-596",
+    "trigger_condition": "callLLM joins the system prompt onto the latest user message, and the request omits the systemInstruction field.",
+    "guard_snippet": "payload.systemInstruction = { parts: [{ text: systemInstructions }] }; contents.push({ role: 'user', parts: [{ text: userContent }] })",
+    "potential_consequence": "The model treats the rules as user text, earlier turns carry no rules, and the stable prompt cannot be cached."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:467,598-604; js/components/AICopilot.jsx:342; js/services/ai-service.js:438",
+    "trigger_condition": "The request uses neither structured output nor function calling. The app recovers code, suggestions and regenerate intent with regular expressions and a magic string.",
+    "guard_snippet": "Define tools (edit_diagram, validate, suggest_next_steps) or a response schema { explanation, language, code, suggestions[] } and read typed fields.",
+    "potential_consequence": "A reply that formats a fence or the [SUGGESTIONS] tag slightly differently loses its code or its chips, and prose can reach the editor as code."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:38,584",
+    "trigger_condition": "The API key travels in the URL query string and sits in localStorage as plain text.",
+    "guard_snippet": "Send the key in the x-goog-api-key header. Default to sessionStorage, with an opt-in to remember the key.",
+    "potential_consequence": "The key appears in proxy logs, browser tooling and error reports, and any script on the page can read the key."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:606-627",
+    "trigger_condition": "callLLM waits for the whole reply. The call has no streaming, no timeout and no AbortController.",
+    "guard_snippet": "Use streamGenerateContent with an AbortController, show partial text, and add a Stop button.",
+    "potential_consequence": "The user watches three dots for the full length of a long BPMN reply and has no way to cancel the request."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:598-604,620-627",
+    "trigger_condition": "maxOutputTokens is fixed at 8192 and the code never reads finishReason.",
+    "guard_snippet": "if (candidate.finishReason === 'MAX_TOKENS') throw new Error('The reply was cut off'); raise the limit to the model's maximum.",
+    "potential_consequence": "A long BPMN file arrives cut off part-way, and Smith presents the partial XML as a finished answer."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:203-269 versus js/services/auto-fix/adapters/*.js",
+    "trigger_condition": "Two validation layers apply different rules. BPMN without layout data passes aiService.validateSyntax and fails BpmnAdapter.validate.",
+    "guard_snippet": "Keep one validation module per language and call that module from chat, auto-fix and the preview.",
+    "potential_consequence": "The chat reports a diagram as valid while the fix loop treats the same diagram as broken, or the reverse."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/ai-service.js:297-327",
+    "trigger_condition": "Every PlantUML or C4 reply is sent to the public kroki.io service for validation, and the interface gives no notice.",
+    "guard_snippet": "Add a Kroki base URL setting, state in the settings dialog where diagrams are sent, and reuse RendererAdapter.render so long diagrams go by POST.",
+    "potential_consequence": "A user who pastes a confidential architecture into Smith sends that architecture to a third party without knowing."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/auto-fix-service.js:19-26,37-51; js/components/editors/CodeEditorView.jsx:93-97",
+    "trigger_condition": "Auto-fix has adapters for Mermaid, PlantUML and BPMN only. The 'c4' hint is not mapped, and both callers ignore the fixed flag.",
+    "guard_snippet": "Map c4 to the PlantUML adapter, fall back to a plain LLM repair for other types, and tell the user when the fix did not succeed.",
+    "potential_consequence": "For C4, Vega, Graphviz and about fifteen other types, the Fix button spins and then leaves the code unchanged without a message."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/services/auto-fix/strategies/mermaid-patcher.js:8-21, plantuml-patcher.js:8-22",
+    "trigger_condition": "The heuristic patchers run before the LLM. The Mermaid patcher appends 'end' whenever the error text contains 'Expecting', and most Mermaid parse errors contain that word.",
+    "guard_snippet": "Remove the regex patchers. Send the real parser error to the model first, and keep the deterministic step only for BPMN auto-layout.",
+    "potential_consequence": "The fix loop spends an attempt adding a stray 'end' line to a diagram whose real fault lies elsewhere."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/components/AICopilot.jsx:390-401,486-497",
+    "trigger_condition": "Apply Code appears on every assistant reply and passes the whole reply, prose included, to the diff modal as the new code.",
+    "guard_snippet": "Extract the fenced block once in the service, store the block as message.code, show Apply only when message.code exists, and pass message.code to the modal.",
+    "potential_consequence": "The diff preview tries to render prose plus a fence, so the preview fails or misleads the user at the moment the user decides to accept the change."
+  },
+  {
+    "lens": "adversarial",
+    "location": "js/components/AICopilot.jsx:113,121-129",
+    "trigger_condition": "Error replies are saved as assistant turns and replayed to the model. The history has no size limit and holds no earlier diagram states.",
+    "guard_snippet": "Filter out messages with isError before the call, cap or summarise the history, and store a diagram snapshot with each turn.",
+    "potential_consequence": "The model reads 'Error: API Error: 429' as its own earlier answer, and long conversations grow in cost on every turn."
+  },
+  {
+    "lens": "adversarial",
+    "location": "general",
+    "trigger_condition": "Smith accepts text only. The user cannot attach an image, and the model never sees the rendered diagram.",
+    "guard_snippet": "Accept pasted images as inlineData parts, and send the rendered PNG back to the model for a layout check after generation.",
+    "potential_consequence": "Smith cannot turn a whiteboard photo into a diagram and cannot notice overlapping or unreadable output, which current general chat assistants can do."
+  },
+  {
+    "lens": "adversarial",
+    "location": "general",
+    "trigger_condition": "The feature has no evaluation set, so the team cannot measure how often a model produces a diagram that parses and renders.",
+    "guard_snippet": "Keep a set of about fifty prompts across diagram types, run the set against each candidate model, and record the pass rate.",
+    "potential_consequence": "A change of model or prompt can lower quality unnoticed, and the '100% runnable' claim stays unproven."
+  },
+  {
+    "lens": "adversarial",
+    "location": ".qoder/repowiki/en/content/Advanced Features/Syntext Smith (AI Copilot).md",
+    "trigger_condition": "The wiki says the compiler targets BPMN and that the correction loop repeats up to 2 times. The compiler has no BPMN target, the chat retries once, and auto-fix tries three times.",
+    "guard_snippet": "Rewrite the page from the code: one chat retry (ai-service.js:476), three auto-fix attempts (auto-fix-service.js:16), no AST path in use.",
+    "potential_consequence": "Readers of the wiki plan work on features that do not exist."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/ai-service.js:438-447,587-596",
+    "trigger_condition": "Regenerate keeps the last user message in history and appends the same message again",
+    "guard_snippet": "const i = history.findLastIndex(m => m.role === 'user'); message = history[i].content; history = history.slice(0, i);",
+    "potential_consequence": "The request holds the question twice as consecutive user turns"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/components/AICopilot.jsx:179-186",
+    "trigger_condition": "Regenerate appends the new answer and leaves the old answer in storage",
+    "guard_snippet": "aiService.updateConversation(id, { messages: [...history, botMessage] })",
+    "potential_consequence": "Both answers reappear after reload and both go to the model as history"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/components/AICopilot.jsx:92-94,200-205",
+    "trigger_condition": "The user presses Enter while a reply is still pending",
+    "guard_snippet": "if (isTyping || !textToSend.trim() || !currentConversationId) return;",
+    "potential_consequence": "Two requests run at once and their replies interleave in the conversation"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/components/AICopilot.jsx:101-106",
+    "trigger_condition": "localStorage.setItem throws a quota error before the try block starts",
+    "guard_snippet": "Move addMessageToConversation inside the try block, and catch the quota error in saveConversations",
+    "potential_consequence": "The typing indicator stays on and the send button stays disabled"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/ai-service.js:19-23,52-55,636",
+    "trigger_condition": "Stored settings or conversations hold invalid JSON",
+    "guard_snippet": "try { return JSON.parse(stored); } catch { localStorage.removeItem(key); return defaults; }",
+    "potential_consequence": "The module throws on import and the whole editor fails to load"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/components/AICopilot.jsx:115-119",
+    "trigger_condition": "The user switches conversation while a reply is pending",
+    "guard_snippet": "const id = currentConversationId; ... if (id === currentIdRef.current) setMessages(prev => [...prev, botMessage]);",
+    "potential_consequence": "The reply shows in the wrong conversation until the panel reloads"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/ai-service.js:467-484",
+    "trigger_condition": "The reply is in a different language from the editor's current diagram type",
+    "guard_snippet": "const lang = fenceLabel || LanguageDetector.detectLanguage(extractedCode); validation = await this.validateSyntax(extractedCode, lang);",
+    "potential_consequence": "Valid Mermaid is judged as broken BPMN and the fix loop then alters the Mermaid"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/ai-service.js:467-468",
+    "trigger_condition": "The reply holds two or more fenced code blocks",
+    "guard_snippet": "const blocks = [...responseText.matchAll(/```[\\w]*\\n([\\s\\S]*?)```/g)]; validate each block or keep the last diagram block",
+    "potential_consequence": "Only the first block is checked and applied, which may be a short example"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/auto-fix-service.js:55-127",
+    "trigger_condition": "A patch or LLM fix lands on the third and final attempt",
+    "guard_snippet": "After the loop: const final = await adapter.validate(currentCode); return { fixed: final.valid, code: currentCode, log: fixLog };",
+    "potential_consequence": "The service reports fixed:false for code that may now be valid, and returns unchecked code"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/auto-fix/adapters/plantuml-adapter.js:21-22; js/services/ai-service.js:483",
+    "trigger_condition": "The chat path passes the error as a string, and normalizeError reads result.error",
+    "guard_snippet": "const msg = typeof result === 'string' ? result : (result?.error || result?.message || 'Unknown PlantUML Error');",
+    "potential_consequence": "The model receives 'Unknown PlantUML Error' in place of the real Kroki message"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/auto-fix-service.js:130-140; js/components/editors/CodeEditorView.jsx:85-101",
+    "trigger_condition": "The user clicks Fix in the editor before saving an API key",
+    "guard_snippet": "if (!aiService.hasApiKey()) throw new Error('API Key is missing. Please configure it in settings.');",
+    "potential_consequence": "The request goes out with an empty key and the fix quietly stops"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/auto-fix/language-detector.js:24,74-77",
+    "trigger_condition": "The code contains '-->' or starts with '<?xml' and is neither Mermaid nor BPMN",
+    "guard_snippet": "Prefer the editor's diagram type when the type is known; use content detection only when the type is unknown",
+    "potential_consequence": "An SVG or a Nomnoml diagram is validated and patched as BPMN or Mermaid"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/hooks/useCopilot.js:11-39; js/components/AICopilot.jsx:393-396",
+    "trigger_condition": "The user applies a reply that holds prose and no code fence",
+    "guard_snippet": "if (!match) return; // apply only an extracted code block",
+    "potential_consequence": "The editor's diagram is replaced with a paragraph of prose"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/ai-service.js:622-626",
+    "trigger_condition": "The candidate is blocked or empty, so candidates[0].content has no parts",
+    "guard_snippet": "const text = data.candidates[0]?.content?.parts?.map(p => p.text || '').join(''); if (!text) throw new Error(`No text returned (${data.candidates[0]?.finishReason})`);",
+    "potential_consequence": "The user sees 'Cannot read properties of undefined' as the error message"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/ai-service.js:305-315",
+    "trigger_condition": "A long PlantUML diagram makes the Kroki GET address exceed the server's limit",
+    "guard_snippet": "Call rendererAdapter.validateSyntax(code, krokiType), which already switches to POST above 4000 characters",
+    "potential_consequence": "A valid long diagram is reported as a syntax error and sent to the fix loop"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/components/AICopilot.jsx:342-350,374-384",
+    "trigger_condition": "The suggestions JSON parses to objects or to a non-array value",
+    "guard_snippet": "if (Array.isArray(parsed)) suggestions = parsed.filter(s => typeof s === 'string');",
+    "potential_consequence": "React throws while rendering the chips and the panel goes blank"
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "js/services/diagram-compiler.js:62,83,89; js/services/ai-service.js:180,424",
+    "trigger_condition": "The AST omits edges, or uses type 'decision' as the prompt instructs",
+    "guard_snippet": "(ast.edges || []).forEach(...); else if (node.type === 'decision' || node.type === 'condition')",
+    "potential_consequence": "The compiler throws on a missing edge list, and decisions never draw as diamonds"
+  },
+  {
+    "lens": "verification-gap",
+    "location": "js/services/ai-service.js:580-604 (request construction in callLLM)",
+    "trigger_condition": "The repository holds no test that inspects the request payload built by callLLM.",
+    "guard_snippet": "A unit test that stubs fetch and asserts the URL, the headers, the role mapping of history and the place of the system prompt.",
+    "potential_consequence": "A change that drops the history, or maps roles wrongly, ships unnoticed because the request is still accepted by the provider.",
+    "gap_shape": "regression-gap",
+    "consumer": "aiService.chat at js/services/ai-service.js:462 and AutoFixService._llmFix at js/services/auto-fix-service.js:140",
+    "evidence": "A search for *.test.* and *.spec.* files outside node_modules returned no files. package.json defines only the dev, build and preview scripts."
+  },
+  {
+    "lens": "verification-gap",
+    "location": "js/services/ai-service.js:467, js/services/auto-fix-service.js:144, js/hooks/useCopilot.js:14 (code-fence extraction)",
+    "trigger_condition": "Three different regular expressions extract fenced code, and the repository holds no test for any of the three.",
+    "guard_snippet": "One shared extractCode(text) helper with table tests: no fence, one fence, two fences, a fence without a language label, a fence without a final newline.",
+    "potential_consequence": "The three expressions already disagree on a fence without a final newline, so the chat can validate one string while Apply inserts another.",
+    "gap_shape": "regression-gap",
+    "consumer": "handleAiCodeApply at js/hooks/useCopilot.js:9 and the chat validation loop at js/services/ai-service.js:470",
+    "evidence": "The same file search and package.json check as above. No test file imports ai-service, auto-fix-service or useCopilot."
+  },
+  {
+    "lens": "verification-gap",
+    "location": "js/services/auto-fix-service.js:34-128 (attemptAutoFix loop)",
+    "trigger_condition": "The repair loop is deterministic apart from the model call, and the repository holds no test for the loop.",
+    "guard_snippet": "A test with a fake adapter and a fake LLM that asserts the attempt count, the final validation and the fixed flag.",
+    "potential_consequence": "The loop already returns fixed:false after a successful last-attempt fix, and no check exposes that result.",
+    "gap_shape": "regression-gap",
+    "consumer": "aiService.fixDiagram at js/services/ai-service.js:530, used by the editor's Fix button at js/components/editors/CodeEditorView.jsx:93",
+    "evidence": "The same file search and package.json check as above."
+  }
+]

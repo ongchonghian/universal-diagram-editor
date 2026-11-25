@@ -2,22 +2,18 @@
 import { useState, useCallback } from 'react';
 import { DIAGRAM_TYPES } from '../config.js';
 import { rendererAdapter } from '../services/RendererAdapter.js';
+import { extractCodeBlock } from '../utils/code-extract.js';
 
 export const useCopilot = (setTextInput, setDiagramType, setViewMode, currentDiagramType) => {
     const [showCopilot, setShowCopilot] = useState(false);
 
     const handleAiCodeApply = useCallback((code) => {
         // Clean markdown code blocks if present
-        let cleanCode = code;
-        if (code.includes('```')) {
-            // Match content between ```...```
-            const match = code.match(/```(?:\w+)?\n([\s\S]*?)```/);
-            if (match && match[1]) {
-                cleanCode = match[1];
-            }
-        }
+        const block = extractCodeBlock(code);
+        let cleanCode = block ? block.code : (code || '');
         
         cleanCode = cleanCode.trim();
+        if (!cleanCode) return;
 
         // Auto-detect and switch diagram type
         // We use a generic filename to trigger content-based detection

@@ -90,10 +90,18 @@ export const CodeEditorView = ({
             console.log("Requesting AI Auto-Fix...");
             
             // Call AI Service to fix
-            const fixedCode = await aiService.fixDiagram(textInput, previewError, diagramType);
+            const result = await aiService.fixDiagramWithResult(textInput, previewError, diagramType);
             
-            if (fixedCode && fixedCode !== textInput) {
-                setTextInput(fixedCode);
+            if (result.fixed) {
+                if (result.code && result.code !== textInput) {
+                    setTextInput(result.code);
+                }
+            } else if (result.reason === 'unsupported') {
+                alert("Auto-fix supports Mermaid, PlantUML, C4 (PlantUML) and BPMN diagrams only.");
+            } else if (result.reason === 'no-key') {
+                alert("Auto-fix needs an API key. Open Syntext Smith and add a key in Settings.");
+            } else {
+                alert("Auto-fix could not produce a valid diagram. The code is unchanged.");
             }
         } catch (e) {
             console.error("Auto-Fix failed:", e);
