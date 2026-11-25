@@ -10,5 +10,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true
+  },
+  // Unit tests (npm test). The evaluation set runs in the browser instead (npm run eval).
+  test: {
+    environment: 'jsdom',
+    include: ['js/**/*.test.js', 'evals/**/*.test.js']
   }
 });

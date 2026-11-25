@@ -2,7 +2,7 @@
  * AI Service for communicating with LLM providers (Gemini, etc.)
  * Handles API keys, model configuration, and prompt generation.
  */
-import { rendererAdapter } from './RendererAdapter.js';
+import { validateDiagram } from './diagram-tools/validate.js';
 import { LanguageDetector } from './auto-fix/language-detector.js';
 import { extractCodeBlock } from '../utils/code-extract.js';
 
@@ -21,6 +21,7 @@ export class AIService {
     constructor() {
         this.STORAGE_KEY = 'universal_diagram_ai_settings';
         this.settings = this.loadSettings();
+        this.usageTotals = { inputTokens: 0, outputTokens: 0, calls: 0 };
     }
 
     /**
@@ -139,169 +140,21 @@ export class AIService {
     // --- End Conversation Management ---
 
     /**
-     * Validate syntax using client-side parsers
-     * @param {string} code 
-     * @param {string} type 
-     * @returns {Promise<{valid: boolean, error: string|null}>}
+     * Validate diagram code with the shared validator (js/services/diagram-tools/validate.js).
+     * @returns {Promise<{valid: boolean, status: string, error: string|null, line: number|null}>}
      */
     async validateSyntax(code, type) {
-        if (!code || !code.trim()) return { valid: false, error: "Empty code" };
-
-        try {
-            if (type === 'mermaid') {
-                const mermaid = await import('mermaid');
-                // mermaid.parse throws on error
-                // Initialize if needed (though usually done by app)
-                // mermaid.initialize({ startOnLoad: false }); 
-                
-                try {
-                    await mermaid.default.parse(code, { suppressErrors: false }); // .default for ES module interop
-
-                    // Extra Heuristic for Timeline (Parse often misses 'section' syntax errors until render)
-                    if (/^\s*timeline\b/m.test(code)) {
-                        const timelineError = this.validateMermaidTimeline(code);
-                        if (!timelineError.valid) return timelineError;
-                    }
-
-                    return { valid: true, error: null };
-                } catch (e) {
-                     // Mermaid.parse error. Ensure we return a string message.
-                     return { valid: false, error: e.message || String(e) };
-                }
-            }
-
-            if (type === 'bpmn') {
-                const BpmnModdleModule = await import('bpmn-moddle');
-                const BpmnModdle = BpmnModdleModule.default || BpmnModdleModule;
-                const moddle = new BpmnModdle();
-                
-                // moddle.fromXML returns { rootElement, warnings }
-                // It throws if XML is completely malformed
-                try {
-                    const { warnings } = await moddle.fromXML(code);
-                    if (warnings && warnings.length > 0) {
-                         // Some warnings are critical, some are not. 
-                         return { valid: true, error: null };
-                    }
-                    return { valid: true, error: null };
-                } catch (parseErr) {
-                    return { valid: false, error: parseErr.message };
-                }
-            }
-
-            if (type === 'plantuml' || type === 'c4') {
-                // Use strict remote validation via Kroki
-                return this.validateWithKroki(code, type);
-            }
-            
-            // For Vega/Vega-Lite, try basic JSON parse
-            if (type === 'vega' || type === 'vegalite') {
-                try {
-                    JSON.parse(code);
-                    return { valid: true, error: null };
-                } catch (e) {
-                     return { valid: false, error: "Invalid JSON: " + e.message };
-                }
-            }
-
-            return { valid: true, error: null };
-
-        } catch (e) {
-            // Mermaid parse error comes here
-            return { valid: false, error: e.message || e.toString() };
-        }
-    }
-
-    /**
-     * Heuristic validator for Mermaid Timeline
-     */
-    validateMermaidTimeline(code) {
-        if (!code) return { valid: false, error: "Empty code" };
-        const lines = code.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.startsWith('section')) {
-                // Check if section title contains a colon
-                // Pattern: section Title That Has : A Colon
-                if (line.includes(':')) {
-                    return { 
-                        valid: false, 
-                        error: `Mermaid Timeline Syntax Error on line ${i+1}: Section titles cannot contain colons. Found: '${line}'. Please remove the colon.` 
-                    };
-                }
-            }
-        }
-        return { valid: true, error: null };
-    }
-
-    /**
-     * Validate using the Kroki service (acts as a remote parser)
-     * This is used when no client-side parser is available (PlantUML, C4, etc.)
-     */
-    async validateWithKroki(code, type) {
-        // The renderer already maps C4 to the right Kroki endpoint and sends long diagrams by POST
-        const result = await rendererAdapter.validateSyntax(code, type);
-        if (result.valid) return { valid: true, error: null };
-
-        const message = result.error || 'Unknown error';
-        if (/failed to fetch|networkerror|load failed/i.test(message)) {
-            // Kroki could not be reached, so fall back to the local heuristic check
-            console.warn("[AI] Kroki validation fetch failed:", message);
-            return this.validatePlantUML(code);
-        }
-
-        const shortMessage = message.length > 300 ? `${message.slice(0, 300)}...` : message;
-        return { valid: false, error: `Syntax Error (Kroki): ${shortMessage}` };
-    }
-
-    /**
-     * Heuristic validator for PlantUML
-     * Checks for structural correctness and common bad patterns
-     */
-    validatePlantUML(code) {
-        const cleanCode = code.trim();
-        
-        // 1. Check for Start/End tags
-        const startTag = cleanCode.match(/@start\w+/);
-        const endTag = cleanCode.match(/@end\w+/);
-        
-        if (!startTag) return { valid: false, error: "Missing @startuml (or @startgantt, etc.) declaration." };
-        if (!endTag) return { valid: false, error: "Missing @enduml (or @endgantt, etc.) termination." };
-        
-        // 2. Check for balanced braces {}
-        // Simplistic check: count must be equal. (Ignores strings/comments for simplicity, but good enough for typical failure modes)
-        const openBraces = (cleanCode.match(/\{/g) || []).length;
-        const closeBraces = (cleanCode.match(/\}/g) || []).length;
-        
-        if (openBraces !== closeBraces) {
-            return { valid: false, error: `Unbalanced braces: Found ${openBraces} '{' and ${closeBraces} '}'.` };
-        }
-
-        // 3. Gantt Specific checks (Common Failure Mode)
-        if (cleanCode.includes('@startgantt')) {
-            // Check for Invalid Alias syntax: [Task] as M1 (Should be [Task] as [M1])
-            // Pattern looks for: [Something] as SomethingNotBracketed
-            // We want to avoid flagging: [Task] as [M1] (Correct)
-            const invalidAliasRegex = /\[[^\]]+\]\s+as\s+[a-zA-Z0-9_]+(?!\s*\[)/;
-            const match = cleanCode.match(invalidAliasRegex);
-            if (match) {
-                return { valid: false, error: `Invalid Gantt Alias syntax near '${match[0]}'. Aliases must be in brackets, e.g., '[Task] as [T1]'.` };
-            }
-
-            // Check for invalid color syntax: is colored #Blue (should be is colored in #Blue)
-            const invalidColor = /is\s+colored\s+#/i;
-            if (invalidColor.test(cleanCode)) {
-                return { valid: false, error: "Invalid color syntax. Use 'is colored in #Color'." };
-            }
-        }
-
-        return { valid: true, error: null };
+        return validateDiagram(code, type);
     }
 
     /**
      * Chat with history awareness
      */
-    async chat(message, history, contextCode, diagramType) {
+    /**
+     * @param {object|null} trace  Optional object that chat() fills in for the evaluation set:
+     *   { language, firstStatus, firstError, repairAttempts, finalStatus }
+     */
+    async chat(message, history, contextCode, diagramType, trace = null) {
          if (!this.hasApiKey()) {
             throw new Error('API Key is missing. Please configure it in settings.');
         }
@@ -345,7 +198,13 @@ User: ${message}
             // The reply can be in a different language from the editor's current type
             const language = this.resolveLanguage(block, diagramType);
             let validation = await this.validateSyntax(extractedCode, language);
-            
+            if (trace) {
+                trace.language = language;
+                trace.firstStatus = validation.status;
+                trace.firstError = validation.error;
+                trace.repairAttempts = 0;
+            }
+
             // If invalid, try to fix (Self-Correction Loop)
             const MAX_CHAT_RETRIES = 1; // Keep it fast for chat
             let attempt = 0;
@@ -367,12 +226,16 @@ User: ${message}
                     break;
                 }
                 attempt++;
+                if (trace) trace.repairAttempts = attempt;
             }
-            
+
             if (!validation.valid) {
                  // If still invalid, append a warning
                  responseText += `\n\n> ⚠️ **Warning**: The generated code may have syntax errors: ${validation.error}`;
+            } else if (validation.status === 'unverified') {
+                 responseText += `\n\n> ℹ️ **Note**: ${validation.error}`;
             }
+            if (trace) trace.finalStatus = validation.status;
         }
         
         return responseText;
@@ -506,6 +369,12 @@ User: ${message}
                  const blockReason = data.promptFeedback?.blockReason;
                  throw new Error(blockReason ? `The AI blocked the request (${blockReason}).` : 'No response generated from AI.');
             }
+
+            // Running token totals, read by the evaluation set to cost each case
+            const usage = data.usageMetadata || {};
+            this.usageTotals.inputTokens += usage.promptTokenCount || 0;
+            this.usageTotals.outputTokens += (usage.candidatesTokenCount || 0) + (usage.thoughtsTokenCount || 0);
+            this.usageTotals.calls += 1;
 
             const candidate = data.candidates[0];
             const text = (candidate.content?.parts || []).map(part => part.text || '').join('');

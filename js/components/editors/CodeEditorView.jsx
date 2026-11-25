@@ -98,6 +98,8 @@ export const CodeEditorView = ({
                 }
             } else if (result.reason === 'unsupported') {
                 alert("Auto-fix supports Mermaid, PlantUML, C4 (PlantUML) and BPMN diagrams only.");
+            } else if (result.reason === 'unverified') {
+                alert("Auto-fix could not check the diagram because the diagram server could not be reached. The code is unchanged.");
             } else if (result.reason === 'no-key') {
                 alert("Auto-fix needs an API key. Open Syntext Smith and add a key in Settings.");
             } else {

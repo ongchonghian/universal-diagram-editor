@@ -1,21 +1,12 @@
 
 import { ToolAdapter } from './tool-adapter.js';
-import { rendererAdapter } from '../../RendererAdapter.js';
 
 export class PlantUmlAdapter extends ToolAdapter {
-    async validate(code) {
-        // Reuse the server-side validator from RendererAdapter (Kroki based)
-        // Since we can't run PlantUML.jar in browser directly
-        const result = await rendererAdapter.validateSyntax(code, 'plantuml');
-        
-        if (result.valid) {
-            return { valid: true, errors: [] };
-        }
-
-        return {
-            valid: false,
-            errors: [this.normalizeError(result, code)]
-        };
+    /**
+     * @param {'plantuml'|'c4'} type  C4 is validated against Kroki's c4plantuml endpoint
+     */
+    constructor(type = 'plantuml') {
+        super(type === 'c4' ? 'c4' : 'plantuml');
     }
 
     normalizeError(result, code) {

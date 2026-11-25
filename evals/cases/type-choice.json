@@ -1,0 +1,39 @@
+[
+  {
+    "group": "type-choice",
+    "id": "type-choice-sequence",
+    "type": null,
+    "editorType": "wavedrom",
+    "task": "create",
+    "prompt": "Draw a sequence diagram of a user signing in with two-factor authentication.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "typeIn": [
+          "mermaid",
+          "plantuml"
+        ]
+      }
+    ]
+  },
+  {
+    "group": "type-choice",
+    "id": "type-choice-flowchart",
+    "type": null,
+    "editorType": "bytefield",
+    "task": "create",
+    "prompt": "Draw a flowchart for deciding whether to approve a customer refund.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "typeIn": [
+          "mermaid",
+          "plantuml",
+          "graphviz"
+        ]
+      }
+    ]
+  }
+]

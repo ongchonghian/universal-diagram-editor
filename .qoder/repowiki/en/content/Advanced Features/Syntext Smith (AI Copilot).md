@@ -15,23 +15,25 @@ This page describes the code as of 25 November 2026. A rebuild of Smith is plann
 
 ## Validation
 
-`aiService.validateSyntax()` checks each language as follows:
+One validator, `validateDiagram()` in `js/services/diagram-tools/validate.js`, serves the chat, the Auto-Fix button and the evaluation set. The validator checks each language as follows:
 
 | Language | Check |
 |---|---|
-| Mermaid | `mermaid.parse`, plus an extra check for colons in timeline sections |
-| BPMN | `bpmn-moddle` reads the XML. Layout data is not required. |
-| PlantUML and C4 | Rendered by the Kroki server. C4 code goes to the `c4plantuml` endpoint. When Kroki cannot be reached, a basic offline check runs in its place. |
-| Vega and Vega-Lite | `JSON.parse` only |
-| Other types | Treated as valid without a check |
+| Mermaid | `mermaid.parse`, a check for colons in timeline sections, then a full render |
+| BPMN | `bpmn-moddle` reads the XML and returns its warnings. The Auto-Fix button also requires layout data; the chat does not. |
+| Vega-Lite | `vegaLite.compile` |
+| Vega | `vega.parse` |
+| PlantUML, C4 and every other type | Rendered by the Kroki server. C4 code goes to the `c4plantuml` endpoint. |
 
-PlantUML, C4 and every other Kroki-rendered type are sent to the public server at `https://kroki.io` (`KROKI_BASE_URL` in `js/config.js`). The address cannot be changed in the settings yet.
+Each result has one of three states: valid, invalid, or unverified. "Unverified" means the check could not run, for example because the Kroki server could not be reached. An unverified diagram is not sent for repair, and the chat adds a note saying the code is not verified.
+
+Every type except Mermaid is sent to the Kroki server, both for the code preview and for Smith's checks. The default server is the public `https://kroki.io` (`KROKI_BASE_URL` in `js/config.js`). Users can enter the address of their own Kroki server under "Diagram server (Kroki)" in the settings dialog; the address is stored under `universal_diagram_kroki_url`.
 
 ## Auto-fix
 
 The auto-fix service (`js/services/auto-fix-service.js`) repairs code in two places: the one chat repair attempt, and the **Auto-Fix (AI)** button in the preview's error panel.
 
-- The service supports Mermaid, PlantUML, C4 and BPMN. For other types the service stops and reports the type as unsupported.
+- The service supports Mermaid, PlantUML, C4 and BPMN. For other types the service stops and reports the type as unsupported. When a check cannot run, the service stops and leaves the code unchanged.
 - The service makes up to three attempts.
 - Each attempt first tries the rule-based patches in `js/services/auto-fix/strategies/`. The model is asked for a fix only when no rule-based patch applies.
 - The service validates the code once more after the last attempt.
@@ -71,6 +73,8 @@ The auto-fix service (`js/services/auto-fix-service.js`) repairs code in two pla
 | `js/hooks/useCopilot.js` | Panel visibility and applying code to the editor |
 | `js/services/ai-service.js` | Settings, conversation storage, prompts, model calls and chat validation |
 | `js/services/auto-fix-service.js`, `js/services/auto-fix/` | Repair loop, rule-based patches and per-language checks |
+| `js/services/diagram-tools/validate.js`, `render.js` | Shared validator and renderer wrapper |
 | `js/utils/code-extract.js` | Extracting fenced code blocks from a reply |
+| `evals/` | Evaluation set, checks and runner (see `evals/README.md`) |
 | `js/components/dialogs/AISettingsModal.jsx` | Settings dialog |
 | `js/components/dialogs/SemanticDiffModal.jsx` | "Verify Changes" dialog |

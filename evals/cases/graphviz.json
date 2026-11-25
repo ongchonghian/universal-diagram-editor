@@ -1,0 +1,73 @@
+[
+  {
+    "group": "graphviz",
+    "id": "graphviz-dependency-create",
+    "type": "graphviz",
+    "task": "create",
+    "prompt": "Create a Graphviz digraph of the module dependencies in a web app: ui depends on api-client and state, api-client depends on http, state depends on storage.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "storage"
+      }
+    ]
+  },
+  {
+    "group": "graphviz",
+    "id": "graphviz-cluster-create",
+    "type": "graphviz",
+    "task": "create",
+    "prompt": "Create a Graphviz digraph with two clusters, Frontend and Backend, where the browser talks to a load balancer that forwards to two API servers sharing one database.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "cluster"
+      }
+    ]
+  },
+  {
+    "group": "graphviz",
+    "id": "graphviz-pipeline-edit",
+    "type": "graphviz",
+    "task": "edit",
+    "prompt": "Add a security scan step between build and test.",
+    "startCode": "digraph pipeline {\n  rankdir=LR;\n  checkout -> build -> test -> deploy;\n  test -> notify [label=\"on failure\"];\n}",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "checkout",
+          "build",
+          "test",
+          "deploy",
+          "notify"
+        ]
+      },
+      {
+        "contains": "scan"
+      }
+    ]
+  },
+  {
+    "group": "graphviz",
+    "id": "graphviz-syntax-fix",
+    "type": "graphviz",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "digraph pipeline {\n  rankdir=LR;\n  checkout -> build -> ;\n  build -> deploy;\n}",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "checkout",
+          "build",
+          "deploy"
+        ]
+      }
+    ]
+  }
+]

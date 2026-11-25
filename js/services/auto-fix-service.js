@@ -17,9 +17,9 @@ class AutoFixService {
         this.MAX_ATTEMPTS = 3;
     }
 
-    getAdapter(language) {
+    getAdapter(language, hintedType = null) {
         switch (language) {
-            case LANGUAGES.PLANTUML: return new PlantUmlAdapter();
+            case LANGUAGES.PLANTUML: return new PlantUmlAdapter(hintedType === 'c4' ? 'c4' : 'plantuml');
             case LANGUAGES.MERMAID: return new MermaidAdapter();
             case LANGUAGES.BPMN: return new BpmnAdapter();
             default: return null;
@@ -47,7 +47,7 @@ class AutoFixService {
 
         const fixLog = [`Detected Language: ${language}`];
         let currentCode = code;
-        const adapter = this.getAdapter(language);
+        const adapter = this.getAdapter(language, hintedType);
 
         if (!adapter) {
             fixLog.push(`No adapter found for language: ${language}`);
@@ -74,6 +74,13 @@ class AutoFixService {
             if (validation.valid) {
                 fixLog.push("Validation Passed!");
                 return { fixed: true, code: currentCode, log: fixLog };
+            }
+
+            if (validation.status === 'unverified') {
+                // The check could not run (for example the diagram server is unreachable), so a repair cannot be confirmed
+                fixLog.push(`Validation could not run: ${validation.errors[0]?.message}`);
+                reason = 'unverified';
+                break;
             }
 
             // 3. Classify Errors
@@ -133,6 +140,7 @@ class AutoFixService {
         if (currentCode !== code) {
             validation = await adapter.validate(currentCode);
             fixLog.push(validation.valid ? "Final validation passed." : "Final validation failed.");
+            if (validation.status === 'unverified') reason = 'unverified';
         }
 
         console.log("[AutoFix] Finished. Fixed:", validation.valid, "Log:", fixLog);

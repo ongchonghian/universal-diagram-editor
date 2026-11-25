@@ -1,0 +1,234 @@
+[
+  {
+    "group": "bpmn",
+    "id": "bpmn-linear-create",
+    "type": "bpmn",
+    "task": "create",
+    "prompt": "Create BPMN 2.0 XML for a library book return: the member returns the book, staff check it for damage, staff update the record, and the process ends.",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      "bpmn-no-warnings",
+      {
+        "contains": "damage"
+      }
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-gateway-create",
+    "type": "bpmn",
+    "task": "create",
+    "prompt": "Create BPMN 2.0 XML for a loan application with an exclusive gateway: if the credit check passes, approve the loan; otherwise send a rejection letter.",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      "bpmn-no-warnings",
+      {
+        "contains": "credit"
+      }
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-lanes-create",
+    "type": "bpmn",
+    "task": "create",
+    "prompt": "Create BPMN 2.0 XML for a support request with two lanes, Customer and Support: the customer raises a ticket, support triages it and resolves it, and the customer confirms the fix.",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      "bpmn-no-warnings",
+      {
+        "contains": "laneSet"
+      }
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-pools-create",
+    "type": "bpmn",
+    "task": "create",
+    "prompt": "Create BPMN 2.0 XML for a collaboration with two pools, Customer and Supplier, with message flows for the purchase order and the invoice.",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      "bpmn-no-warnings",
+      {
+        "contains": "messageFlow"
+      }
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-rename-review",
+    "type": "bpmn",
+    "task": "edit",
+    "prompt": "Rename the task 'Manager review' to 'Line manager review'. Change nothing else.",
+    "startCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_Review\" name=\"Manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify\" name=\"Notify employee\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Leave\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Leave\" bpmnElement=\"Process_Leave\">\n      <bpmndi:BPMNShape id=\"Start_Request_di\" bpmnElement=\"Start_Request\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Submit_di\" bpmnElement=\"Task_Submit\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Review_di\" bpmnElement=\"Task_Review\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"50\" y=\"465\" width=\"50\" height=\"50\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_UpdateBalance_di\" bpmnElement=\"Task_UpdateBalance\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Notify_di\" bpmnElement=\"Task_Notify\">\n        <dc:Bounds x=\"25\" y=\"730\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Approved_di\" bpmnElement=\"End_Approved\">\n        <dc:Bounds x=\"57\" y=\"892\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Rejected_di\" bpmnElement=\"End_Rejected\">\n        <dc:Bounds x=\"57\" y=\"1032\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      {
+        "contains": "Line manager review"
+      },
+      "bounds-unchanged",
+      "no-removals"
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-rename-match",
+    "type": "bpmn",
+    "task": "edit",
+    "prompt": "Rename the task 'Match purchase order' to 'Three-way match'. Change nothing else.",
+    "startCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Invoice\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Invoice\" name=\"Invoice processing\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Invoice\" name=\"Invoice received\" />\n    <bpmn:task id=\"Task_Scan\" name=\"Scan invoice\" />\n    <bpmn:task id=\"Task_Match\" name=\"Match purchase order\" />\n    <bpmn:task id=\"Task_Approve\" name=\"Approve payment\" />\n    <bpmn:task id=\"Task_Pay\" name=\"Pay supplier\" />\n    <bpmn:endEvent id=\"End_Paid\" name=\"Invoice paid\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Invoice\" targetRef=\"Task_Scan\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Scan\" targetRef=\"Task_Match\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Match\" targetRef=\"Task_Approve\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Approve\" targetRef=\"Task_Pay\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Pay\" targetRef=\"End_Paid\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Invoice\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Invoice\" bpmnElement=\"Process_Invoice\">\n      <bpmndi:BPMNShape id=\"Start_Invoice_di\" bpmnElement=\"Start_Invoice\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Scan_di\" bpmnElement=\"Task_Scan\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Match_di\" bpmnElement=\"Task_Match\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Approve_di\" bpmnElement=\"Task_Approve\">\n        <dc:Bounds x=\"25\" y=\"450\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Pay_di\" bpmnElement=\"Task_Pay\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Paid_di\" bpmnElement=\"End_Paid\">\n        <dc:Bounds x=\"57\" y=\"752\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      {
+        "contains": "Three-way match"
+      },
+      "bounds-unchanged",
+      "no-removals"
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-add-step",
+    "type": "bpmn",
+    "task": "edit",
+    "prompt": "Add a task 'Check team calendar' between 'Submit request' and 'Manager review'.",
+    "startCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_Review\" name=\"Manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify\" name=\"Notify employee\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Leave\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Leave\" bpmnElement=\"Process_Leave\">\n      <bpmndi:BPMNShape id=\"Start_Request_di\" bpmnElement=\"Start_Request\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Submit_di\" bpmnElement=\"Task_Submit\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Review_di\" bpmnElement=\"Task_Review\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"50\" y=\"465\" width=\"50\" height=\"50\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_UpdateBalance_di\" bpmnElement=\"Task_UpdateBalance\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Notify_di\" bpmnElement=\"Task_Notify\">\n        <dc:Bounds x=\"25\" y=\"730\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Approved_di\" bpmnElement=\"End_Approved\">\n        <dc:Bounds x=\"57\" y=\"892\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Rejected_di\" bpmnElement=\"End_Rejected\">\n        <dc:Bounds x=\"57\" y=\"1032\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      "bpmn-no-warnings",
+      {
+        "keeps": [
+          "Submit request",
+          "Manager review",
+          "Notify employee"
+        ]
+      },
+      {
+        "contains": "Check team calendar"
+      },
+      "no-removals"
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-extend-branch",
+    "type": "bpmn",
+    "task": "edit",
+    "prompt": "On the rejected branch, add a task 'Offer alternative dates' after 'Notify employee' and before the end event.",
+    "startCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_Review\" name=\"Manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify\" name=\"Notify employee\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Leave\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Leave\" bpmnElement=\"Process_Leave\">\n      <bpmndi:BPMNShape id=\"Start_Request_di\" bpmnElement=\"Start_Request\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Submit_di\" bpmnElement=\"Task_Submit\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Review_di\" bpmnElement=\"Task_Review\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"50\" y=\"465\" width=\"50\" height=\"50\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_UpdateBalance_di\" bpmnElement=\"Task_UpdateBalance\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Notify_di\" bpmnElement=\"Task_Notify\">\n        <dc:Bounds x=\"25\" y=\"730\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Approved_di\" bpmnElement=\"End_Approved\">\n        <dc:Bounds x=\"57\" y=\"892\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Rejected_di\" bpmnElement=\"End_Rejected\">\n        <dc:Bounds x=\"57\" y=\"1032\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      "bpmn-no-warnings",
+      {
+        "keeps": [
+          "Update leave balance",
+          "Notify employee"
+        ]
+      },
+      {
+        "contains": "Offer alternative dates"
+      },
+      "no-removals"
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-add-gateway",
+    "type": "bpmn",
+    "task": "edit",
+    "prompt": "Add an exclusive gateway after 'Match purchase order'. If the match fails, go to a task 'Query supplier' and then to a new end event.",
+    "startCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Invoice\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Invoice\" name=\"Invoice processing\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Invoice\" name=\"Invoice received\" />\n    <bpmn:task id=\"Task_Scan\" name=\"Scan invoice\" />\n    <bpmn:task id=\"Task_Match\" name=\"Match purchase order\" />\n    <bpmn:task id=\"Task_Approve\" name=\"Approve payment\" />\n    <bpmn:task id=\"Task_Pay\" name=\"Pay supplier\" />\n    <bpmn:endEvent id=\"End_Paid\" name=\"Invoice paid\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Invoice\" targetRef=\"Task_Scan\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Scan\" targetRef=\"Task_Match\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Match\" targetRef=\"Task_Approve\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Approve\" targetRef=\"Task_Pay\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Pay\" targetRef=\"End_Paid\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Invoice\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Invoice\" bpmnElement=\"Process_Invoice\">\n      <bpmndi:BPMNShape id=\"Start_Invoice_di\" bpmnElement=\"Start_Invoice\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Scan_di\" bpmnElement=\"Task_Scan\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Match_di\" bpmnElement=\"Task_Match\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Approve_di\" bpmnElement=\"Task_Approve\">\n        <dc:Bounds x=\"25\" y=\"450\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Pay_di\" bpmnElement=\"Task_Pay\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Paid_di\" bpmnElement=\"End_Paid\">\n        <dc:Bounds x=\"57\" y=\"752\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      "bpmn-no-warnings",
+      {
+        "keeps": [
+          "Scan invoice",
+          "Approve payment",
+          "Pay supplier"
+        ]
+      },
+      {
+        "contains": "Query supplier"
+      },
+      "no-removals"
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-fix-mismatched-tag",
+    "type": "bpmn",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Invoice\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Invoice\" name=\"Invoice processing\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Invoice\" name=\"Invoice received\" />\n    <bpmn:task id=\"Task_Scan\" name=\"Scan invoice\" />\n    <bpmn:task id=\"Task_Match\" name=\"Match purchase order\" />\n    <bpmn:task id=\"Task_Approve\" name=\"Approve payment\">\n    </bpmn:userTask>\n    <bpmn:task id=\"Task_Pay\" name=\"Pay supplier\" />\n    <bpmn:endEvent id=\"End_Paid\" name=\"Invoice paid\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Invoice\" targetRef=\"Task_Scan\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Scan\" targetRef=\"Task_Match\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Match\" targetRef=\"Task_Approve\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Approve\" targetRef=\"Task_Pay\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Pay\" targetRef=\"End_Paid\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Invoice\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Invoice\" bpmnElement=\"Process_Invoice\">\n      <bpmndi:BPMNShape id=\"Start_Invoice_di\" bpmnElement=\"Start_Invoice\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Scan_di\" bpmnElement=\"Task_Scan\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Match_di\" bpmnElement=\"Task_Match\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Approve_di\" bpmnElement=\"Task_Approve\">\n        <dc:Bounds x=\"25\" y=\"450\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Pay_di\" bpmnElement=\"Task_Pay\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Paid_di\" bpmnElement=\"End_Paid\">\n        <dc:Bounds x=\"57\" y=\"752\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      {
+        "keeps": [
+          "Scan invoice",
+          "Pay supplier"
+        ]
+      }
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-fix-missing-quote",
+    "type": "bpmn",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_Review\" name=\"Manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify name=\"Notify employee\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Leave\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Leave\" bpmnElement=\"Process_Leave\">\n      <bpmndi:BPMNShape id=\"Start_Request_di\" bpmnElement=\"Start_Request\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Submit_di\" bpmnElement=\"Task_Submit\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Review_di\" bpmnElement=\"Task_Review\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"50\" y=\"465\" width=\"50\" height=\"50\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_UpdateBalance_di\" bpmnElement=\"Task_UpdateBalance\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Notify_di\" bpmnElement=\"Task_Notify\">\n        <dc:Bounds x=\"25\" y=\"730\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Approved_di\" bpmnElement=\"End_Approved\">\n        <dc:Bounds x=\"57\" y=\"892\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Rejected_di\" bpmnElement=\"End_Rejected\">\n        <dc:Bounds x=\"57\" y=\"1032\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      {
+        "keeps": [
+          "Submit request",
+          "Manager review"
+        ]
+      }
+    ]
+  },
+  {
+    "group": "bpmn",
+    "id": "bpmn-fix-missing-layout",
+    "type": "bpmn",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_Review\" name=\"Manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify\" name=\"Notify employee\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n</bpmn:definitions>",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      {
+        "keeps": [
+          "Submit request",
+          "Manager review",
+          "Notify employee"
+        ]
+      }
+    ]
+  }
+]

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../common.jsx';
 import { DEFAULT_MODEL } from '../../services/ai-service.js';
+import { rendererAdapter, normaliseKrokiUrl } from '../../services/RendererAdapter.js';
+import { KROKI_BASE_URL } from '../../config.js';
 
 // Stopgap list, checked against Google's model documentation on 25 November 2026.
 // Phase 2 of the Smith rebuild replaces this list with the provider's live model list.
@@ -28,6 +30,10 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
         temperature: 0.7
     });
 
+    // Empty means the public default server
+    const [krokiUrl, setKrokiUrl] = useState('');
+    const krokiUrlInvalid = krokiUrl.trim() !== '' && !normaliseKrokiUrl(krokiUrl);
+
     useEffect(() => {
         if (isOpen) {
             const currentSettings = aiService.getSettings();
@@ -38,8 +44,11 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                 model: isCustom ? 'custom' : currentSettings.model,
                 customModel: isCustom ? currentSettings.model : ''
             });
+            const currentKroki = rendererAdapter.getBaseUrl();
+            setKrokiUrl(currentKroki === KROKI_BASE_URL ? '' : currentKroki);
         }
     }, [isOpen, aiService]);
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -50,8 +59,11 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
     };
 
     const handleSave = () => {
-        const modelToSave = settings.model === 'custom' ? settings.customModel : settings.model;
-        aiService.updateSettings({ ...settings, model: modelToSave });
+        if (krokiUrlInvalid) return;
+        const { customModel, ...rest } = settings;
+        const modelToSave = settings.model === 'custom' ? customModel : settings.model;
+        aiService.updateSettings({ ...rest, model: modelToSave });
+        rendererAdapter.setBaseUrl(krokiUrl);
         onClose();
     };
 
@@ -167,6 +179,27 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                             <span>Creative</span>
                         </div>
                     </div>
+
+                    {/* Diagram server (Kroki) */}
+                    <div>
+                        <label htmlFor="kroki-url" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Diagram server (Kroki)</label>
+                        <input
+                            id="kroki-url"
+                            type="url"
+                            value={krokiUrl}
+                            onChange={(e) => setKrokiUrl(e.target.value)}
+                            placeholder={KROKI_BASE_URL}
+                            aria-invalid={krokiUrlInvalid}
+                            className={`w-full px-3 py-2 bg-white text-slate-800 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono ${krokiUrlInvalid ? 'border-red-400' : 'border-slate-300'}`}
+                        />
+                        {krokiUrlInvalid && (
+                            <p className="mt-1.5 text-xs text-red-600">The address must start with http:// or https://</p>
+                        )}
+                        <p className="mt-1.5 text-xs text-slate-500">
+                            Every diagram type except Mermaid is sent to this server, both for the code preview and for Syntext Smith's checks.
+                            Leave the field empty to use the public server at kroki.io, or enter the address of your own Kroki server to keep diagrams private.
+                        </p>
+                    </div>
                 </div>
 
                 {/* Footer */}
@@ -177,9 +210,10 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                     >
                         Cancel
                     </button>
-                    <button 
+                    <button
                         onClick={handleSave}
-                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+                        disabled={krokiUrlInvalid}
+                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors flex items-center gap-2"
                     >
                         <i className="fas fa-check"></i>
                         Save Settings

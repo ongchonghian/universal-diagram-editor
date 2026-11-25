@@ -1,20 +1,9 @@
 
 import { ToolAdapter } from './tool-adapter.js';
-import mermaid from 'mermaid'; // Might need to be dynamically imported if in node/strict env, but here we assume bundle
 
 export class MermaidAdapter extends ToolAdapter {
-    async validate(code) {
-        try {
-            // Mermaid's parse function throws on error
-            // Note: parse() is async in newer versions
-            await mermaid.parse(code);
-            return { valid: true, errors: [] };
-        } catch (err) {
-            return { 
-                valid: false, 
-                errors: [this.normalizeError(err, code)] 
-            };
-        }
+    constructor() {
+        super('mermaid');
     }
 
     normalizeError(err, code) {

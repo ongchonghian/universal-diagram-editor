@@ -438,7 +438,7 @@ Sync["MermaidSyncController"] --> AST
 ### Syntext Smith (AI assistant)
 Syntext Smith asks a language model for native diagram code and checks that code with the same parsers the editor uses:
 1.  **Request**: The chat sends a system instruction, the conversation history, the diagram type and the current editor code to Google Gemini.
-2.  **Validation**: The longest code block in the reply is checked with `mermaid.parse`, `bpmn-moddle`, the Kroki server or `JSON.parse`, depending on the language.
+2.  **Validation**: The longest code block in the reply is checked by the shared validator (`js/services/diagram-tools/validate.js`): `mermaid.parse` and a render for Mermaid, `bpmn-moddle` for BPMN, `vegaLite.compile` or `vega.parse` for charts, and the Kroki server for every other type.
 3.  **Repair**: When validation fails, the auto-fix service makes one repair attempt. The service tries rule-based patches first and asks the model only when no patch applies.
 
 ```mermaid
