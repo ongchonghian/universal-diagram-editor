@@ -2,11 +2,20 @@
  * AI Service for communicating with LLM providers (Gemini, etc.)
  * Handles API keys, model configuration, and prompt generation.
  */
-import { diagramCompiler } from './diagram-compiler.js';
 import { rendererAdapter } from './RendererAdapter.js';
 import { LanguageDetector } from './auto-fix/language-detector.js';
 import { extractCodeBlock } from '../utils/code-extract.js';
 
+export const DEFAULT_MODEL = 'gemini-3.8-flash';
+
+// Model ids that Google has retired or shuts down on 1 December 2026.
+// A stored setting that names one of these falls back to DEFAULT_MODEL, so existing users keep a working chat.
+const RETIRED_MODELS = new Set([
+    'gemini-pro',
+    'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-001', 'gemini-1.5-pro-001',
+    'gemini-2.0-flash', 'gemini-2.0-flash-001', 'gemini-2.0-flash-lite', 'gemini-2.0-flash-lite-001',
+    'gemini-2.5-flash', 'gemini-2.5-pro'
+]);
 
 export class AIService {
     constructor() {
@@ -20,12 +29,16 @@ export class AIService {
     loadSettings() {
         const defaults = {
             provider: 'gemini',
-            model: 'gemini-1.5-flash',
+            model: DEFAULT_MODEL,
             apiKey: '',
             temperature: 0.7
         };
         const stored = this.readStoredJSON(this.STORAGE_KEY);
-        return stored ? { ...defaults, ...stored } : defaults;
+        const settings = stored ? { ...defaults, ...stored } : defaults;
+        if (!settings.model || RETIRED_MODELS.has(settings.model)) {
+            settings.model = DEFAULT_MODEL;
+        }
+        return settings;
     }
 
     /**
@@ -124,93 +137,6 @@ export class AIService {
     }
 
     // --- End Conversation Management ---
-
-    /**
-     * Generate diagram code based on prompt and context
-     * Uses Neuro-Symbolic approach: LLM -> JSON AST -> Compiler -> Code
-     * Includes Iterative Self-Correction Loop
-     * @param {string} prompt - User instruction
-     * @param {string} contextCode - Current code in editor
-     * @param {string} diagramType - Type of diagram (mermaid, bpmn, etc.)
-     */
-    async generateDiagram(prompt, contextCode, diagramType) {
-        if (!this.hasApiKey()) {
-            throw new Error('API Key is missing. Please configure it in settings.');
-        }
-
-        if (!contextCode) {
-            // New diagram
-            const code = await this._generateInitialCode(prompt, '', diagramType);
-            return code;
-        }
-
-        // Modification
-        // We can use the chat capability for this
-        const systemPrompt = this.getSystemPrompt(diagramType);
-        const userMessage = `Current Code:\n\`\`\`${diagramType}\n${contextCode}\n\`\`\`\n\nRequest: ${prompt}`;
-        
-        const response = await this.callLLM(systemPrompt, userMessage);
-        
-        // Attempt auto-fix on the generated code if it's invalid
-        // This connects the generation loop to our new AutoFix engine
-        const { autoFixService } = await import('./auto-fix-service.js');
-        // Pass diagramType as hint, no initial error
-        const fixResult = await autoFixService.attemptAutoFix(response, diagramType, null);
-        
-        return fixResult.code;
-    }
-
-    /**
-     * Internal method for the initial generation pass
-     */
-    async _generateInitialCode(prompt, contextCode, diagramType) {
-        // 1. Get Schema/System Prompt for Semantic Parsing
-        const systemPrompt = this.getJSONSystemPrompt(diagramType);
-        
-        // 2. Call LLM to get JSON AST
-        const userMessage = `
-Context Code:
-\`\`\`
-${contextCode || '(Empty)'}
-\`\`\`
-
-User Request: ${prompt}
-
-Generate specific JSON AST. No markdown outside the JSON.
-`;
-        const jsonResponse = await this.callLLM(systemPrompt, userMessage);
-        
-        // 3. Parse JSON
-        let ast;
-        try {
-            // Strip markdown block if present
-            const cleanJson = jsonResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-            ast = JSON.parse(cleanJson);
-        } catch (e) {
-            console.error("JSON Parse Error", e);
-            // Fallback: If AI fails to give JSON, maybe it gave code directly? 
-            // For now, we strictly enforce JSON to avoid "hallucinated syntax". 
-            // But we could retry demanding JSON.
-            throw new Error("Failed to parse AI response. The AI did not return valid JSON.");
-        }
-
-        // 4. Validate AST (Basic check)
-        if (!ast || !ast.nodes) {
-             throw new Error("Invalid AST structure returned by AI.");
-        }
-
-        // 5. Compile to Target Syntax
-        // Determine target syntax based on diagramType (mermaid, bpmn, plantuml, c4)
-        // Note: 'c4' is usually PlantUML syntax in this app context
-        const targetSyntax = (diagramType === 'c4') ? 'plantuml' : diagramType;
-        
-        try {
-            return diagramCompiler.compile(ast, targetSyntax);
-        } catch (e) {
-             console.error("Compilation Error", e);
-             throw new Error(`Failed to compile diagram: ${e.message}`);
-        }
-    }
 
     /**
      * Validate syntax using client-side parsers
@@ -372,62 +298,6 @@ Generate specific JSON AST. No markdown outside the JSON.
         return { valid: true, error: null };
     }
 
-    getJSONSystemPrompt(diagramType) {
-        const schema = {
-            meta: { 
-                type: "diagram_type (e.g., sequence, flowchart, gantt)", 
-                title: "string",
-                direction: "TB or LR (optional)"
-            },
-            nodes: [
-                { 
-                    id: "string (alphanumeric_snake_case)", 
-                    label: "string", 
-                    type: "string (e.g., participant, task, class, milestone)",
-                    section: "string (optional, for Gantt sections)",
-                    style: {
-                        startDate: "YYYY-MM-DD (for Gantt)",
-                        duration: "number (days)",
-                        color: "string (optional color code)"
-                    }
-                }
-            ],
-            edges: [
-                {
-                    sourceId: "node_id",
-                    targetId: "node_id",
-                    label: "string (optional)",
-                    type: "string (connector type e.g., ->, -->)"
-                }
-            ]
-        };
-
-        return `
-You are the Semantic Parsing Engine for a diagramming tool.
-Your goal is to analyze the user request and generate a strict JSON Abstract Syntax Tree (AST).
-You DO NOT generate diagram code directly. You generate JSON.
-
-TARGET DIAGRAM TYPE: ${diagramType}
-
-RULES:
-1. Return ONLY valid JSON. No explanations.
-2. Use alphanumeric IDs (snake_case) for nodes.
-3. Map the user's logic into the schema provided below.
-
-SCHEMA:
-${JSON.stringify(schema, null, 2)}
-
-SPECIFIC INSTRUCTIONS FOR ${diagramType.toUpperCase()}:
-${this.getSpecificInstructions(diagramType)}
-`;
-    }
-
-    getSpecificInstructions(type) {
-        if (type === 'mermaid') return "For Flowcharts, use type='start/end/process/decision'. For Sequence, use type='participant/actor'. For Gantt/Timeline, use type='task/milestone' and fill 'section'. IMPORTANT: For Timeline, Do NOT use colons in section titles.";
-        if (type === 'plantuml' || type === 'c4') return "For Gantt, use type='task' or 'milestone'. IMPORTANT: 'startDate' is required for tasks. Use 'style.duration' for length. For Sequence, use type='participant'.";
-        return "";
-    }
-
     /**
      * Chat with history awareness
      */
@@ -522,27 +392,6 @@ User: ${message}
         if (code.startsWith('<?xml') || code.includes('<bpmn:definitions') || code.includes('<definitions')) return 'bpmn';
         if (LanguageDetector.isMermaidKeyword(LanguageDetector.getFirstSignificantLine(code))) return 'mermaid';
         return diagramType;
-    }
-
-    /**
-     * Explain the current diagram
-     */
-    async explainDiagram(code, diagramType) {
-        if (!this.hasApiKey()) {
-            throw new Error('API Key is missing. Please configure it in settings.');
-        }
-
-        const systemPrompt = "You are a helpful expert software architect. Explain the provided diagram code in simple, clear terms suitable for a developer or business analyst.";
-        const userMessage = `
-Diagram Type: ${diagramType}
-Code:
-\`\`\`
-${code}
-\`\`\`
-
-Please explain what this diagram represents.
-`;
-        return this.callLLM(systemPrompt, userMessage);
     }
 
      /**

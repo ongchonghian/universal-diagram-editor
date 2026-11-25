@@ -474,26 +474,25 @@ D2 --> E2["Offer Alternative Actions"]
   - Reference: [testLibraryUpdates](file://js/update-tester.js#L398-L444)
 
 ## AI Service Integration
-**NEW**: The application integrates a neuro-symbolic AI pipeline to assist in diagram generation.
+The application integrates Syntext Smith, an AI assistant that helps users create, edit and fix diagrams.
 
 ### Components
-- **AICopilot**: The UI component (Sidebar) handling user chat and interaction.
-- **AIService**: The core service managing API communication with Google's Gemini models. It uses a "Neuro-Symbolic" approach:
-    1.  **Prompt Engineering**: Converts user requests into structured prompts for the LLM.
-    2.  **AST Generation**: Requests a JSON Abstract Syntax Tree (AST) from the LLM instead of raw code, ensuring structural validity.
-    3.  **Diagram Compiler**: Deterministically compiles the JSON AST into the target syntax (Mermaid, PlantUML), eliminating syntax errors common in direct LLM generation.
+- **AICopilot**: The chat panel in the sidebar.
+- **AIService**: The service that calls Google's Gemini models through the `generateContent` REST method. The service also stores settings and conversations, and validates the code in each reply.
+- **AutoFixService**: The repair loop used by the chat and by the preview's Auto-Fix button.
 - **Workflow**:
-    - User enters a request ("Create a login flow").
-    - `AIService` generates JSON AST.
-    - `DiagramCompiler` converts AST to code.
-    - Code is validated and applied to the editor.
+    - The user enters a request, for example "Create a login flow".
+    - `AIService` sends the request, the conversation history and the current editor code to the model.
+    - `AIService` validates the code block in the reply and makes one repair attempt when validation fails.
+    - The user reviews the change in the "Verify Changes" dialog and applies the change to the editor.
 
 ### Configuration
-- **API Key**: Users must provide a valid Google Gemini API Key via the Settings modal to enable AI features. The key is stored locally in the browser.
+- **API Key**: Users provide a Google Gemini API key in the settings dialog to enable AI features. The key is stored as plain text in the browser's `localStorage`.
+- **Model**: The default model is `gemini-3.8-flash`. The settings dialog lists current Gemini models and accepts any other model id.
 
 **Section sources**
 - [js/services/ai-service.js](file://js/services/ai-service.js)
-- [js/services/diagram-compiler.js](file://js/services/diagram-compiler.js)
+- [js/services/auto-fix-service.js](file://js/services/auto-fix-service.js)
 - [js/components/AICopilot.jsx](file://js/components/AICopilot.jsx)
 
 **Section sources**

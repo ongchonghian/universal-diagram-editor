@@ -1,10 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../common.jsx';
+import { DEFAULT_MODEL } from '../../services/ai-service.js';
+
+// Stopgap list, checked against Google's model documentation on 25 November 2026.
+// Phase 2 of the Smith rebuild replaces this list with the provider's live model list.
+const MODEL_GROUPS = [
+    { label: 'Flash (recommended)', models: [
+        { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (default)' },
+        { id: 'gemini-4-hydrogen', name: 'Gemini 4 Hydrogen' },
+        { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash' }
+    ] },
+    { label: 'Flash-Lite (fastest)', models: [
+        { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite' },
+        { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash-Lite' }
+    ] },
+    { label: 'Pro (paid tier only)', models: [
+        { id: 'gemini-4-carbon', name: 'Gemini 4 Carbon' }
+    ] }
+];
+const KNOWN_MODELS = MODEL_GROUPS.flatMap(group => group.models.map(m => m.id));
 
 export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
     const [settings, setSettings] = useState({
         provider: 'gemini',
-        model: 'gemini-1.5-flash',
+        model: DEFAULT_MODEL,
         apiKey: '',
         temperature: 0.7
     });
@@ -12,14 +31,7 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
     useEffect(() => {
         if (isOpen) {
             const currentSettings = aiService.getSettings();
-            const knownModels = [
-                'gemini-3-pro-preview', 'gemini-3-flash-preview',
-                'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash',
-                'gemini-1.5-flash', 'gemini-1.5-pro', 
-                'gemini-1.5-flash-001', 'gemini-1.5-pro-001', 
-                'gemini-pro'
-            ];
-            const isCustom = !knownModels.includes(currentSettings.model);
+            const isCustom = !KNOWN_MODELS.includes(currentSettings.model);
             
             setSettings({
                 ...currentSettings,
@@ -91,30 +103,19 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                             onChange={handleChange}
                             className="w-full px-3 py-2 bg-white text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                         >
-                            <optgroup label="Next Gen (Preview)">
-                                <option value="gemini-3-pro-preview">Gemini 3 Pro Preview</option>
-                                <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
-                            </optgroup>
-                            <optgroup label="2.x Series">
-                                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                            </optgroup>
-                            <optgroup label="1.x Series">
-                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                                <option value="gemini-1.5-flash-001">Gemini 1.5 Flash-001</option>
-                                <option value="gemini-1.5-pro-001">Gemini 1.5 Pro-001</option>
-                            </optgroup>
-                            <optgroup label="Legacy">
-                                <option value="gemini-pro">Gemini 1.0 Pro</option>
-                            </optgroup>
+                            {MODEL_GROUPS.map(group => (
+                                <optgroup key={group.label} label={group.label}>
+                                    {group.models.map(m => (
+                                        <option key={m.id} value={m.id}>{m.name}</option>
+                                    ))}
+                                </optgroup>
+                            ))}
                             <option value="custom">Custom Model...</option>
                         </select>
                         {settings.model === 'custom' && (
                             <input
                                 type="text"
-                                placeholder="Enter model name (e.g. gemini-3.0-flash)"
+                                placeholder="Enter model name (e.g. gemini-flash-latest)"
                                 value={settings.customModel || ''}
                                 onChange={(e) => setSettings(prev => ({ ...prev, customModel: e.target.value }))}
                                 className="mt-2 w-full px-3 py-2 bg-slate-50 text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono"
