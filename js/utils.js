@@ -195,10 +195,8 @@ export const applyBpmnAutoLayout = async (xml) => {
     try {
         const { layoutProcess } = await import('bpmn-auto-layout');
         // Dynamic import bpmn-moddle
-        const BpmnModdleModule = await import('bpmn-moddle');
-        const BpmnModdle = BpmnModdleModule.default || BpmnModdleModule;
-        
-        const moddle = new BpmnModdle();
+        const { createBpmnModdle } = await import('./utils/bpmn-moddle.js');
+        const moddle = await createBpmnModdle();
         const { rootElement: definitions } = await moddle.fromXML(xml);
         
         // Check if there is a collaboration
