@@ -2,7 +2,7 @@
 
 **Syntext Smith** is the assistant built into the Universal Diagram Generator. Smith helps users create, edit and fix diagrams through natural language. Smith writes native diagram code (Mermaid, PlantUML, BPMN XML and so on) with tools, and the real parser checks every edit before the user sees the result.
 
-This page describes the code as of 25 November 2026, after Phase 3 of the Smith rebuild. Later phases add per-hunk review with undo, image input and a BPMN layout pipeline.
+This page describes the code as of 25 November 2026, after Phase 3 of the Smith rebuild and the removal of the older text-only path. Later phases add per-hunk review with undo, image input and a BPMN layout pipeline.
 
 ## How a chat request works
 
@@ -24,12 +24,12 @@ This page describes the code as of 25 November 2026, after Phase 3 of the Smith 
 
 ## Validation
 
-One validator, `validateDiagram()` in `js/services/diagram-tools/validate.js`, serves the tool loop, the evaluation set and the older text-only chat path. The validator checks each language as follows:
+One validator, `validateDiagram()` in `js/services/diagram-tools/validate.js`, serves the tool loop and the evaluation set. The validator checks each language as follows:
 
 | Language | Check |
 |---|---|
 | Mermaid | `mermaid.parse`, a check for colons in timeline sections, then a full render |
-| BPMN | `bpmn-moddle` reads the XML and returns its warnings. The tool loop does not require layout data; the older auto-fix service does. |
+| BPMN | `bpmn-moddle` reads the XML and returns its warnings. The tool loop does not require layout data; the evaluation set's layout check does. |
 | Vega-Lite | `vegaLite.compile` |
 | Vega | `vega.parse` |
 | PlantUML, C4 and every other type | Rendered by the Kroki server. C4 code goes to the `c4plantuml` endpoint. |
@@ -45,9 +45,9 @@ The **Auto-Fix (AI)** button in the preview's error panel calls `fixWithSmith()`
 - A verified repair in the same notation is written straight into the editor, without a review step.
 - Every other outcome leaves the code unchanged and shows a message in the error panel: a repair that still fails, a check that could not run, a rewrite into another notation, or a turn with no change.
 
-## The older text-only path
+## Measured results
 
-`aiService.chat()` in `js/services/ai-service.js` and the auto-fix service (`js/services/auto-fix-service.js`, with the rule-based patches in `js/services/auto-fix/`) are the text-only path from before the tool loop. The app no longer calls them. They stay as the evaluation set's `chat` path, so the tool loop can be compared with the Phase 1 baseline, and are deleted once the tool loop matches or beats that baseline on every diagram group.
+On `gemini-3.8-flash`, the tool loop passed 57 of 60 evaluation cases on 25 November 2026, against 54 of 60 for the older text-only path. After a fix for replies cut off at the length limit, the tool loop passed all 12 BPMN cases and matched or beat the older path in every diagram group, so the older path, the auto-fix service and its rule-based patches were removed. The reports are in `evals/results/`.
 
 ## Provider and settings
 
@@ -96,8 +96,7 @@ Model calls go through a provider-neutral layer in `js/services/llm/`. The layer
 | `js/services/smith/prompt.js` | System prompt and per-type notes |
 | `js/services/smith/conversation-store.js` | Conversation storage |
 | `js/services/llm/` | Provider-neutral model layer: `index.js`, `types.js`, `sse.js` and one adapter per provider |
-| `js/services/ai-service.js` | Settings, and the older text-only chat path |
-| `js/services/auto-fix-service.js`, `js/services/auto-fix/` | Older repair loop and rule-based patches (evaluation `chat` path only) |
+| `js/services/ai-service.js` | Settings and running token totals |
 | `js/services/diagram-tools/validate.js`, `render.js` | Shared validator and renderer wrapper |
 | `evals/` | Evaluation set, checks and runner (see `evals/README.md`) |
 | `js/components/dialogs/AISettingsModal.jsx` | Settings dialog |

@@ -31,9 +31,8 @@ PlantUML, C4, Graphviz and the other Kroki types are sent to the diagram server 
 | Path | What runs |
 |---|---|
 | `loop` | The tool loop that the chat panel and the Fix button use (`js/services/smith/`). `firstStatus` is the verdict on the first draft; repair attempts count the later drafts. |
-| `chat` | The text-only path from before the tool loop: `aiService.chat()` and the older auto-fix service. Kept to produce the Phase 1 baseline. |
 
-The `chat` path, the auto-fix service and its rule-based patches are deleted once the `loop` path's pass rate matches or beats the `chat` baseline on every diagram group, on the default model.
+The text-only `chat` path from before the tool loop, with the older auto-fix service and its rule-based patches, was removed on 25 November 2026. On `gemini-3.8-flash` the `chat` path passed 54 of 60 cases and the `loop` path passed 57 of 60. The `loop` path matched or beat the `chat` path in every group once a cut-off fix brought BPMN to 12 of 12. The three reports from that comparison are in `results/` and record the gate.
 
 ## Cases
 

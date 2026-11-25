@@ -2,10 +2,11 @@
  * Evaluation runner. Runs cases against a "path" (the way Smith answers) and builds a JSON report.
  *
  * Paths:
- *   chat  The current Smith: aiService.chat() for create and edit cases, and the Auto-Fix button's
- *         aiService.fixDiagramWithResult() for fix cases.
  *   loop  The tool loop (js/services/smith/): askSmith() for create and edit cases, and
  *         fixWithSmith() for fix cases. The chat panel and the Fix button use this path.
+ *
+ * The text-only "chat" path from before the tool loop was removed on 25 November 2026, after the
+ * loop matched or beat its baseline in every group (evals/results/2026-11-25-*.json).
  *
  * Cases run one at a time. Running in sequence keeps the token count per case exact and stays
  * inside free-tier rate limits.
@@ -13,7 +14,6 @@
 import { aiService } from '../js/services/ai-service.js';
 import { askSmith, fixWithSmith } from '../js/services/smith/index.js';
 import { buildSystemPrompt } from '../js/services/smith/prompt.js';
-import { extractCodeBlock } from '../js/utils/code-extract.js';
 import { validateDiagram } from '../js/services/diagram-tools/validate.js';
 import { rendererAdapter } from '../js/services/RendererAdapter.js';
 import { KROKI_BASE_URL } from '../js/config.js';
@@ -34,10 +34,9 @@ export const editorTypeOf = (caseDef) => caseDef.editorType || caseDef.type;
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /** A short, stable fingerprint of the system prompts, so a report records which prompt it measured. */
-export function promptVersion(cases, pathName = 'chat') {
+export function promptVersion(cases) {
     const types = [...new Set(cases.map(editorTypeOf))].sort();
-    const promptFor = pathName === 'loop' ? buildSystemPrompt : (t) => aiService.getSystemPrompt(t);
-    const text = types.map(promptFor).join('\n---\n');
+    const text = types.map(buildSystemPrompt).join('\n---\n');
     let hash = 0x811c9dc5;
     for (let i = 0; i < text.length; i++) {
         hash ^= text.charCodeAt(i);
@@ -47,23 +46,6 @@ export function promptVersion(cases, pathName = 'chat') {
 }
 
 const PATHS = {
-    async chat(caseDef) {
-        const editorType = editorTypeOf(caseDef);
-        if (caseDef.task === 'fix') {
-            const before = await validateDiagram(caseDef.startCode, editorType, { requireLayout: editorType === 'bpmn' });
-            const result = await aiService.fixDiagramWithResult(caseDef.startCode, before.error, editorType);
-            return { code: result.code, type: editorType, firstStatus: null, repairAttempts: null, note: result.reason || '' };
-        }
-
-        const trace = {};
-        const reply = await aiService.chat(caseDef.prompt, [], caseDef.startCode || '', editorType, { trace });
-        const block = extractCodeBlock(reply);
-        if (!block) return { code: null, type: null, firstStatus: null, repairAttempts: 0, note: 'The reply held no code block.' };
-        // A case without a fixed type lets the reply choose the notation
-        const type = caseDef.type || trace.language || aiService.resolveLanguage(block, editorType);
-        return { code: block.code, type, firstStatus: trace.firstStatus ?? null, repairAttempts: trace.repairAttempts ?? 0, note: '' };
-    },
-
     async loop(caseDef) {
         const editorType = editorTypeOf(caseDef);
         const code = caseDef.startCode || '';
@@ -158,7 +140,7 @@ export function buildReport(records, { pathName, cases, startedAt }) {
         model: active.model,
         temperature: Number(settings.temperature),
         path: pathName,
-        promptVersion: promptVersion(cases, pathName),
+        promptVersion: promptVersion(cases),
         // Only whether a private server was used; the address itself stays out of committed reports
         krokiServer: rendererAdapter.getBaseUrl() === KROKI_BASE_URL ? 'public kroki.io' : 'custom',
         summary: summarise(records),
@@ -171,7 +153,7 @@ export function buildReport(records, { pathName, cases, startedAt }) {
  * Run a list of cases in sequence.
  * @param {object} options { pathName, delayMs, signal, onCase(record, index, total) }
  */
-export async function runSuite(cases, { pathName = 'chat', delayMs = 1500, signal, onCase } = {}) {
+export async function runSuite(cases, { pathName = 'loop', delayMs = 1500, signal, onCase } = {}) {
     if (!PATHS[pathName]) throw new Error(`Unknown path "${pathName}". Known paths: ${PATH_NAMES.join(', ')}`);
     const startedAt = new Date().toISOString();
     const records = [];

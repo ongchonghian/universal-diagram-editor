@@ -5,8 +5,6 @@ vi.mock('./RendererAdapter.js', () => ({
 }));
 
 import { AIService, DEFAULT_MODEL } from './ai-service.js';
-import { streamResponse, sse, mockFetch } from './llm/test-helpers.js';
-import { outputLimits } from './llm/providers/gemini.js';
 
 const STORAGE_KEY = 'universal_diagram_ai_settings';
 const SESSION_KEYS = 'universal_diagram_ai_keys';
@@ -15,8 +13,6 @@ const stored = () => JSON.parse(localStorage.getItem(STORAGE_KEY));
 beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
-    // A known output limit, so each test needs only its stream response
-    outputLimits.set(DEFAULT_MODEL, 65536);
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -69,43 +65,8 @@ describe('AIService settings', () => {
     });
 });
 
-describe('AIService.chat', () => {
-    it('records the first validation result and the language for the evaluation set', async () => {
-        const service = new AIService();
-        service.updateSettings({ providers: { gemini: { apiKey: 'test-key' } } });
-        service.callLLM = vi.fn().mockResolvedValue('Here you go:\n```mermaid\nflowchart TD\n  A --> B\n```');
-        const trace = {};
-        const reply = await service.chat('Draw A to B', [], '', 'mermaid', { trace });
-        expect(trace).toMatchObject({ language: 'mermaid', firstStatus: 'valid', repairAttempts: 0, finalStatus: 'valid' });
-        expect(reply).not.toMatch(/Warning/);
-    });
-
-    it('streams the reply through the chosen provider and counts tokens', async () => {
-        const service = new AIService();
-        service.updateSettings({ providers: { gemini: { apiKey: 'test-key' } } });
-        mockFetch(streamResponse([sse([
-            { candidates: [{ content: { parts: [{ text: 'Hello ' }] } }] },
-            { candidates: [{ content: { parts: [{ text: 'there.' }] }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 4 } }
-        ])]));
-        const seen = [];
-        const reply = await service.chat('Hi', [], '', 'mermaid', { onText: (t) => seen.push(t) });
-        expect(reply).toBe('Hello there.');
-        expect(seen).toEqual(['Hello ', 'Hello there.']);
-        expect(service.usageTotals).toEqual({ inputTokens: 10, outputTokens: 4, calls: 1 });
-    });
-
-    it('stops with an AbortError when the signal aborts', async () => {
-        const service = new AIService();
-        service.updateSettings({ providers: { gemini: { apiKey: 'test-key' } } });
-        const controller = new AbortController();
-        controller.abort();
-        vi.stubGlobal('fetch', vi.fn((url, init) => init.signal.aborted
-            ? Promise.reject(new DOMException('Aborted', 'AbortError'))
-            : Promise.resolve(streamResponse([]))));
-        await expect(service.chat('Hi', [], '', 'mermaid', { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' });
-    });
-
-    it('says which setting is missing', async () => {
-        await expect(new AIService().chat('Hi', [], '', 'mermaid')).rejects.toMatchObject({ code: 'NOT_CONFIGURED', message: expect.stringContaining('Google Gemini API key') });
+describe('AIService.missingSetting', () => {
+    it('says which setting is missing', () => {
+        expect(new AIService().missingSetting()).toMatch(/Google Gemini API key/);
     });
 });

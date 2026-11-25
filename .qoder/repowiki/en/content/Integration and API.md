@@ -478,13 +478,12 @@ The application integrates Syntext Smith, an AI assistant that helps users creat
 
 ### Components
 - **AICopilot**: The chat panel in the sidebar.
-- **AIService**: The service that stores settings and conversations, builds the prompts, and validates the code in each reply. Model calls go through the provider-neutral layer in `js/services/llm/`, which streams replies from Google Gemini, Anthropic or an OpenAI-compatible endpoint.
-- **AutoFixService**: The repair loop used by the chat and by the preview's Auto-Fix button.
+- **AIService**: Stores Smith's settings and running token totals.
+- **Smith's agent loop** (`js/services/smith/`): Sends the request, the earlier turns and the current editor code to the model. The model changes a working copy of the diagram through tools, and the shared validator checks every change before the user sees it. The preview's Auto-Fix button uses the same loop. Model calls go through the provider-neutral layer in `js/services/llm/`, which streams replies from Google Gemini, Anthropic or an OpenAI-compatible endpoint.
 - **Workflow**:
     - The user enters a request, for example "Create a login flow".
-    - `AIService` sends the request, the conversation history and the current editor code to the model.
-    - `AIService` validates the code block in the reply and makes one repair attempt when validation fails.
-    - The user reviews the change in the "Verify Changes" dialog and applies the change to the editor.
+    - Smith edits the working copy, reads each validation result, and repairs the copy when the parser reports an error.
+    - The reply shows a proposal card. The user reviews the change in the "Verify Changes" dialog and applies the change to the editor.
 
 ### Configuration
 - **API Key**: Users provide a key for the chosen provider in the settings dialog. Keys are kept in `sessionStorage` for the browser tab, and also in `localStorage` as plain text when the user ticks "Remember keys in this browser". A local OpenAI-compatible server can run without a key.
@@ -492,7 +491,7 @@ The application integrates Syntext Smith, an AI assistant that helps users creat
 
 **Section sources**
 - [js/services/ai-service.js](file://js/services/ai-service.js)
-- [js/services/auto-fix-service.js](file://js/services/auto-fix-service.js)
+- [js/services/smith/index.js](file://js/services/smith/index.js)
 - [js/components/AICopilot.jsx](file://js/components/AICopilot.jsx)
 
 **Section sources**
