@@ -1,36 +1,102 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { DIAGRAM_TYPES } from '../config.js';
+import { askSmith } from '../services/smith/index.js';
+import { conversationStore } from '../services/smith/conversation-store.js';
 import { aiService } from '../services/ai-service.js';
-import { extractCodeBlock } from '../utils/code-extract.js';
-import { Button, LogoLoader } from './common.jsx';
 import { AISettingsModal } from './dialogs/AISettingsModal.jsx';
 import { SemanticDiffModal } from './dialogs/SemanticDiffModal.jsx';
 
-export const AICopilot = ({ 
-    isOpen, 
-    onClose, 
-    contextCode, 
-    diagramType, 
+const typeName = (type) => DIAGRAM_TYPES[type]?.name || type;
+
+/** One entry of the validation trail, in words. */
+function describeStep(step) {
+    const action = step.action === 'write' ? `Wrote ${typeName(step.type)}` : 'Edited';
+    if (step.status === 'rejected') return { icon: 'fa-undo', tone: 'text-slate-500', text: `${action}: the edit did not match the draft` };
+    if (step.status === 'valid') return { icon: 'fa-check', tone: 'text-emerald-600', text: `${action}: parsed` };
+    if (step.status === 'unverified') return { icon: 'fa-question', tone: 'text-amber-600', text: `${action}: could not check` };
+    return { icon: 'fa-times', tone: 'text-red-600', text: `${action}: parse error` };
+}
+
+const ValidationTrail = ({ trail }) => (
+    <ul className="mt-2 space-y-0.5 text-[11px]" aria-label="What Smith checked">
+        {trail.map((step, i) => {
+            const d = describeStep(step);
+            return (
+                <li key={i} className={`flex items-center gap-1.5 ${d.tone}`}>
+                    <i className={`fas ${d.icon} w-3 text-center`}></i>
+                    <span>{d.text}</span>
+                </li>
+            );
+        })}
+    </ul>
+);
+
+/** The proposed change under a reply, with its check result and the Review button. */
+const ProposalCard = ({ proposal, editorCode, editorType, onReview }) => {
+    const stale = proposal.baseCode !== editorCode || proposal.baseType !== editorType;
+    const status = proposal.verified
+        ? { tone: 'bg-emerald-50 text-emerald-700', icon: 'fa-check-circle', text: 'Checked: the diagram is valid' }
+        : proposal.status === 'unverified'
+            ? { tone: 'bg-amber-50 text-amber-700', icon: 'fa-question-circle', text: 'Not checked: the diagram server could not be reached' }
+            : { tone: 'bg-red-50 text-red-700', icon: 'fa-exclamation-circle', text: 'Not verified: the diagram still has an error' };
+    return (
+        <div className="mt-2 w-full max-w-[90%] rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-3 py-2 flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <i className="fas fa-code-branch text-indigo-500"></i>
+                    Proposed change · {typeName(proposal.type)}
+                    {proposal.type !== proposal.baseType && proposal.baseCode && (
+                        <span className="font-normal text-slate-500">(from {typeName(proposal.baseType)})</span>
+                    )}
+                </span>
+                <button
+                    onClick={onReview}
+                    className="text-xs flex items-center gap-1 text-white font-medium px-2.5 py-1 bg-indigo-600 rounded hover:bg-indigo-700 transition-colors shrink-0"
+                >
+                    <i className="fas fa-eye"></i>
+                    Review and apply
+                </button>
+            </div>
+            <div className={`px-3 py-1.5 text-xs ${status.tone} flex items-start gap-1.5`}>
+                <i className={`fas ${status.icon} mt-0.5`}></i>
+                <span>
+                    {status.text}
+                    {!proposal.verified && proposal.error && <span className="block font-mono text-[11px] mt-0.5 whitespace-pre-wrap">{proposal.error}</span>}
+                </span>
+            </div>
+            {stale && (
+                <div className="px-3 py-1.5 text-[11px] text-slate-500 bg-slate-50 border-t border-slate-100">
+                    The editor has changed since Smith made this proposal. Applying the proposal replaces the current code.
+                </div>
+            )}
+        </div>
+    );
+};
+
+export const AICopilot = ({
+    isOpen,
+    onClose,
+    contextCode,
+    diagramType,
     onApplyCode,
-    isSidebar = false 
+    isSidebar = false
 }) => {
-    // State
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    // The reply as it streams in, and what Smith is doing after the text arrives ('checking' or 'repairing')
+    // The reply as it streams in, and the checks made so far in this turn
     const [streamingText, setStreamingText] = useState('');
-    const [chatStatus, setChatStatus] = useState(null);
-    const abortRef = useRef(null);
+    const [liveTrail, setLiveTrail] = useState([]);
     const [showSettings, setShowSettings] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [currentConversationId, setCurrentConversationId] = useState(null);
     const [conversations, setConversations] = useState({});
-    
-    // Diff State
-    const [showDiffModal, setShowDiffModal] = useState(false);
-    const [pendingCode, setPendingCode] = useState('');
-    
+    const [reviewProposal, setReviewProposal] = useState(null);
+    const [isInputExpanded, setIsInputExpanded] = useState(false);
+
     const messagesEndRef = useRef(null);
+    const messageRefs = useRef({});
+    const abortRef = useRef(null);
     // Tracks the open conversation, so a late reply is not shown in another conversation
     const currentConversationRef = useRef(null);
 
@@ -38,43 +104,42 @@ export const AICopilot = ({
         currentConversationRef.current = currentConversationId;
     }, [currentConversationId]);
 
-    // Load conversations and initial chat
     useEffect(() => {
-        if (isOpen) {
-            loadConversations();
-        }
+        if (isOpen) loadConversations();
     }, [isOpen]);
 
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isTyping, liveTrail.length]);
+
+    // Stop a reply that is still running when the panel unmounts
+    useEffect(() => () => abortRef.current?.abort(), []);
+
+    const refreshList = () => setConversations(conversationStore.getAll());
+
     const loadConversations = () => {
-        const all = aiService.getConversations();
+        const all = conversationStore.getAll();
         setConversations(all);
-        
-        // If no current conversation, create one or select latest
         if (!currentConversationId) {
             const sortedIds = Object.keys(all).sort((a, b) => all[b].lastModified - all[a].lastModified);
-            if (sortedIds.length > 0) {
-                selectConversation(sortedIds[0]);
-            } else {
-                createNewConversation();
-            }
+            if (sortedIds.length > 0) selectConversation(sortedIds[0]);
+            else createNewConversation();
         } else {
-            // Refresh current messages
-            if (all[currentConversationId]) {
-                setMessages(all[currentConversationId].messages);
-            }
+            const convo = conversationStore.get(currentConversationId);
+            if (convo) setMessages(convo.messages);
         }
     };
 
     const createNewConversation = () => {
-        const id = aiService.createConversation();
-        setConversations(aiService.getConversations());
+        const id = conversationStore.create();
+        refreshList();
         setCurrentConversationId(id);
         setMessages([]);
         setShowHistory(false);
     };
 
     const selectConversation = (id) => {
-        const convo = aiService.getConversation(id);
+        const convo = conversationStore.get(id);
         if (convo) {
             setCurrentConversationId(id);
             setMessages(convo.messages);
@@ -84,10 +149,9 @@ export const AICopilot = ({
 
     const handleDeleteConversation = (e, id) => {
         e.stopPropagation();
-        aiService.deleteConversation(id);
-        const remaining = aiService.getConversations();
+        conversationStore.remove(id);
+        const remaining = conversationStore.getAll();
         setConversations(remaining);
-        
         if (id === currentConversationId) {
             const sorted = Object.keys(remaining).sort((a, b) => remaining[b].lastModified - remaining[a].lastModified);
             if (sorted.length > 0) selectConversation(sorted[0]);
@@ -95,163 +159,96 @@ export const AICopilot = ({
         }
     };
 
-    // Auto-scroll to bottom
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, isTyping]);
-
-    // Stop a reply that is still streaming when the panel unmounts
-    useEffect(() => () => abortRef.current?.abort(), []);
-
-    /** Start a reply: returns the options that stream text into the panel, and the abort controller. */
-    const beginReply = (isStillOpen) => {
+    /**
+     * Run Smith for a request and return the assistant message to store.
+     * @param {Array} earlier  the chat messages before this request
+     */
+    const runReply = async (request, earlier, isStillOpen) => {
         const controller = new AbortController();
         abortRef.current = controller;
         setStreamingText('');
-        setChatStatus(null);
-        return {
-            controller,
-            options: {
+        setLiveTrail([]);
+        let partial = '';
+        try {
+            const result = await askSmith({
+                request,
+                messages: earlier,
+                code: contextCode,
+                type: diagramType,
                 signal: controller.signal,
-                onText: (text) => { if (isStillOpen()) setStreamingText(text); },
-                onStatus: (status) => { if (isStillOpen()) setChatStatus(status); }
+                onEvent: (event) => {
+                    if (!isStillOpen()) return;
+                    if (event.type === 'text') {
+                        partial = event.text;
+                        setStreamingText(event.text);
+                    } else if (event.type === 'step') {
+                        setLiveTrail(prev => [...prev, event.step]);
+                    }
+                }
+            });
+            return {
+                role: 'assistant',
+                content: result.text || (result.proposal ? 'Here is the change.' : 'Smith finished without a reply.'),
+                ...(result.proposal ? { proposal: result.proposal } : {}),
+                ...(result.trail.length ? { trail: result.trail } : {}),
+                ...(result.suggestions.length ? { suggestions: result.suggestions } : {}),
+                ...(result.limitReached ? { limitReached: true } : {})
+            };
+        } catch (error) {
+            if (error?.name === 'AbortError') {
+                return { role: 'assistant', content: partial ? `${partial}\n\n(Stopped before the end.)` : 'Stopped.', isStopped: true };
             }
-        };
+            if (error?.code === 'NOT_CONFIGURED') setShowSettings(true);
+            return { role: 'assistant', content: `Error: ${error.message}`, isError: true };
+        } finally {
+            abortRef.current = null;
+            setStreamingText('');
+            setLiveTrail([]);
+        }
     };
-
-    const endReply = () => {
-        abortRef.current = null;
-        setStreamingText('');
-        setChatStatus(null);
-        setIsTyping(false);
-    };
-
-    /** The message saved when the user presses Stop: the text so far, which the model never sees again. */
-    const stoppedMessage = (partial) => ({
-        role: 'assistant',
-        content: partial ? `${partial}\n\n(Stopped before the end.)` : 'Stopped.',
-        isStopped: true
-    });
-
-    const handleStop = () => abortRef.current?.abort();
 
     const handleSend = async (textOverride = null) => {
-        const textToSend = textOverride || input;
+        const textToSend = typeof textOverride === 'string' ? textOverride : input;
         if (isTyping || !textToSend.trim() || !currentConversationId) return;
 
         const conversationId = currentConversationId;
         const isStillOpen = () => currentConversationRef.current === conversationId;
         const userMessage = { role: 'user', content: textToSend };
-        
-        // Update UI immediately
+        const earlier = messages;
+
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setIsTyping(true);
+        conversationStore.append(conversationId, userMessage);
+        refreshList();
 
-        // Save to persistence
-        aiService.addMessageToConversation(conversationId, userMessage);
-        // Update title/list in background
-        setConversations(aiService.getConversations());
-
-        const { options } = beginReply(isStillOpen);
-        let partial = '';
-        const onText = options.onText;
-        options.onText = (text) => { partial = text; onText(text); };
-
-        try {
-            // Earlier messages are the history; the service leaves out error and stopped messages
-            const history = messages.filter(m => m.role !== 'system');
-
-            const responseText = await aiService.chat(userMessage.content, history, contextCode, diagramType, options);
-
-            const botMessage = { role: 'assistant', content: responseText };
-            if (isStillOpen()) setMessages(prev => [...prev, botMessage]);
-            aiService.addMessageToConversation(conversationId, botMessage);
-
-        } catch (error) {
-            const errorMessage = error?.name === 'AbortError'
-                ? stoppedMessage(partial)
-                : { role: 'assistant', content: `Error: ${error.message}`, isError: true };
-            if (isStillOpen()) setMessages(prev => [...prev, errorMessage]);
-            // Saved so the user sees the message after a reload. The service leaves these out of model history.
-            aiService.addMessageToConversation(conversationId, errorMessage);
-
-            if (error?.code === 'NOT_CONFIGURED') {
-                setShowSettings(true);
-            }
-        } finally {
-            endReply();
-            setConversations(aiService.getConversations()); // Refresh list for last modified
-        }
+        const reply = await runReply(textToSend, earlier, isStillOpen);
+        if (isStillOpen()) setMessages(prev => [...prev, reply]);
+        conversationStore.append(conversationId, reply);
+        setIsTyping(false);
+        refreshList();
     };
 
+    /** Ask again for the last answer, and replace that answer. */
     const handleRegenerate = async () => {
         if (!currentConversationId || isTyping) return;
-
         const conversationId = currentConversationId;
         const isStillOpen = () => currentConversationRef.current === conversationId;
-        
-        // Remove last assistant message from UI
-        setMessages(prev => {
-            if (prev.length > 0 && prev[prev.length - 1].role === 'assistant') {
-                return prev.slice(0, -1);
-            }
-            return prev;
-        });
-        
+        const convo = conversationStore.get(conversationId);
+        const lastUser = convo ? convo.messages.map(m => m.role).lastIndexOf('user') : -1;
+        if (lastUser === -1) return;
+
+        const kept = convo.messages.slice(0, lastUser + 1);
+        setMessages(kept);
         setIsTyping(true);
-        const { options } = beginReply(isStillOpen);
-        let partial = '';
-        const onText = options.onText;
-        options.onText = (text) => { partial = text; onText(text); };
-        let history = [];
-
-        try {
-            // Get history (excluding valid system prompt stuff if needed)
-            // We need to fetch the actual conversation from service to be sure
-            const convo = aiService.getConversation(conversationId);
-            if (!convo || convo.messages.length === 0) return;
-
-             // Remove the last message if it was assistant
-            history = [...convo.messages];
-            if (history[history.length - 1].role === 'assistant') {
-                history.pop();
-            }
-
-            // We pass a special flag or just call chat. 
-            // Since we implemented __REGENERATE__ in service, we can use that, 
-            // OR effectively we just want to call chat with the *previous* user prompt again.
-            // But relying on service logic is cleaner if we pass a special flag? 
-            // Actually, let's just use the last user message from history.
-            
-            // Simplest way: Call chat with a specialized prompt or just re-send the last user message context?
-            // The service's 'chat' method expects 'message' to be the NEW user input.
-            // If we want to regenerate, we basically want to pretend the user just sent the last message again.
-            // My service modification handled `__REGENERATE__` to look up the last user message.
-            
-            // We pass the SPECIAL flag as the message
-            const responseText = await aiService.chat('__REGENERATE__', history, contextCode, diagramType, options);
-
-            const botMessage = { role: 'assistant', content: responseText };
-            if (isStillOpen()) setMessages(prev => [...prev, botMessage]);
-            
-            // Replace the old answer in storage with the new answer
-            aiService.updateConversation(conversationId, { messages: [...history, botMessage] });
-
-        } catch (error) {
-            if (error?.name === 'AbortError') {
-                const stopped = stoppedMessage(partial);
-                if (isStillOpen()) setMessages(prev => [...prev, stopped]);
-                aiService.updateConversation(conversationId, { messages: [...history, stopped] });
-            } else {
-                const errorMessage = { role: 'assistant', content: `Error: ${error.message}`, isError: true };
-                if (isStillOpen()) setMessages(prev => [...prev, errorMessage]);
-                if (error?.code === 'NOT_CONFIGURED') setShowSettings(true);
-            }
-        } finally {
-            endReply();
-        }
+        const reply = await runReply(convo.messages[lastUser].content, convo.messages.slice(0, lastUser), isStillOpen);
+        if (isStillOpen()) setMessages([...kept, reply]);
+        conversationStore.setMessages(conversationId, [...kept, reply]);
+        setIsTyping(false);
+        refreshList();
     };
+
+    const handleStop = () => abortRef.current?.abort();
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -260,37 +257,29 @@ export const AICopilot = ({
         }
     };
 
-    const [isInputExpanded, setIsInputExpanded] = useState(false);
-    const messageRefs = useRef({});
-
     if (!isOpen) return null;
 
     const scrollToMessage = (index) => {
         messageRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
-    // Chat Timeline Component
+    const lastAssistantIndex = messages.map(m => m.role).lastIndexOf('assistant');
+
     const ChatTimeline = () => (
         <div className="absolute right-1 top-4 bottom-4 w-4 bg-transparent z-50 flex flex-col gap-1 items-center overflow-y-auto no-scrollbar pointer-events-auto pb-4">
             {messages.map((msg, idx) => (
-                <div 
-                    key={idx}
-                    className="group relative pointer-events-auto"
-                >
-                    {/* Indicator Dot */}
+                <div key={idx} className="group relative pointer-events-auto">
                     <button
                         onClick={() => scrollToMessage(idx)}
                         className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                            msg.role === 'user' 
-                                ? 'bg-indigo-400 hover:bg-indigo-600 hover:scale-125' 
+                            msg.role === 'user'
+                                ? 'bg-indigo-400 hover:bg-indigo-600 hover:scale-125'
                                 : msg.isError
                                     ? 'bg-red-400 hover:bg-red-600'
                                     : 'bg-slate-300 hover:bg-slate-500 hover:scale-125'
                         }`}
                         aria-label={`Jump to message ${idx + 1}`}
                     />
-                    
-                    {/* Tooltip */}
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap max-w-[150px] truncate shadow-lg pointer-events-none z-20">
                         {msg.role === 'user' ? 'User: ' : 'AI: '}
                         {msg.content.slice(0, 30)}...
@@ -302,15 +291,15 @@ export const AICopilot = ({
 
     return (
         <div className={
-            isSidebar 
-            ? "w-full h-full flex flex-col bg-white overflow-hidden relative" 
+            isSidebar
+            ? "w-full h-full flex flex-col bg-white overflow-hidden relative"
             : "fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-40 flex flex-col border-l border-slate-200 transform transition-transform duration-300 ease-in-out"
         }>
-            
-            {/* ... Header ... */}
+
+            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200 shrink-0 z-10">
                 <div className="flex items-center gap-2">
-                     <button 
+                    <button
                         onClick={() => setShowHistory(!showHistory)}
                         className={`p-2 rounded-full transition-colors ${showHistory ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-200'}`}
                         title="Conversation History"
@@ -322,21 +311,22 @@ export const AICopilot = ({
                     </h3>
                 </div>
                 <div className="flex items-center gap-1">
-                    <button 
+                    <button
                         onClick={createNewConversation}
-                        className="p-2 text-slate-500 hover:text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors"
+                        disabled={isTyping}
+                        className="p-2 text-slate-500 hover:text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors disabled:opacity-40"
                         title="New Chat"
                     >
                         <i className="fas fa-plus"></i>
                     </button>
-                    <button 
+                    <button
                         onClick={() => setShowSettings(true)}
                         className="p-2 text-slate-400 hover:text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors"
                         title="Settings"
                     >
                         <i className="fas fa-cog"></i>
                     </button>
-                    <button 
+                    <button
                         onClick={onClose}
                         className="p-2 text-slate-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
                         title="Close"
@@ -346,7 +336,7 @@ export const AICopilot = ({
                 </div>
             </div>
 
-            {/* History Overlay (Dropdown style or Slide over) */}
+            {/* History */}
             {showHistory && (
                 <div className="absolute top-[60px] left-0 right-0 bottom-0 bg-white z-20 overflow-y-auto border-t border-slate-200 animate-fade-in">
                     <div className="p-2 space-y-1">
@@ -356,9 +346,9 @@ export const AICopilot = ({
                         {Object.values(conversations)
                             .sort((a, b) => b.lastModified - a.lastModified)
                             .map(convo => (
-                            <div 
-                                key={convo.id} 
-                                onClick={() => selectConversation(convo.id)}
+                            <div
+                                key={convo.id}
+                                onClick={() => !isTyping && selectConversation(convo.id)}
                                 className={`group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-sm ${
                                     convo.id === currentConversationId ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
                                 }`}
@@ -367,9 +357,10 @@ export const AICopilot = ({
                                     <i className="far fa-comment-alt mr-2 opacity-50"></i>
                                     {convo.title || 'New Conversation'}
                                 </span>
-                                <button 
+                                <button
                                     onClick={(e) => handleDeleteConversation(e, convo.id)}
                                     className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"
+                                    aria-label="Delete conversation"
                                 >
                                     <i className="fas fa-trash-alt text-xs"></i>
                                 </button>
@@ -384,44 +375,21 @@ export const AICopilot = ({
                 </div>
             )}
 
-            {/* Messages Area */}
+            {/* Messages */}
             <div className="flex-1 relative min-h-0 bg-slate-50/50">
                 <ChatTimeline />
-                
+
                 <div className="absolute inset-0 overflow-y-auto p-4 space-y-4">
-                    {messages.concat(isTyping ? [] : []).map((msg, idx) => {
-                        // Check for suggestions tag
-                        let content = msg.content;
-                        let suggestions = [];
-                        
-                        if (msg.role === 'assistant') {
-                            const suggestionMatch = content.match(/\[SUGGESTIONS\]:\s*(\[.*\])/);
-                            if (suggestionMatch) {
-                                try {
-                                    const parsed = JSON.parse(suggestionMatch[1]);
-                                    if (Array.isArray(parsed)) {
-                                        suggestions = parsed.filter(s => typeof s === 'string' && s.trim());
-                                    }
-                                    content = content.replace(suggestionMatch[0], '').trim();
-                                } catch (e) {
-                                    console.warn("Failed to parse suggestions JSON", e);
-                                }
-                            }
-                        }
-
-                        // Apply Code is offered only when the reply holds a code block
-                        const codeBlock = (msg.role === 'assistant' && !msg.isError && !msg.isStopped) ? extractCodeBlock(content) : null;
-
-                        return (
-                        <div 
-                            key={idx} 
+                    {messages.map((msg, idx) => (
+                        <div
+                            key={idx}
                             ref={el => messageRefs.current[idx] = el}
                             className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                         >
-                            <div 
+                            <div
                                 className={`max-w-[90%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap shadow-sm ${
-                                    msg.role === 'user' 
-                                    ? 'bg-indigo-600 text-white rounded-br-none' 
+                                    msg.role === 'user'
+                                    ? 'bg-indigo-600 text-white rounded-br-none'
                                     : msg.isError
                                         ? 'bg-red-50 text-red-700 border border-red-100'
                                         : msg.isStopped
@@ -429,51 +397,51 @@ export const AICopilot = ({
                                             : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
                                 }`}
                             >
-                                {content}
+                                {msg.content}
+                                {msg.trail?.length > 0 && <ValidationTrail trail={msg.trail} />}
+                                {msg.limitReached && (
+                                    <p className="mt-2 text-[11px] text-amber-700">Smith stopped after the most steps allowed for one request.</p>
+                                )}
                             </div>
-                            
-                            {/* Suggestion Chips */}
-                            {suggestions.length > 0 && (
+
+                            {msg.proposal && (
+                                <ProposalCard
+                                    proposal={msg.proposal}
+                                    editorCode={contextCode}
+                                    editorType={diagramType}
+                                    onReview={() => setReviewProposal(msg.proposal)}
+                                />
+                            )}
+
+                            {msg.suggestions?.length > 0 && idx === lastAssistantIndex && (
                                 <div className="mt-2 flex flex-wrap gap-2 max-w-[90%]">
-                                    {suggestions.map((suggestion, sIdx) => (
+                                    {msg.suggestions.map((suggestion, sIdx) => (
                                         <button
                                             key={sIdx}
-                                            onClick={() => {
-                                                setInput(suggestion);
-                                                handleSend(suggestion); 
-                                            }}
-                                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full border border-indigo-200 transition-colors shadow-sm"
+                                            onClick={() => handleSend(suggestion)}
+                                            disabled={isTyping}
+                                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full border border-indigo-200 transition-colors shadow-sm disabled:opacity-50"
                                         >
                                             {suggestion}
                                         </button>
                                     ))}
                                 </div>
                             )}
-                            
-                            {/* Actions for Assistant Messages */}
+
                             {msg.role === 'assistant' && !msg.isError && (
                                 <div className="mt-1 flex gap-2">
-                                    {codeBlock && (
-                                    <button 
-                                        onClick={() => {
-                                            setPendingCode(codeBlock.code);
-                                            setShowDiffModal(true);
-                                        }}
-                                        className="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
-                                    >
-                                        <i className="fas fa-reply"></i>
-                                        Apply Code
-                                    </button>
+                                    {idx === lastAssistantIndex && (
+                                        <button
+                                            onClick={handleRegenerate}
+                                            disabled={isTyping}
+                                            className="text-xs flex items-center gap-1 text-slate-500 hover:text-indigo-600 px-2 py-1 rounded hover:bg-slate-100 transition-colors disabled:opacity-50"
+                                        >
+                                            <i className="fas fa-sync-alt"></i>
+                                            Regenerate
+                                        </button>
                                     )}
-                                    <button 
-                                        onClick={() => handleRegenerate()}
-                                        className="text-xs flex items-center gap-1 text-slate-500 hover:text-indigo-600 px-2 py-1 rounded hover:bg-slate-100 transition-colors"
-                                    >
-                                        <i className="fas fa-sync-alt"></i>
-                                        Regenerate
-                                    </button>
-                                    <button 
-                                        onClick={() => navigator.clipboard.writeText(content)}
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(msg.content)}
                                         className="text-xs flex items-center gap-1 text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors"
                                     >
                                         <i className="fas fa-copy"></i>
@@ -482,9 +450,8 @@ export const AICopilot = ({
                                 </div>
                             )}
                         </div>
-                        );
-                    })}
-                    
+                    ))}
+
                     {messages.length === 0 && !isTyping && (
                         <div className="text-center py-10 text-slate-400">
                             <i className="fas fa-robot text-4xl mb-3 opacity-20"></i>
@@ -496,26 +463,21 @@ export const AICopilot = ({
                         <div className="flex flex-col items-start" aria-live="polite">
                             <div className="max-w-[90%] bg-white px-4 py-3 rounded-lg rounded-bl-none border border-slate-200 shadow-sm text-sm text-slate-700 whitespace-pre-wrap">
                                 {streamingText || (
-                                    <div className="flex gap-1" aria-label="Smith is replying">
+                                    <div className="flex gap-1" aria-label="Smith is working">
                                         <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
                                         <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
                                         <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
                                     </div>
                                 )}
+                                {liveTrail.length > 0 && <ValidationTrail trail={liveTrail} />}
                             </div>
-                            {chatStatus && (
-                                <div className="mt-1 text-xs text-slate-500 flex items-center gap-1.5">
-                                    <i className="fas fa-circle-notch animate-spin"></i>
-                                    {chatStatus === 'repairing' ? 'Repairing the code…' : 'Checking the code…'}
-                                </div>
-                            )}
                         </div>
                     )}
                     <div ref={messagesEndRef} />
                 </div>
             </div>
 
-            {/* Input Area */}
+            {/* Input */}
             <div className="p-4 bg-white border-t border-slate-200 shrink-0">
                 <div className="relative">
                     <button
@@ -538,8 +500,8 @@ export const AICopilot = ({
                     {isTyping ? (
                         <button
                             onClick={handleStop}
-                            title="Stop the reply"
-                            aria-label="Stop the reply"
+                            title="Stop"
+                            aria-label="Stop"
                             className="absolute right-2 bottom-2 p-2 bg-slate-700 text-white rounded-lg hover:bg-slate-900 transition-all shadow-sm w-8 h-8 flex items-center justify-center"
                         >
                             <i className="fas fa-stop text-xs"></i>
@@ -562,25 +524,23 @@ export const AICopilot = ({
                 </div>
             </div>
 
-            {/* Settings Modal */}
-            <AISettingsModal 
-                isOpen={showSettings} 
-                onClose={() => setShowSettings(false)} 
-                aiService={aiService} 
+            <AISettingsModal
+                isOpen={showSettings}
+                onClose={() => setShowSettings(false)}
+                aiService={aiService}
             />
 
-            {/* Semantic Diff Modal */}
-            {showDiffModal && (
+            {reviewProposal && (
                 <SemanticDiffModal
-                    isOpen={showDiffModal}
-                    onClose={() => setShowDiffModal(false)}
+                    isOpen={true}
+                    onClose={() => setReviewProposal(null)}
                     onConfirm={() => {
-                        onApplyCode(pendingCode);
-                        setShowDiffModal(false);
+                        onApplyCode(reviewProposal.code, reviewProposal.type);
+                        setReviewProposal(null);
                     }}
                     oldCode={contextCode}
-                    newCode={pendingCode}
-                    diagramType={diagramType}
+                    newCode={reviewProposal.code}
+                    diagramType={reviewProposal.type}
                 />
             )}
         </div>

@@ -26,6 +26,15 @@ Cases run one at a time, with a pause between cases, so that the token count per
 
 PlantUML, C4, Graphviz and the other Kroki types are sent to the diagram server set in the app's settings. The default is the public kroki.io service. The cases hold invented content only.
 
+## Paths
+
+| Path | What runs |
+|---|---|
+| `loop` | The tool loop that the chat panel and the Fix button use (`js/services/smith/`). `firstStatus` is the verdict on the first draft; repair attempts count the later drafts. |
+| `chat` | The text-only path from before the tool loop: `aiService.chat()` and the older auto-fix service. Kept to produce the Phase 1 baseline. |
+
+The `chat` path, the auto-fix service and its rule-based patches are deleted once the `loop` path's pass rate matches or beats the `chat` baseline on every diagram group, on the default model.
+
 ## Cases
 
 `cases/` holds one JSON file per diagram group: 60 cases in all.
@@ -45,7 +54,7 @@ Each case has a `task`:
 
 - `create` sends the prompt with an empty editor.
 - `edit` sends the prompt with `startCode` in the editor.
-- `fix` sends `startCode` and its real validation error to the Auto-Fix path.
+- `fix` sends `startCode` and its real validation error to the path's repair.
 
 `editorType` sets the editor's diagram type when the type differs from the expected output. `type: null` lets the reply choose the notation.
 

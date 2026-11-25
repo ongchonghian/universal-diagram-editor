@@ -4,12 +4,15 @@
  * Paths:
  *   chat  The current Smith: aiService.chat() for create and edit cases, and the Auto-Fix button's
  *         aiService.fixDiagramWithResult() for fix cases.
- * Phase 3 of the rebuild adds the tool loop as a second path.
+ *   loop  The tool loop (js/services/smith/): askSmith() for create and edit cases, and
+ *         fixWithSmith() for fix cases. The chat panel and the Fix button use this path.
  *
  * Cases run one at a time. Running in sequence keeps the token count per case exact and stays
  * inside free-tier rate limits.
  */
 import { aiService } from '../js/services/ai-service.js';
+import { askSmith, fixWithSmith } from '../js/services/smith/index.js';
+import { buildSystemPrompt } from '../js/services/smith/prompt.js';
 import { extractCodeBlock } from '../js/utils/code-extract.js';
 import { validateDiagram } from '../js/services/diagram-tools/validate.js';
 import { rendererAdapter } from '../js/services/RendererAdapter.js';
@@ -31,9 +34,10 @@ export const editorTypeOf = (caseDef) => caseDef.editorType || caseDef.type;
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /** A short, stable fingerprint of the system prompts, so a report records which prompt it measured. */
-export function promptVersion(cases) {
+export function promptVersion(cases, pathName = 'chat') {
     const types = [...new Set(cases.map(editorTypeOf))].sort();
-    const text = types.map(t => aiService.getSystemPrompt(t)).join('\n---\n');
+    const promptFor = pathName === 'loop' ? buildSystemPrompt : (t) => aiService.getSystemPrompt(t);
+    const text = types.map(promptFor).join('\n---\n');
     let hash = 0x811c9dc5;
     for (let i = 0; i < text.length; i++) {
         hash ^= text.charCodeAt(i);
@@ -58,6 +62,25 @@ const PATHS = {
         // A case without a fixed type lets the reply choose the notation
         const type = caseDef.type || trace.language || aiService.resolveLanguage(block, editorType);
         return { code: block.code, type, firstStatus: trace.firstStatus ?? null, repairAttempts: trace.repairAttempts ?? 0, note: '' };
+    },
+
+    async loop(caseDef) {
+        const editorType = editorTypeOf(caseDef);
+        const code = caseDef.startCode || '';
+        const result = caseDef.task === 'fix'
+            ? await fixWithSmith({ code, type: editorType, error: (await validateDiagram(code, editorType, { requireLayout: editorType === 'bpmn' })).error })
+            : await askSmith({ request: caseDef.prompt, code, type: editorType });
+        // Only drafts the parser saw count; a rejected edit left the draft unchanged
+        const checked = result.trail.filter(s => s.status !== 'rejected');
+        const notes = [result.limitReached ? 'Reached the step limit.' : '', `${result.steps} model steps.`].filter(Boolean).join(' ');
+        if (!result.proposal) return { code: null, type: null, firstStatus: null, repairAttempts: 0, note: `The loop made no change. ${notes}` };
+        return {
+            code: result.proposal.code,
+            type: result.proposal.type,
+            firstStatus: caseDef.task === 'fix' ? null : (checked[0]?.status ?? null),
+            repairAttempts: Math.max(0, checked.length - 1),
+            note: notes
+        };
     }
 };
 
@@ -135,7 +158,7 @@ export function buildReport(records, { pathName, cases, startedAt }) {
         model: active.model,
         temperature: Number(settings.temperature),
         path: pathName,
-        promptVersion: promptVersion(cases),
+        promptVersion: promptVersion(cases, pathName),
         // Only whether a private server was used; the address itself stays out of committed reports
         krokiServer: rendererAdapter.getBaseUrl() === KROKI_BASE_URL ? 'public kroki.io' : 'custom',
         summary: summarise(records),

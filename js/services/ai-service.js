@@ -1,5 +1,9 @@
 /**
- * AI Service: settings, conversation storage, prompts and chat validation for Syntext Smith.
+ * AI Service: Syntext Smith's settings, and the text-only chat path from before the tool loop.
+ *
+ * The chat panel and the Fix button use the tool loop in ./smith/. The text-only chat() and the
+ * auto-fix service stay as the "chat" path of the evaluation set, so the tool loop can be measured
+ * against the Phase 1 baseline. They are deleted once the loop passes that comparison.
  * Model calls go through the provider-neutral layer in ./llm/.
  */
 import { validateDiagram } from './diagram-tools/validate.js';
@@ -132,69 +136,6 @@ export class AIService {
         return !this.missingSetting();
     }
 
-    // --- Conversation Management ---
-
-    getConversations() {
-        return this.readStoredJSON('universal_diagram_ai_conversations') || {};
-    }
-
-    saveConversations(conversations) {
-        try {
-            localStorage.setItem('universal_diagram_ai_conversations', JSON.stringify(conversations));
-        } catch (e) {
-            // Usually a storage quota error. The chat keeps working; the conversation is not saved.
-            console.warn('[AI] Could not save conversations', e);
-        }
-    }
-
-    createConversation() {
-        const id = Date.now().toString();
-        const conversations = this.getConversations();
-        conversations[id] = {
-            id,
-            title: 'New Conversation',
-            messages: [],
-            lastModified: Date.now()
-        };
-        this.saveConversations(conversations);
-        return id;
-    }
-
-    getConversation(id) {
-        const conversations = this.getConversations();
-        return conversations[id] || null;
-    }
-
-    updateConversation(id, updates) {
-        const conversations = this.getConversations();
-        if (conversations[id]) {
-            conversations[id] = { ...conversations[id], ...updates, lastModified: Date.now() };
-            this.saveConversations(conversations);
-        }
-    }
-
-    deleteConversation(id) {
-        const conversations = this.getConversations();
-        delete conversations[id];
-        this.saveConversations(conversations);
-    }
-
-    addMessageToConversation(id, message) {
-        const conversations = this.getConversations();
-        if (conversations[id]) {
-            conversations[id].messages.push(message);
-            // Auto-generate title from first user message if title is default
-            if (message.role === 'user' && conversations[id].title === 'New Conversation') {
-                conversations[id].title = message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '');
-            }
-            conversations[id].lastModified = Date.now();
-            this.saveConversations(conversations);
-            return conversations[id];
-        }
-        return null;
-    }
-
-    // --- End Conversation Management ---
 
     /**
      * Validate diagram code with the shared validator (js/services/diagram-tools/validate.js).

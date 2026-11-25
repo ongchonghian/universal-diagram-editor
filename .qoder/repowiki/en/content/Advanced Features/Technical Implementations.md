@@ -436,26 +436,28 @@ Sync["MermaidSyncController"] --> AST
 - [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
 
 ### Syntext Smith (AI assistant)
-Syntext Smith asks a language model for native diagram code and checks that code with the same parsers the editor uses:
-1.  **Request**: The chat sends a system instruction, the conversation history, the diagram type and the current editor code to the chosen model provider (Google Gemini, Anthropic or an OpenAI-compatible endpoint). The reply streams back into the chat.
-2.  **Validation**: The longest code block in the reply is checked by the shared validator (`js/services/diagram-tools/validate.js`): `mermaid.parse` and a render for Mermaid, `bpmn-moddle` for BPMN, `vegaLite.compile` or `vega.parse` for charts, and the Kroki server for every other type.
-3.  **Repair**: When validation fails, the auto-fix service makes one repair attempt. The service tries rule-based patches first and asks the model only when no patch applies.
+Syntext Smith lets a language model write native diagram code through tools, and checks every edit with the same parsers the editor uses:
+1.  **Request**: The chat sends a system instruction, the earlier turns, the diagram type and the current editor code to the chosen model provider (Google Gemini, Anthropic or an OpenAI-compatible endpoint). The reply streams back into the chat.
+2.  **Tool loop**: The model changes a draft with `edit_diagram` (exact text replacements) or `write_diagram` (a whole diagram with its type). The editor stays untouched.
+3.  **Validation**: Each tool call checks the draft with the shared validator (`js/services/diagram-tools/validate.js`) and returns the parser's verdict to the model. The validator uses `mermaid.parse` and a render for Mermaid, `bpmn-moddle` for BPMN, `vegaLite.compile` or `vega.parse` for charts, and the Kroki server for every other type.
+4.  **Repair**: When the verdict is "invalid", the model fixes the draft with another call. The loop allows eight model steps.
+5.  **Review**: The finished draft becomes a proposal, which the user reviews in the "Verify Changes" dialog before applying.
 
 ```mermaid
 graph LR
-User -->|Prompt and current code| LLM
-LLM -->|Reply with code block| Validator
-Validator -->|Valid| Review[Verify Changes dialog]
-Validator -->|Invalid| AutoFix
-AutoFix -->|Repaired code| Validator
+User -->|Request and current code| LLM
+LLM -->|edit_diagram or write_diagram| Draft
+Draft --> Validator
+Validator -->|Verdict| LLM
+LLM -->|Done| Review[Verify Changes dialog]
 Review -->|Accept| Editor
 ```
 
 The earlier design, in which the model returned a JSON syntax tree for a separate compiler, had no caller and was removed on 25 November 2026.
 
 **Section sources**
-- [js/services/ai-service.js](file://js/services/ai-service.js)
-- [js/services/auto-fix-service.js](file://js/services/auto-fix-service.js)
+- [js/services/smith/agent-loop.js](file://js/services/smith/agent-loop.js)
+- [js/services/smith/tools.js](file://js/services/smith/tools.js)
 
 ## Library Update Management System
 

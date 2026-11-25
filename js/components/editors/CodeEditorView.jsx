@@ -4,7 +4,7 @@ import { PreviewPanel } from './PreviewPanel.jsx';
 import { PlantUmlToolbar } from '../PlantUmlToolbar.jsx';
 import { MermaidToolbar } from '../MermaidToolbar.jsx';
 import { SnippetInsertionDialog } from '../dialogs/SnippetInsertionDialog.jsx';
-import { aiService } from '../../services/ai-service.js';
+import { fixWithSmith } from '../../services/smith/index.js';
 
 export const CodeEditorView = ({
     textInput,
@@ -34,6 +34,11 @@ export const CodeEditorView = ({
     const [selectedElement, setSelectedElement] = useState(null);
     const [snippetDialogSnippet, setSnippetDialogSnippet] = useState(null);
     const [isFixing, setIsFixing] = useState(false);
+    // The result of the last Fix attempt, shown in the preview's error panel: { tone, text }
+    const [fixMessage, setFixMessage] = useState(null);
+
+    // A new error, or a new diagram, makes the last Fix message out of date
+    useEffect(() => { setFixMessage(null); }, [previewError, diagramType]);
 
     // Handle snippet insertion from toolbar
     const handleSnippetInsert = useCallback((code, mode = 'cursor') => {
@@ -81,33 +86,30 @@ export const CodeEditorView = ({
         }
     }, []);
 
-    // Handle Auto-Fix request
+    // Fix button: Smith's tool loop repairs the diagram, checking every edit with the real validator
     const handleAutoFix = async () => {
-        if (!previewError || !textInput) return;
-        
+        if (!previewError || !textInput || isFixing) return;
         setIsFixing(true);
+        setFixMessage(null);
         try {
-            console.log("Requesting AI Auto-Fix...");
-            
-            // Call AI Service to fix
-            const result = await aiService.fixDiagramWithResult(textInput, previewError, diagramType);
-            
-            if (result.fixed) {
-                if (result.code && result.code !== textInput) {
-                    setTextInput(result.code);
-                }
-            } else if (result.reason === 'unsupported') {
-                alert("Auto-fix supports Mermaid, PlantUML, C4 (PlantUML) and BPMN diagrams only.");
-            } else if (result.reason === 'unverified') {
-                alert("Auto-fix could not check the diagram because the diagram server could not be reached. The code is unchanged.");
-            } else if (result.reason === 'no-key') {
-                alert("Auto-fix needs Syntext Smith to be set up. Open Syntext Smith and choose a provider, a model and, if the provider needs one, an API key in Settings.");
+            const result = await fixWithSmith({ code: textInput, type: diagramType, error: previewError });
+            const proposal = result.proposal;
+            if (!proposal) {
+                setFixMessage({ tone: 'error', text: `Smith made no change, so the code is unchanged.${result.text ? ` Smith said: ${result.text}` : ''}` });
+            } else if (proposal.type !== diagramType) {
+                setFixMessage({ tone: 'error', text: 'Smith rewrote the diagram in another notation, so the fix was not applied. Ask Smith in the chat to convert the diagram instead.' });
+            } else if (proposal.verified) {
+                setTextInput(proposal.code);
+            } else if (proposal.status === 'unverified') {
+                setFixMessage({ tone: 'warning', text: 'Smith could not check the repair because the diagram server could not be reached. The code is unchanged.' });
             } else {
-                alert("Auto-fix could not produce a valid diagram. The code is unchanged.");
+                setFixMessage({ tone: 'error', text: `Smith could not produce a valid diagram. The code is unchanged. Last error: ${proposal.error || 'unknown'}` });
             }
         } catch (e) {
-            console.error("Auto-Fix failed:", e);
-            alert("Failed to auto-fix diagram: " + e.message);
+            const text = e?.code === 'NOT_CONFIGURED'
+                ? `${e.message} Open Syntext Smith to change the settings.`
+                : `The fix failed: ${e.message}`;
+            setFixMessage({ tone: 'error', text });
         } finally {
             setIsFixing(false);
         }
@@ -213,6 +215,7 @@ export const CodeEditorView = ({
                 onRenameRequest={handleRenameRequest}
                 onRetry={handleAutoFix}
                 isFixing={isFixing}
+                fixMessage={fixMessage}
                 diagramType={diagramType}
             />
 

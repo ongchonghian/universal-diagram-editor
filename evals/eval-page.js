@@ -14,7 +14,7 @@ const escapeHtml = (text) => String(text ?? '').replace(/[&<>"']/g, ch => ({ '&'
 const pct = (value) => (value === null || value === undefined ? '–' : `${value}%`);
 
 function setup() {
-    $('path').innerHTML = PATH_NAMES.map(p => `<option value="${p}">${p === 'chat' ? 'chat (current Smith)' : p}</option>`).join('');
+    $('path').innerHTML = PATH_NAMES.map(p => `<option value="${p}">${({ chat: 'chat (text-only path, Phase 1 baseline)', loop: 'loop (tool loop, current Smith)' }[p] || p)}</option>`).join('');
     $('provider').innerHTML = PROVIDER_IDS.map(id => `<option value="${id}">${escapeHtml(PROVIDERS[id].label)}</option>`).join('');
     $('provider').value = aiService.getActiveConfig().provider;
     $('provider').addEventListener('change', () => {

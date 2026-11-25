@@ -20,7 +20,8 @@ export const PreviewPanel = ({
     onInsert,
     onRenameRequest,
     diagramType, // Added prop
-    isFixing = false // Added prop
+    isFixing = false,
+    fixMessage = null // The result of the last Fix attempt: { tone: 'error' | 'warning', text }
 }) => {
     const containerRef = useRef(null);
     const [selectedText, setSelectedText] = useState(null);
@@ -202,6 +203,11 @@ export const PreviewPanel = ({
                                             </button>
                                         )}
                                     </div>
+                                {fixMessage && (
+                                    <p role="status" className={`mt-3 text-xs text-left px-3 py-2 rounded border ${fixMessage.tone === 'warning' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                        {fixMessage.text}
+                                    </p>
+                                )}
                                 {!errorLine && onRetry && (
                                     <div className="flex justify-center mt-3">
                                          <button onClick={onRetry}
