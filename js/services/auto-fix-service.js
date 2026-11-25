@@ -106,7 +106,7 @@ class AutoFixService {
                 } catch (e) {
                      fixLog.push(`LLM fix failed: ${e.message}`);
                      console.error("[AutoFix] LLM failed:", e);
-                     if (!aiService.hasApiKey()) reason = 'no-key';
+                     if (!aiService.isConfigured()) reason = 'no-key';
                      break; 
                 }
                 continue;
@@ -148,9 +148,8 @@ class AutoFixService {
     }
 
     async _llmFix(code, errors, language) {
-        if (!aiService.hasApiKey()) {
-            throw new Error('API Key is missing. Please configure it in settings.');
-        }
+        const missing = aiService.missingSetting();
+        if (missing) throw new Error(missing);
 
         const errorMsg = errors.map(e => `${e.kind}: ${e.message} (Line ${e.line})`).join('\n');
         

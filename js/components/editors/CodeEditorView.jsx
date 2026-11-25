@@ -101,7 +101,7 @@ export const CodeEditorView = ({
             } else if (result.reason === 'unverified') {
                 alert("Auto-fix could not check the diagram because the diagram server could not be reached. The code is unchanged.");
             } else if (result.reason === 'no-key') {
-                alert("Auto-fix needs an API key. Open Syntext Smith and add a key in Settings.");
+                alert("Auto-fix needs Syntext Smith to be set up. Open Syntext Smith and choose a provider, a model and, if the provider needs one, an API key in Settings.");
             } else {
                 alert("Auto-fix could not produce a valid diagram. The code is unchanged.");
             }

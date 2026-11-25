@@ -43,7 +43,7 @@ Supported diagram families include BPMN, Mermaid (flowcharts, sequences, class/s
 Technology stack highlights:
 - React 18 with a lightweight helper for JSX-like syntax.
 - Monaco Editor with custom language support for PlantUML and Mermaid.
-- Google Gemini API (default model `gemini-3.8-flash`) for **Syntext Smith** AI services.
+- Google Gemini (default model `gemini-3.8-flash`), Anthropic Claude, or any OpenAI-compatible endpoint for **Syntext Smith** AI services.
 - External rendering via Kroki for Mermaid and other formats.
 - bpmn-js for BPMN visual editing.
 - Tailwind CSS for responsive UI.

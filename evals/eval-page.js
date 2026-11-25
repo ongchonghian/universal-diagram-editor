@@ -2,6 +2,7 @@
  * Controller for eval.html (development only).
  */
 import { aiService } from '../js/services/ai-service.js';
+import { PROVIDERS, PROVIDER_IDS } from '../js/services/llm/index.js';
 import { loadCases, runSuite, summarise, GROUPS, PATH_NAMES } from './runner.js';
 
 const $ = (id) => document.getElementById(id);
@@ -14,9 +15,15 @@ const pct = (value) => (value === null || value === undefined ? '–' : `${value
 
 function setup() {
     $('path').innerHTML = PATH_NAMES.map(p => `<option value="${p}">${p === 'chat' ? 'chat (current Smith)' : p}</option>`).join('');
-    const settings = aiService.getSettings();
-    $('model').value = settings.model;
-    $('key-notice').hidden = aiService.hasApiKey();
+    $('provider').innerHTML = PROVIDER_IDS.map(id => `<option value="${id}">${escapeHtml(PROVIDERS[id].label)}</option>`).join('');
+    $('provider').value = aiService.getActiveConfig().provider;
+    $('provider').addEventListener('change', () => {
+        $('model').value = aiService.getSettings().providers[$('provider').value].model;
+        updateKeyNotice();
+    });
+    $('model').value = aiService.getActiveConfig().model;
+    $('api-key').addEventListener('input', updateKeyNotice);
+    updateKeyNotice();
 
     const counts = Object.fromEntries(GROUPS.map(g => [g, allCases.filter(c => c.group === g).length]));
     $('groups').insertAdjacentHTML('beforeend', GROUPS.map(g =>
@@ -30,6 +37,29 @@ function setup() {
     renderSummary([]);
 }
 
+/** Apply this page's provider, model and key to the service in memory only; returns what is still missing. */
+function applyRunSettings() {
+    const provider = $('provider').value;
+    const saved = aiService.getSettings().providers[provider];
+    aiService.settings = {
+        ...aiService.settings,
+        provider,
+        providers: {
+            ...aiService.settings.providers,
+            [provider]: { ...saved, model: $('model').value.trim() || saved.model, apiKey: $('api-key').value.trim() || saved.apiKey }
+        }
+    };
+    return aiService.missingSetting();
+}
+
+function updateKeyNotice() {
+    const provider = $('provider').value;
+    const saved = aiService.getSettings().providers[provider];
+    const needsKey = PROVIDERS[provider].needsKey && !saved.apiKey && !$('api-key').value.trim();
+    $('key-notice').hidden = !needsKey;
+    $('key-notice-text').textContent = needsKey ? `This page has no ${PROVIDERS[provider].label} API key.` : '';
+}
+
 function selectedCases() {
     const groups = new Set([...document.querySelectorAll('input[name=group]:checked')].map(i => i.value));
     const filter = $('filter').value.trim().toLowerCase();
@@ -37,8 +67,10 @@ function selectedCases() {
 }
 
 async function run() {
-    if (!aiService.hasApiKey()) {
-        $('key-notice').hidden = false;
+    const missing = applyRunSettings();
+    if (missing) {
+        $('progress').textContent = missing;
+        updateKeyNotice();
         return;
     }
     const cases = selectedCases();
@@ -46,10 +78,6 @@ async function run() {
         $('progress').textContent = 'The filters match no cases.';
         return;
     }
-
-    // Use the chosen model for this run only, without changing the saved settings
-    const model = $('model').value.trim();
-    if (model) aiService.settings = { ...aiService.settings, model };
 
     controller = new AbortController();
     $('run').disabled = true;

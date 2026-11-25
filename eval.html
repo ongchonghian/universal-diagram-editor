@@ -45,7 +45,7 @@
         <h1>Syntext Smith evaluation</h1>
         <p class="lead">
             Runs the evaluation cases in <code>evals/cases/</code> against a model and checks each answer with the real validators.
-            The page uses the provider, model and API key saved in the app's Syntext Smith settings, so the key stays in this browser.
+            The page starts from the provider and model saved in the app's Syntext Smith settings. Changes made on this page apply to this page only and are not saved.
             Download the report when the run finishes and commit the report to <code>evals/results/</code>.
         </p>
 
@@ -57,8 +57,16 @@
                     <select id="path"></select>
                 </div>
                 <div>
+                    <label for="provider">Provider</label>
+                    <select id="provider"></select>
+                </div>
+                <div>
                     <label for="model">Model</label>
                     <input id="model" type="text" spellcheck="false">
+                </div>
+                <div>
+                    <label for="api-key">API key (this page only)</label>
+                    <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Saved key if left empty">
                 </div>
                 <div>
                     <label for="filter">Case id contains</label>
@@ -78,7 +86,8 @@
                 <button id="download" type="button" disabled>Download report</button>
             </div>
             <div id="key-notice" class="notice" hidden>
-                No API key is saved. Open the editor, open Syntext Smith, and add a key in Settings first.
+                <span id="key-notice-text"></span>
+                A key that Smith keeps for one browser tab only is not visible here. Paste the key above, or tick "Remember keys" in Smith's settings.
             </div>
             <div id="progress" role="status" aria-live="polite"></div>
         </section>

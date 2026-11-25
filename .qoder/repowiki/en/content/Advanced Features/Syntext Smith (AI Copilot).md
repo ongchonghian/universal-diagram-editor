@@ -7,11 +7,12 @@ This page describes the code as of 25 November 2026. A rebuild of Smith is plann
 ## How a chat request works
 
 1. The chat panel (`js/components/AICopilot.jsx`) calls `aiService.chat()` in `js/services/ai-service.js`.
-2. `chat()` sends three things to the model: a system instruction from `getSystemPrompt()`, the earlier turns of the conversation, and a user turn that holds the diagram type, the current editor code and the request. Error notices from earlier turns are left out of the history.
-3. `chat()` takes the longest fenced code block from the reply and works out the block's language with `resolveLanguage()`.
-4. `chat()` validates the block (see the next section).
-5. If the block fails validation, `chat()` makes one repair attempt through the auto-fix service. A successful repair replaces the block in the reply.
-6. If the block still fails, `chat()` appends a warning with the parser error to the reply.
+2. `chat()` sends three things to the model: a system instruction from `getSystemPrompt()`, the earlier turns of the conversation, and a user turn that holds the diagram type, the current editor code and the request. Error notices and stopped replies from earlier turns are left out of the history.
+3. The reply streams into the panel as the model writes the reply. While a reply streams, the send button becomes a **Stop** button. Stop ends the reply and keeps the text so far, marked "(Stopped before the end.)"; the model never sees a stopped reply again.
+4. `chat()` takes the longest fenced code block from the reply and works out the block's language with `resolveLanguage()`. The panel shows "Checking the code…" while the block is validated, and "Repairing the code…" during a repair.
+5. `chat()` validates the block (see the next section).
+6. If the block fails validation, `chat()` makes one repair attempt through the auto-fix service. A successful repair replaces the block in the reply.
+7. If the block still fails, `chat()` appends a warning with the parser error to the reply.
 
 ## Validation
 
@@ -42,10 +43,17 @@ The auto-fix service (`js/services/auto-fix-service.js`) repairs code in two pla
 
 ## Provider and settings
 
-- **Provider:** Google Gemini only, through the `generateContent` REST method. The API key travels in the `x-goog-api-key` request header.
-- **Default model:** `gemini-3.8-flash`. A stored setting that names a retired model (the 1.0, 1.5, 2.0 and 2.5 series) falls back to the default when the app loads.
-- **Settings dialog:** `js/components/dialogs/AISettingsModal.jsx` offers a short list of current Gemini models and a free-text field for any other model id.
-- **Storage:** settings, including the API key, are kept as plain text in the browser's `localStorage` under `universal_diagram_ai_settings`. Conversations are kept under `universal_diagram_ai_conversations`.
+Model calls go through a provider-neutral layer in `js/services/llm/`. The layer's `streamTurn()` sends one turn and yields text, tool-call and done events; each provider has one adapter file. The chat uses text only today; the tool-call support is there for the tool loop in a later phase.
+
+| Provider | Adapter | API | Notes |
+|---|---|---|---|
+| Google Gemini (default) | `providers/gemini.js` | `streamGenerateContent` with server-sent events | The key travels in the `x-goog-api-key` header. Default model `gemini-3.8-flash`. |
+| Anthropic | `providers/anthropic.js` | Messages API with streaming | Sends `anthropic-dangerous-direct-browser-access: true`. Organisations with zero data retention cannot use browser access. Temperature is never sent, because current Claude models reject the setting. For the models that support the server-side fallback, the request asks Anthropic to re-run a declined request on a fallback model (`fallbacks: "default"`). Default model `claude-opus-5-5`. |
+| OpenAI-compatible endpoint | `providers/openai-compatible.js` | Chat Completions with streaming, at a base address the user sets | For OpenRouter, Ollama, LM Studio and similar servers. The key is optional. When the endpoint rejects temperature, the adapter retries once without temperature. |
+
+- **Settings dialog:** `js/components/dialogs/AISettingsModal.jsx`. The user chooses the provider, and each provider keeps its own key, model and (for the compatible endpoint) base address. The model menu comes from the provider's own model list; "Other model id…" accepts any id.
+- **Retired models:** a stored Gemini model from the 1.0, 1.5, 2.0 or 2.5 series falls back to the default when the app loads.
+- **Storage:** settings are kept in `localStorage` under `universal_diagram_ai_settings`. API keys are kept in `sessionStorage` under `universal_diagram_ai_keys`, so a key lasts until the browser tab closes. With "Remember keys in this browser" ticked, keys are also stored as plain text in `localStorage`. Settings saved before November 2026 are moved to the new shape on load, and a key saved then stays remembered. Conversations are kept under `universal_diagram_ai_conversations`.
 
 ## The chat panel
 
@@ -71,7 +79,8 @@ The auto-fix service (`js/services/auto-fix-service.js`) repairs code in two pla
 |---|---|
 | `js/components/AICopilot.jsx` | Chat panel |
 | `js/hooks/useCopilot.js` | Panel visibility and applying code to the editor |
-| `js/services/ai-service.js` | Settings, conversation storage, prompts, model calls and chat validation |
+| `js/services/ai-service.js` | Settings, conversation storage, prompts and chat validation |
+| `js/services/llm/` | Provider-neutral model layer: `index.js`, `types.js`, `sse.js` and one adapter per provider |
 | `js/services/auto-fix-service.js`, `js/services/auto-fix/` | Repair loop, rule-based patches and per-language checks |
 | `js/services/diagram-tools/validate.js`, `render.js` | Shared validator and renderer wrapper |
 | `js/utils/code-extract.js` | Extracting fenced code blocks from a reply |

@@ -478,7 +478,7 @@ The application integrates Syntext Smith, an AI assistant that helps users creat
 
 ### Components
 - **AICopilot**: The chat panel in the sidebar.
-- **AIService**: The service that calls Google's Gemini models through the `generateContent` REST method. The service also stores settings and conversations, and validates the code in each reply.
+- **AIService**: The service that stores settings and conversations, builds the prompts, and validates the code in each reply. Model calls go through the provider-neutral layer in `js/services/llm/`, which streams replies from Google Gemini, Anthropic or an OpenAI-compatible endpoint.
 - **AutoFixService**: The repair loop used by the chat and by the preview's Auto-Fix button.
 - **Workflow**:
     - The user enters a request, for example "Create a login flow".
@@ -487,8 +487,8 @@ The application integrates Syntext Smith, an AI assistant that helps users creat
     - The user reviews the change in the "Verify Changes" dialog and applies the change to the editor.
 
 ### Configuration
-- **API Key**: Users provide a Google Gemini API key in the settings dialog to enable AI features. The key is stored as plain text in the browser's `localStorage`.
-- **Model**: The default model is `gemini-3.8-flash`. The settings dialog lists current Gemini models and accepts any other model id.
+- **API Key**: Users provide a key for the chosen provider in the settings dialog. Keys are kept in `sessionStorage` for the browser tab, and also in `localStorage` as plain text when the user ticks "Remember keys in this browser". A local OpenAI-compatible server can run without a key.
+- **Model**: The default is Gemini with `gemini-3.8-flash`. The settings dialog loads each provider's own model list and accepts any other model id.
 
 **Section sources**
 - [js/services/ai-service.js](file://js/services/ai-service.js)

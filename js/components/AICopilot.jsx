@@ -17,6 +17,10 @@ export const AICopilot = ({
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    // The reply as it streams in, and what Smith is doing after the text arrives ('checking' or 'repairing')
+    const [streamingText, setStreamingText] = useState('');
+    const [chatStatus, setChatStatus] = useState(null);
+    const abortRef = useRef(null);
     const [showSettings, setShowSettings] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [currentConversationId, setCurrentConversationId] = useState(null);
@@ -96,6 +100,41 @@ export const AICopilot = ({
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isTyping]);
 
+    // Stop a reply that is still streaming when the panel unmounts
+    useEffect(() => () => abortRef.current?.abort(), []);
+
+    /** Start a reply: returns the options that stream text into the panel, and the abort controller. */
+    const beginReply = (isStillOpen) => {
+        const controller = new AbortController();
+        abortRef.current = controller;
+        setStreamingText('');
+        setChatStatus(null);
+        return {
+            controller,
+            options: {
+                signal: controller.signal,
+                onText: (text) => { if (isStillOpen()) setStreamingText(text); },
+                onStatus: (status) => { if (isStillOpen()) setChatStatus(status); }
+            }
+        };
+    };
+
+    const endReply = () => {
+        abortRef.current = null;
+        setStreamingText('');
+        setChatStatus(null);
+        setIsTyping(false);
+    };
+
+    /** The message saved when the user presses Stop: the text so far, which the model never sees again. */
+    const stoppedMessage = (partial) => ({
+        role: 'assistant',
+        content: partial ? `${partial}\n\n(Stopped before the end.)` : 'Stopped.',
+        isStopped: true
+    });
+
+    const handleStop = () => abortRef.current?.abort();
+
     const handleSend = async (textOverride = null) => {
         const textToSend = textOverride || input;
         if (isTyping || !textToSend.trim() || !currentConversationId) return;
@@ -114,34 +153,34 @@ export const AICopilot = ({
         // Update title/list in background
         setConversations(aiService.getConversations());
 
+        const { options } = beginReply(isStillOpen);
+        let partial = '';
+        const onText = options.onText;
+        options.onText = (text) => { partial = text; onText(text); };
+
         try {
-            // Use chat method for history awareness
-            // Filter history to exclude the just-added message (already in state) 
-            // and system messages if we handled them differently. 
-            // For now, pass previous messages as history.
-            const history = messages.filter(m => m.role !== 'system'); // Exclude system greeting if any
-            
-            const responseText = await aiService.chat(userMessage.content, history, contextCode, diagramType);
+            // Earlier messages are the history; the service leaves out error and stopped messages
+            const history = messages.filter(m => m.role !== 'system');
+
+            const responseText = await aiService.chat(userMessage.content, history, contextCode, diagramType, options);
 
             const botMessage = { role: 'assistant', content: responseText };
             if (isStillOpen()) setMessages(prev => [...prev, botMessage]);
             aiService.addMessageToConversation(conversationId, botMessage);
 
         } catch (error) {
-            const errorMessage = { 
-                role: 'assistant', 
-                content: `Error: ${error.message}`, 
-                isError: true 
-            };
+            const errorMessage = error?.name === 'AbortError'
+                ? stoppedMessage(partial)
+                : { role: 'assistant', content: `Error: ${error.message}`, isError: true };
             if (isStillOpen()) setMessages(prev => [...prev, errorMessage]);
-            // Saved so the user sees the error after a reload. The service leaves errors out of model history.
+            // Saved so the user sees the message after a reload. The service leaves these out of model history.
             aiService.addMessageToConversation(conversationId, errorMessage);
-            
-            if (error.message.includes('API Key is missing')) {
+
+            if (error?.code === 'NOT_CONFIGURED') {
                 setShowSettings(true);
             }
         } finally {
-            setIsTyping(false);
+            endReply();
             setConversations(aiService.getConversations()); // Refresh list for last modified
         }
     };
@@ -161,7 +200,12 @@ export const AICopilot = ({
         });
         
         setIsTyping(true);
-        
+        const { options } = beginReply(isStillOpen);
+        let partial = '';
+        const onText = options.onText;
+        options.onText = (text) => { partial = text; onText(text); };
+        let history = [];
+
         try {
             // Get history (excluding valid system prompt stuff if needed)
             // We need to fetch the actual conversation from service to be sure
@@ -169,7 +213,7 @@ export const AICopilot = ({
             if (!convo || convo.messages.length === 0) return;
 
              // Remove the last message if it was assistant
-            let history = [...convo.messages];
+            history = [...convo.messages];
             if (history[history.length - 1].role === 'assistant') {
                 history.pop();
             }
@@ -186,7 +230,7 @@ export const AICopilot = ({
             // My service modification handled `__REGENERATE__` to look up the last user message.
             
             // We pass the SPECIAL flag as the message
-            const responseText = await aiService.chat('__REGENERATE__', history, contextCode, diagramType);
+            const responseText = await aiService.chat('__REGENERATE__', history, contextCode, diagramType, options);
 
             const botMessage = { role: 'assistant', content: responseText };
             if (isStillOpen()) setMessages(prev => [...prev, botMessage]);
@@ -195,14 +239,17 @@ export const AICopilot = ({
             aiService.updateConversation(conversationId, { messages: [...history, botMessage] });
 
         } catch (error) {
-             const errorMessage = { 
-                role: 'assistant', 
-                content: `Error: ${error.message}`, 
-                isError: true 
-            };
-            if (isStillOpen()) setMessages(prev => [...prev, errorMessage]);
+            if (error?.name === 'AbortError') {
+                const stopped = stoppedMessage(partial);
+                if (isStillOpen()) setMessages(prev => [...prev, stopped]);
+                aiService.updateConversation(conversationId, { messages: [...history, stopped] });
+            } else {
+                const errorMessage = { role: 'assistant', content: `Error: ${error.message}`, isError: true };
+                if (isStillOpen()) setMessages(prev => [...prev, errorMessage]);
+                if (error?.code === 'NOT_CONFIGURED') setShowSettings(true);
+            }
         } finally {
-            setIsTyping(false);
+            endReply();
         }
     };
 
@@ -363,7 +410,7 @@ export const AICopilot = ({
                         }
 
                         // Apply Code is offered only when the reply holds a code block
-                        const codeBlock = (msg.role === 'assistant' && !msg.isError) ? extractCodeBlock(content) : null;
+                        const codeBlock = (msg.role === 'assistant' && !msg.isError && !msg.isStopped) ? extractCodeBlock(content) : null;
 
                         return (
                         <div 
@@ -375,9 +422,11 @@ export const AICopilot = ({
                                 className={`max-w-[90%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap shadow-sm ${
                                     msg.role === 'user' 
                                     ? 'bg-indigo-600 text-white rounded-br-none' 
-                                    : msg.isError 
+                                    : msg.isError
                                         ? 'bg-red-50 text-red-700 border border-red-100'
-                                        : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
+                                        : msg.isStopped
+                                            ? 'bg-slate-50 text-slate-500 border border-dashed border-slate-300 rounded-bl-none'
+                                            : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
                                 }`}
                             >
                                 {content}
@@ -444,14 +493,22 @@ export const AICopilot = ({
                     )}
 
                     {isTyping && (
-                        <div className="flex items-start">
-                            <div className="bg-white px-4 py-3 rounded-lg rounded-bl-none border border-slate-200 shadow-sm">
-                                <div className="flex gap-1">
-                                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
-                                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
-                                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
-                                </div>
+                        <div className="flex flex-col items-start" aria-live="polite">
+                            <div className="max-w-[90%] bg-white px-4 py-3 rounded-lg rounded-bl-none border border-slate-200 shadow-sm text-sm text-slate-700 whitespace-pre-wrap">
+                                {streamingText || (
+                                    <div className="flex gap-1" aria-label="Smith is replying">
+                                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
+                                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
+                                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
+                                    </div>
+                                )}
                             </div>
+                            {chatStatus && (
+                                <div className="mt-1 text-xs text-slate-500 flex items-center gap-1.5">
+                                    <i className="fas fa-circle-notch animate-spin"></i>
+                                    {chatStatus === 'repairing' ? 'Repairing the code…' : 'Checking the code…'}
+                                </div>
+                            )}
                         </div>
                     )}
                     <div ref={messagesEndRef} />
@@ -478,13 +535,26 @@ export const AICopilot = ({
                         rows={isInputExpanded ? 10 : 1}
                         style={{ height: isInputExpanded ? undefined : 'auto' }}
                     />
-                    <button
-                        onClick={() => handleSend()}
-                        disabled={!input.trim() || isTyping}
-                        className="absolute right-2 bottom-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-all shadow-sm w-8 h-8 flex items-center justify-center"
-                    >
-                        <i className="fas fa-paper-plane text-xs"></i>
-                    </button>
+                    {isTyping ? (
+                        <button
+                            onClick={handleStop}
+                            title="Stop the reply"
+                            aria-label="Stop the reply"
+                            className="absolute right-2 bottom-2 p-2 bg-slate-700 text-white rounded-lg hover:bg-slate-900 transition-all shadow-sm w-8 h-8 flex items-center justify-center"
+                        >
+                            <i className="fas fa-stop text-xs"></i>
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => handleSend()}
+                            disabled={!input.trim()}
+                            title="Send"
+                            aria-label="Send"
+                            className="absolute right-2 bottom-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-all shadow-sm w-8 h-8 flex items-center justify-center"
+                        >
+                            <i className="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    )}
                 </div>
                 <div className="mt-2 flex justify-center text-[10px] text-slate-400 gap-4">
                     <span><i className="fas fa-keyboard mr-1"></i>Enter to send</span>

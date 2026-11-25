@@ -1,12 +1,14 @@
 /**
- * AI Service for communicating with LLM providers (Gemini, etc.)
- * Handles API keys, model configuration, and prompt generation.
+ * AI Service: settings, conversation storage, prompts and chat validation for Syntext Smith.
+ * Model calls go through the provider-neutral layer in ./llm/.
  */
 import { validateDiagram } from './diagram-tools/validate.js';
 import { LanguageDetector } from './auto-fix/language-detector.js';
 import { extractCodeBlock } from '../utils/code-extract.js';
+import { PROVIDERS, PROVIDER_IDS, streamTurn, missingSetting, textMessage, LLMError } from './llm/index.js';
 
-export const DEFAULT_MODEL = 'gemini-3.8-flash';
+export const DEFAULT_PROVIDER = 'gemini';
+export const DEFAULT_MODEL = PROVIDERS.gemini.defaultModel;
 
 // Model ids that Google has retired or shuts down on 1 December 2026.
 // A stored setting that names one of these falls back to DEFAULT_MODEL, so existing users keep a working chat.
@@ -17,38 +19,64 @@ const RETIRED_MODELS = new Set([
     'gemini-2.5-flash', 'gemini-2.5-pro'
 ]);
 
+const SETTINGS_KEY = 'universal_diagram_ai_settings';
+// Keys for this browser tab only. sessionStorage clears when the tab closes.
+const SESSION_KEYS_KEY = 'universal_diagram_ai_keys';
+
+const defaultProviders = () => Object.fromEntries(PROVIDER_IDS.map(id => [id, {
+    model: PROVIDERS[id].defaultModel,
+    apiKey: '',
+    ...(PROVIDERS[id].needsBaseUrl ? { baseUrl: '' } : {})
+}]));
+
+/**
+ * Settings shape:
+ *   { provider, temperature, rememberKeys, providers: { [id]: { model, apiKey, baseUrl? } } }
+ * API keys are kept in sessionStorage, and in localStorage only when rememberKeys is true.
+ */
 export class AIService {
     constructor() {
-        this.STORAGE_KEY = 'universal_diagram_ai_settings';
+        this.STORAGE_KEY = SETTINGS_KEY;
         this.settings = this.loadSettings();
         this.usageTotals = { inputTokens: 0, outputTokens: 0, calls: 0 };
     }
 
-    /**
-     * Load settings from local storage or set defaults
-     */
     loadSettings() {
-        const defaults = {
-            provider: 'gemini',
-            model: DEFAULT_MODEL,
-            apiKey: '',
-            temperature: 0.7
-        };
-        const stored = this.readStoredJSON(this.STORAGE_KEY);
-        const settings = stored ? { ...defaults, ...stored } : defaults;
-        if (!settings.model || RETIRED_MODELS.has(settings.model)) {
-            settings.model = DEFAULT_MODEL;
+        const stored = this.readStoredJSON(SETTINGS_KEY, localStorage);
+        const sessionKeys = this.readStoredJSON(SESSION_KEYS_KEY, sessionStorage) || {};
+        const settings = { provider: DEFAULT_PROVIDER, temperature: 0.7, rememberKeys: false, providers: defaultProviders() };
+
+        if (stored && !stored.providers) {
+            // Settings saved before November 2026: Gemini only, with the key in localStorage.
+            // A user who saved a key keeps the key remembered, as before.
+            settings.temperature = stored.temperature ?? settings.temperature;
+            settings.providers.gemini.model = stored.model || DEFAULT_MODEL;
+            settings.providers.gemini.apiKey = stored.apiKey || '';
+            settings.rememberKeys = !!stored.apiKey;
+        } else if (stored) {
+            settings.provider = PROVIDERS[stored.provider] ? stored.provider : DEFAULT_PROVIDER;
+            settings.temperature = stored.temperature ?? settings.temperature;
+            settings.rememberKeys = !!stored.rememberKeys;
+            for (const id of PROVIDER_IDS) settings.providers[id] = { ...settings.providers[id], ...(stored.providers[id] || {}) };
         }
+
+        for (const id of PROVIDER_IDS) {
+            if (sessionKeys[id]) settings.providers[id].apiKey = sessionKeys[id];
+        }
+        const gemini = settings.providers.gemini;
+        if (!gemini.model || RETIRED_MODELS.has(gemini.model)) gemini.model = DEFAULT_MODEL;
+
+        if (stored && !stored.providers) this.persist(settings);
         return settings;
     }
 
     /**
-     * Read a JSON value from local storage.
+     * Read a JSON value from browser storage.
      * Returns null when the entry is missing or holds invalid JSON, so a corrupt entry cannot stop the app from loading.
      */
-    readStoredJSON(key) {
+    readStoredJSON(key, storage = localStorage) {
         try {
-            const stored = localStorage.getItem(key);
+            const stored = storage.getItem(key);
             const parsed = stored ? JSON.parse(stored) : null;
             return parsed && typeof parsed === 'object' ? parsed : null;
         } catch (e) {
@@ -57,22 +85,51 @@ export class AIService {
         }
     }
 
+    /** Write settings: keys go to sessionStorage always, and to localStorage only when remembered. */
+    persist(settings) {
+        const keys = Object.fromEntries(PROVIDER_IDS.map(id => [id, settings.providers[id].apiKey || '']).filter(([, k]) => k));
+        const providers = Object.fromEntries(PROVIDER_IDS.map(id => {
+            const { apiKey, ...rest } = settings.providers[id];
+            return [id, settings.rememberKeys ? { ...rest, apiKey } : rest];
+        }));
+        try {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, providers }));
+            sessionStorage.setItem(SESSION_KEYS_KEY, JSON.stringify(keys));
+        } catch (e) {
+            console.warn('[AI] Could not save settings', e);
+        }
+    }
+
     /**
-     * Save settings to local storage
-     * @param {Object} newSettings 
+     * Save settings. Accepts any top-level fields, and per-provider fields under `providers`.
      */
     updateSettings(newSettings) {
-        this.settings = { ...this.settings, ...newSettings };
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.settings));
-        return this.settings;
+        const providers = { ...this.settings.providers };
+        for (const [id, values] of Object.entries(newSettings.providers || {})) {
+            if (PROVIDERS[id]) providers[id] = { ...providers[id], ...values };
+        }
+        this.settings = { ...this.settings, ...newSettings, providers };
+        this.persist(this.settings);
+        return this.getSettings();
     }
 
+    /** A copy of every setting, including each provider's own fields. */
     getSettings() {
-        return { ...this.settings };
+        return { ...this.settings, providers: Object.fromEntries(PROVIDER_IDS.map(id => [id, { ...this.settings.providers[id] }])) };
     }
 
-    hasApiKey() {
-        return !!this.settings.apiKey;
+    /** The config the model layer needs for the chosen provider: { provider, model, apiKey, baseUrl? }. */
+    getActiveConfig() {
+        return { provider: this.settings.provider, ...this.settings.providers[this.settings.provider] };
+    }
+
+    /** A sentence naming the missing setting, or null when Smith is ready to call the model. */
+    missingSetting() {
+        return missingSetting(this.getActiveConfig());
+    }
+
+    isConfigured() {
+        return !this.missingSetting();
     }
 
     // --- Conversation Management ---
@@ -148,15 +205,18 @@ export class AIService {
     }
 
     /**
-     * Chat with history awareness
+     * Chat with history awareness.
+     * @param {object} options
+     *   trace     an object that chat() fills in for the evaluation set:
+     *             { language, firstStatus, firstError, repairAttempts, finalStatus }
+     *   onText    called with the reply so far, each time more text streams in
+     *   onStatus  called with 'checking' or 'repairing' while the code block is validated
+     *   signal    an AbortSignal; aborting stops the reply and throws an AbortError
      */
-    /**
-     * @param {object|null} trace  Optional object that chat() fills in for the evaluation set:
-     *   { language, firstStatus, firstError, repairAttempts, finalStatus }
-     */
-    async chat(message, history, contextCode, diagramType, trace = null) {
-         if (!this.hasApiKey()) {
-            throw new Error('API Key is missing. Please configure it in settings.');
+    async chat(message, history, contextCode, diagramType, { trace = null, onText, onStatus, signal } = {}) {
+        const missing = this.missingSetting();
+        if (missing) {
+            throw new LLMError(missing, { provider: this.settings.provider, code: 'NOT_CONFIGURED' });
         }
 
         // Check if message is a regeneration request
@@ -171,8 +231,8 @@ export class AIService {
             history = history.slice(0, lastUserIndex);
         }
 
-        // Error notices shown in the chat are not model turns
-        history = history.filter(m => !m.isError);
+        // Error notices and stopped replies shown in the chat are not model turns
+        history = history.filter(m => !m.isError && !m.isStopped);
 
         const systemPrompt = this.getSystemPrompt(diagramType);
         const userContent = `
@@ -186,18 +246,20 @@ ${contextCode || '(Empty)'}
 User: ${message}
 `;
         
-        let responseText = await this.callLLM(systemPrompt, userContent, history);
+        let responseText = await this.callLLM(systemPrompt, userContent, history, { onText, signal });
 
         // --- VALIDATION LOOP FOR CHAT ---
         // If response contains code block, valid it.
         // We only validate if it looks like there is code.
         const block = extractCodeBlock(responseText);
-        
+
         if (block) {
             let extractedCode = block.code;
             // The reply can be in a different language from the editor's current type
             const language = this.resolveLanguage(block, diagramType);
+            onStatus?.('checking');
             let validation = await this.validateSyntax(extractedCode, language);
+            signal?.throwIfAborted();
             if (trace) {
                 trace.language = language;
                 trace.firstStatus = validation.status;
@@ -212,16 +274,20 @@ User: ${message}
             while (!validation.valid && attempt < MAX_CHAT_RETRIES) {
                 console.log(`[AI Chat] Auto-correcting syntax error: ${validation.error}`);
                 
+                onStatus?.('repairing');
                 try {
                      extractedCode = await this.fixDiagram(extractedCode, validation.error, language);
+                     // The repair itself runs to the end; a Stop during the repair discards its result
+                     signal?.throwIfAborted();
                      validation = await this.validateSyntax(extractedCode, language);
-                     
+
                      if (validation.valid) {
                          // Replace the code block in the original text with the fixed code
                          const fixedBlock = `\`\`\`${language}\n${extractedCode}\n\`\`\``;
                          responseText = responseText.replace(block.raw, () => fixedBlock);
                      }
                 } catch (e) {
+                    if (e?.name === 'AbortError') throw e;
                     console.error("[AI Chat] Auto-correction failed:", e);
                     break;
                 }
@@ -316,82 +382,49 @@ User: ${message}
     }
 
     /**
-     * Call the LLM Provider (currently hardcoded for Gemini)
+     * Send one text turn to the chosen provider and return the whole reply text.
+     * @param {object} options  { onText(textSoFar), signal }
      */
-    async callLLM(systemInstructions, userContent, history = []) {
-        const { apiKey, model, temperature } = this.settings;
-        
-        // Gemini API Endpoint. The key travels in a header, so the key stays out of the URL.
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-
-        // Map internal roles to Gemini roles
-        const contents = history.map(msg => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }]
-        }));
-
-        // Add current user message
-        contents.push({
-            role: 'user',
-            parts: [{ text: userContent }]
-        });
-
-        const payload = {
-            contents,
-            generationConfig: {
-                temperature: parseFloat(temperature),
-                maxOutputTokens: 8192
-            }
-        };
-
-        if (systemInstructions && systemInstructions.trim()) {
-            payload.systemInstruction = { parts: [{ text: systemInstructions }] };
-        }
-
+    async callLLM(systemInstructions, userContent, history = [], { onText, signal } = {}) {
+        const messages = [...history.map(msg => textMessage(msg.role === 'assistant' ? 'assistant' : 'user', msg.content)), textMessage('user', userContent)];
+        let text = '';
+        let done = null;
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': apiKey
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+            for await (const event of streamTurn(this.getActiveConfig(), {
+                system: systemInstructions,
+                messages,
+                temperature: Number(this.settings.temperature),
+                signal
+            })) {
+                if (event.type === 'text') {
+                    text += event.text;
+                    onText?.(text);
+                } else if (event.type === 'done') {
+                    done = event;
+                }
             }
-
-            const data = await response.json();
-            
-            if (!data.candidates || data.candidates.length === 0) {
-                 const blockReason = data.promptFeedback?.blockReason;
-                 throw new Error(blockReason ? `The AI blocked the request (${blockReason}).` : 'No response generated from AI.');
-            }
-
-            // Running token totals, read by the evaluation set to cost each case
-            const usage = data.usageMetadata || {};
-            this.usageTotals.inputTokens += usage.promptTokenCount || 0;
-            this.usageTotals.outputTokens += (usage.candidatesTokenCount || 0) + (usage.thoughtsTokenCount || 0);
-            this.usageTotals.calls += 1;
-
-            const candidate = data.candidates[0];
-            const text = (candidate.content?.parts || []).map(part => part.text || '').join('');
-
-            if (candidate.finishReason === 'MAX_TOKENS') {
-                throw new Error('The AI reply was cut off before the end because the reply reached the length limit. Ask for a smaller diagram, or ask for the change in smaller steps.');
-            }
-            if (!text) {
-                throw new Error(`The AI returned no text (finish reason: ${candidate.finishReason || 'unknown'}).`);
-            }
-
-            return text;
-
         } catch (error) {
-            console.error('AI Service Error:', error);
+            if (error?.name !== 'AbortError') console.error('AI Service Error:', error);
             throw error;
         }
+
+        // Running token totals, read by the evaluation set to cost each case
+        if (done) {
+            this.usageTotals.inputTokens += done.usage.inputTokens;
+            this.usageTotals.outputTokens += done.usage.outputTokens;
+        }
+        this.usageTotals.calls += 1;
+
+        if (done?.stopReason === 'max_tokens') {
+            throw new Error('The AI reply was cut off before the end because the reply reached the length limit. Ask for a smaller diagram, or ask for the change in smaller steps.');
+        }
+        if (done?.stopReason === 'blocked') {
+            throw new Error(`The AI declined to answer (${done.finishReason || 'blocked'}). Try rewording the request.`);
+        }
+        if (!text) {
+            throw new Error(`The AI returned no text (finish reason: ${done?.finishReason || 'unknown'}).`);
+        }
+        return text;
     }
 }
 

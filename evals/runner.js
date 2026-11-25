@@ -52,7 +52,7 @@ const PATHS = {
         }
 
         const trace = {};
-        const reply = await aiService.chat(caseDef.prompt, [], caseDef.startCode || '', editorType, trace);
+        const reply = await aiService.chat(caseDef.prompt, [], caseDef.startCode || '', editorType, { trace });
         const block = extractCodeBlock(reply);
         if (!block) return { code: null, type: null, firstStatus: null, repairAttempts: 0, note: 'The reply held no code block.' };
         // A case without a fixed type lets the reply choose the notation
@@ -121,6 +121,7 @@ export function summarise(records) {
 
 export function buildReport(records, { pathName, cases, startedAt }) {
     const settings = aiService.getSettings();
+    const active = aiService.getActiveConfig();
     const byGroup = {};
     for (const group of GROUPS) {
         const inGroup = records.filter(r => r.group === group);
@@ -130,8 +131,8 @@ export function buildReport(records, { pathName, cases, startedAt }) {
         schema: 1,
         startedAt,
         finishedAt: new Date().toISOString(),
-        provider: settings.provider,
-        model: settings.model,
+        provider: active.provider,
+        model: active.model,
         temperature: Number(settings.temperature),
         path: pathName,
         promptVersion: promptVersion(cases),

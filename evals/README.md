@@ -18,8 +18,8 @@ The unit tests make no model calls and no network calls. They cover the shared v
    npm run eval
    ```
 
-2. If the page says that no API key is saved, open the editor at the same address, open Syntext Smith, and add a key in Settings. The page reads the key from the same browser storage as the app, so the key stays in the browser.
-3. Choose the path, the model and, if needed, a filter. Press **Run**.
+2. The page starts from the provider, model and base address saved in Smith's settings. Smith keeps keys for one browser tab unless "Remember keys in this browser" is ticked, so a tab-only key is not visible on the evaluation page. Either tick that option in Smith's settings, or paste the key into the page's "API key" field. The page holds a pasted key in memory only, and changes made on the page are not saved.
+3. Choose the path, the provider, the model and, if needed, a filter. Press **Run**.
 4. When the run finishes, press **Download report** and save the file in `evals/results/`.
 
 Cases run one at a time, with a pause between cases, so that the token count per case is exact and free-tier rate limits hold. A full run of 60 cases takes several minutes.
@@ -67,6 +67,6 @@ A case passes when every check passes. A check that cannot run (for example, the
 
 ## Report
 
-The report records the provider, model, temperature, path, a fingerprint of the system prompts (`promptVersion`), and whether the public Kroki server was used. For each case, the report records the outcome, every check, the first-attempt validation result, repair attempts, tokens, seconds and the output code.
+The report records the provider (`gemini`, `anthropic` or `openai-compatible`), model, temperature, path, a fingerprint of the system prompts (`promptVersion`), and whether the public Kroki server was used. For each case, the report records the outcome, every check, the first-attempt validation result, repair attempts, tokens, seconds and the output code.
 
 The headline numbers are the **pass rate** and the **first-attempt parse rate**: the share of create and edit answers that parsed before any repair. Both numbers are given overall and for each group.
