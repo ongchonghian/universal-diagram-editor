@@ -86,4 +86,6 @@ Since Phase 5 (26 November 2026), Smith can call `render_diagram` to look at its
 
 On 26 November 2026, `gemini-3.8-flash` passed all four image cases (`results/2026-11-26-loop-image-gemini-3.8-flash.json`). Smith looked at the render six times in four cases. The image cases used 2 to 5 times the input tokens of the Phase 4 create cases in the same notation: for example, 38,159 for the BPMN sketch against an average of 7,047. The image cases also carry an attached picture, so the figures overstate the cost of looking alone.
 
+A second run the same day (`results/2026-11-26-loop-image-rerun-gemini-3.8-flash.json`) measured three cost cuts: only the latest render is resent, a turn allows two looks at most, and the prompt asks for one look unless the layout changes. All four cases passed again. Input tokens fell from 75,784 to 74,423, which is within the variation between single runs at temperature 0.7. The PlantUML sketch looked once instead of twice and used 9,972 input tokens instead of 19,509. The BPMN sketch still looked twice, after a layout edit, and used 42,342: most of that cost is the BPMN XML, about 5,800 characters, sent again at every step.
+
 The headline numbers are the **pass rate** and the **first-attempt parse rate**: the share of create and edit answers that parsed before any repair. Both numbers are given overall and for each group.
