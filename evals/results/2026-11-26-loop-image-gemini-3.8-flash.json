@@ -1,0 +1,255 @@
+{
+  "schema": 1,
+  "startedAt": "2026-11-26T01:21:25.035Z",
+  "finishedAt": "2026-11-26T01:23:32.518Z",
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "temperature": 0.7,
+  "path": "loop",
+  "promptVersion": "5259d0a5",
+  "krokiServer": "public kroki.io",
+  "summary": {
+    "total": 4,
+    "pass": 4,
+    "fail": 0,
+    "unverified": 0,
+    "error": 0,
+    "passRate": 100,
+    "firstAttemptParseRate": 100,
+    "inputTokens": 75784,
+    "outputTokens": 10943,
+    "seconds": 123
+  },
+  "byGroup": {
+    "image": {
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "unverified": 0,
+      "error": 0,
+      "passRate": 100,
+      "firstAttemptParseRate": 100,
+      "inputTokens": 75784,
+      "outputTokens": 10943,
+      "seconds": 123
+    }
+  },
+  "cases": [
+    {
+      "id": "image-whiteboard-flowchart",
+      "group": "image",
+      "type": "mermaid",
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "looks": 1,
+      "note": "3 model steps. Looked at the render once.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "flowchart TD\n    A[\"Order received\"] --> B[\"Check stock\"]\n    B --> C{\"In stock?\"}\n    C -- no --> D[\"Reorder\"]\n    D --> B\n    C -- yes --> E[\"Pack order\"]\n    E --> F[\"Ship\"]\n\n    classDef blueDecision stroke:#1e5cb3,stroke-width:2px,color:#1e5cb3;\n    class C blueDecision;\n",
+      "seconds": 26.4,
+      "inputTokens": 9205,
+      "outputTokens": 2390,
+      "modelCalls": 3
+    },
+    {
+      "id": "image-paper-sequence",
+      "group": "image",
+      "type": "plantuml",
+      "task": "create",
+      "outputType": "plantuml",
+      "firstStatus": "valid",
+      "repairAttempts": 1,
+      "looks": 2,
+      "note": "5 model steps. Looked at the render 2 times.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\nhide footbox\n\nparticipant Browser\nparticipant API\nparticipant Database\n\nBrowser -> API : POST /login\nAPI -> Database : find user\nDatabase --> API : user row\nAPI --> Browser : token\n@enduml",
+      "seconds": 24.2,
+      "inputTokens": 19509,
+      "outputTokens": 1082,
+      "modelCalls": 5
+    },
+    {
+      "id": "image-paper-process-bpmn",
+      "group": "image",
+      "type": "bpmn",
+      "task": "create",
+      "outputType": "bpmn",
+      "firstStatus": "valid",
+      "repairAttempts": 1,
+      "looks": 2,
+      "note": "5 model steps. Looked at the render 2 times.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\"\n                  xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\"\n                  xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\"\n                  id=\"Definitions_1\"\n                  targetNamespace=\"http://bpmn.io/schema/bpmn\">\n  <bpmn:process id=\"Process_Claim\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_1\" name=\"Start\">\n      <bpmn:outgoing>Flow_1</bpmn:outgoing>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_SubmitClaim\" name=\"Submit claim\">\n      <bpmn:incoming>Flow_1</bpmn:incoming>\n      <bpmn:outgoing>Flow_2</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:task id=\"Task_ReviewClaim\" name=\"Review claim\">\n      <bpmn:incoming>Flow_2</bpmn:incoming>\n      <bpmn:outgoing>Flow_3</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\">\n      <bpmn:incoming>Flow_3</bpmn:incoming>\n      <bpmn:outgoing>Flow_Yes</bpmn:outgoing>\n      <bpmn:outgoing>Flow_No</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:task id=\"Task_PayClaim\" name=\"Pay claim\">\n      <bpmn:incoming>Flow_Yes</bpmn:incoming>\n      <bpmn:outgoing>Flow_4</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:endEvent id=\"EndEvent_Pay\">\n      <bpmn:incoming>Flow_4</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:task id=\"Task_RejectClaim\" name=\"Reject claim\">\n      <bpmn:incoming>Flow_No</bpmn:incoming>\n      <bpmn:outgoing>Flow_5</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:endEvent id=\"EndEvent_Reject\">\n      <bpmn:incoming>Flow_5</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"StartEvent_1\" targetRef=\"Task_SubmitClaim\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_SubmitClaim\" targetRef=\"Task_ReviewClaim\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_ReviewClaim\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_PayClaim\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"no\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_RejectClaim\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_PayClaim\" targetRef=\"EndEvent_Pay\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_RejectClaim\" targetRef=\"EndEvent_Reject\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_1\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_1\" bpmnElement=\"Process_Claim\">\n      <bpmndi:BPMNShape id=\"StartEvent_1_di\" bpmnElement=\"StartEvent_1\">\n        <dc:Bounds x=\"162\" y=\"182\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"168\" y=\"225\" width=\"25\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_SubmitClaim_di\" bpmnElement=\"Task_SubmitClaim\">\n        <dc:Bounds x=\"250\" y=\"160\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_ReviewClaim_di\" bpmnElement=\"Task_ReviewClaim\">\n        <dc:Bounds x=\"400\" y=\"160\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"555\" y=\"175\" width=\"50\" height=\"50\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"548\" y=\"145\" width=\"65\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_PayClaim_di\" bpmnElement=\"Task_PayClaim\">\n        <dc:Bounds x=\"670\" y=\"80\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"EndEvent_Pay_di\" bpmnElement=\"EndEvent_Pay\">\n        <dc:Bounds x=\"832\" y=\"102\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_RejectClaim_di\" bpmnElement=\"Task_RejectClaim\">\n        <dc:Bounds x=\"670\" y=\"240\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"EndEvent_Reject_di\" bpmnElement=\"EndEvent_Reject\">\n        <dc:Bounds x=\"832\" y=\"262\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNEdge id=\"Flow_1_di\" bpmnElement=\"Flow_1\">\n        <di:waypoint x=\"198\" y=\"200\" />\n        <di:waypoint x=\"250\" y=\"200\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_2_di\" bpmnElement=\"Flow_2\">\n        <di:waypoint x=\"350\" y=\"200\" />\n        <di:waypoint x=\"400\" y=\"200\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_3_di\" bpmnElement=\"Flow_3\">\n        <di:waypoint x=\"500\" y=\"200\" />\n        <di:waypoint x=\"555\" y=\"200\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_Yes_di\" bpmnElement=\"Flow_Yes\">\n        <di:waypoint x=\"605\" y=\"200\" />\n        <di:waypoint x=\"635\" y=\"200\" />\n        <di:waypoint x=\"635\" y=\"120\" />\n        <di:waypoint x=\"670\" y=\"120\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"642\" y=\"102\" width=\"22\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_No_di\" bpmnElement=\"Flow_No\">\n        <di:waypoint x=\"605\" y=\"200\" />\n        <di:waypoint x=\"635\" y=\"200\" />\n        <di:waypoint x=\"635\" y=\"280\" />\n        <di:waypoint x=\"670\" y=\"280\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"644\" y=\"285\" width=\"20\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_4_di\" bpmnElement=\"Flow_4\">\n        <di:waypoint x=\"770\" y=\"120\" />\n        <di:waypoint x=\"832\" y=\"120\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_5_di\" bpmnElement=\"Flow_5\">\n        <di:waypoint x=\"770\" y=\"280\" />\n        <di:waypoint x=\"832\" y=\"280\" />\n      </bpmndi:BPMNEdge>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 60.9,
+      "inputTokens": 38159,
+      "outputTokens": 7002,
+      "modelCalls": 5
+    },
+    {
+      "id": "image-marked-up-edit",
+      "group": "image",
+      "type": "mermaid",
+      "task": "edit",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "looks": 1,
+      "note": "3 model steps. Looked at the render once.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "no-removals",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "flowchart LR\n    Draft --> Review\n    Review --> Legal[\"Legal check\"]\n    Legal --> Publish",
+      "seconds": 11.5,
+      "inputTokens": 8911,
+      "outputTokens": 469,
+      "modelCalls": 3
+    }
+  ]
+}

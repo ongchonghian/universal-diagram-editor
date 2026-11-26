@@ -84,4 +84,6 @@ The report records the provider (`gemini`, `anthropic` or `openai-compatible`), 
 
 Since Phase 5 (26 November 2026), Smith can call `render_diagram` to look at its draft. Each look adds a model step and an image to the conversation, so compare the tokens per case with the Phase 4 reports to check the cost of looking.
 
+On 26 November 2026, `gemini-3.8-flash` passed all four image cases (`results/2026-11-26-loop-image-gemini-3.8-flash.json`). Smith looked at the render six times in four cases. The image cases used 2 to 5 times the input tokens of the Phase 4 create cases in the same notation: for example, 38,159 for the BPMN sketch against an average of 7,047. The image cases also carry an attached picture, so the figures overstate the cost of looking alone.
+
 The headline numbers are the **pass rate** and the **first-attempt parse rate**: the share of create and edit answers that parsed before any repair. Both numbers are given overall and for each group.
