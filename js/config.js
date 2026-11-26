@@ -131,6 +131,30 @@ Alice <-- Bob: another authentication Response
     },
     wavedrom: { label: 'Wavedrom', extensions: ['.json5', '.json'], monacoLang: 'json', docs: 'https://wavedrom.com/tutorial.html', example: `{ signal: [\n  { name: "clock", wave: "p......" },\n  { name: "data",  wave: "x.345x.", data: ["head", "body", "tail"] },\n  { name: "valid", wave: "0.1..0." }\n]}` },
     wireviz: { label: 'Wireviz', extensions: ['.yaml', '.yml'], monacoLang: 'yaml', docs: 'https://github.com/formatc1702/WireViz', example: `connectors:\n  X1:\n    type: D-Sub\n    subtype: female\n    pinlabels: [DCD, RX, TX, DTR, GND]\n  X2:\n    type: Molex KK 254\n    subtype: female\n    pinlabels: [GND, RX, TX]\n\ncables:\n  W1:\n    gauge: 0.25 mm2\n    length: 0.2\n    color_code: DIN\n    wirecount: 3\n\nconnections:\n  -\n    - X1: [5, 2, 3]\n    - W1: [1, 2, 3]\n    - X2: [1, 3, 2]` },
+    archify: {
+        label: 'Archify',
+        extensions: ['.json'],
+        monacoLang: 'json',
+        docs: 'https://github.com/tt-a1i/archify',
+        example: `{
+  "schema_version": 1,
+  "diagram_type": "tree",
+  "meta": {
+    "title": "Online shop",
+    "subtitle": "What the shop does, grouped by team"
+  },
+  "nodes": [
+    { "id": "shop", "label": "Online shop" },
+    { "id": "orders", "label": "Orders", "parent": "shop" },
+    { "id": "payments", "label": "Payments", "parent": "shop" },
+    { "id": "receive", "label": "Receive the order", "parent": "orders" },
+    { "id": "pack", "label": "Pack the order", "parent": "orders" },
+    { "id": "ship", "label": "Ship the order", "parent": "orders" },
+    { "id": "card", "label": "Card payment", "parent": "payments" },
+    { "id": "refund", "label": "Refund", "parent": "payments" }
+  ]
+}`
+    },
     c4: {
         label: 'C4 Model',
         extensions: ['.c4', '.puml', '.json'],

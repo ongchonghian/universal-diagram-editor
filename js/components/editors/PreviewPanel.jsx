@@ -5,6 +5,7 @@ import { MERMAID_SNIPPETS } from '../../config.js';
 
 export const PreviewPanel = ({ 
     svgContent, 
+    htmlContent, // A whole page from a renderer that returns HTML in place of SVG (Archify)
     previewImage, 
     loading, 
     error, 
@@ -135,6 +136,19 @@ export const PreviewPanel = ({
     // Inject SVG content safely
     const renderContent = () => {
         if (loading) return null;
+
+        if (htmlContent) {
+            // The page runs its own viewer script. The sandbox gives the page a separate origin,
+            // so the script cannot read the editor's saved drafts or API keys.
+            return (
+                <iframe
+                    title="Diagram preview"
+                    srcDoc={htmlContent}
+                    sandbox="allow-scripts allow-downloads"
+                    className="flex-1 w-full min-h-0 border-0 bg-white"
+                />
+            );
+        }
         
         if (svgContent) {
             return (

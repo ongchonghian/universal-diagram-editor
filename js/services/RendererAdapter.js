@@ -4,6 +4,7 @@ import { parseError } from '../error-diagnostics/index.js';
 import { lineInCode, cleanErrorMessage } from '../notations.js';
 import pako from 'pako';
 import mermaid from 'mermaid';
+import { renderArchify, isArchifyDocument } from './archify.js';
 
 /**
  * Unified Renderer Adapter
@@ -30,7 +31,7 @@ class RendererAdapter {
         }
     }
 
-    /** The Kroki server that renders every type except Mermaid. */
+    /** The Kroki server that renders every type except Mermaid and Archify. */
     getBaseUrl() {
         return this.baseUrl;
     }
@@ -58,7 +59,8 @@ class RendererAdapter {
      * @param {string} content - The diagram source code
      * @param {string} type - The diagram type (bpmn, mermaid, etc.)
      * @param {Object} options - execution options (editorRef, internal flags)
-     * @returns {Promise<{svg: string, url: string, error: object, errorLine: number}>}
+     * @returns {Promise<{svg: string, html?: string, url: string, error: object, errorLine: number}>}
+     *   `html` replaces `svg` for Archify, whose renderer returns a whole page
      */
     async render(content, type, options = {}) {
         if (!content || !content.trim()) {
@@ -84,6 +86,18 @@ class RendererAdapter {
         }
         if (type === 'likec4') {
             return { svg: null, url: '', error: null, skipped: true };
+        }
+
+        // --- ARCHIFY: drawn by the editor's own server, which returns a standalone page ---
+        if (type === 'archify') {
+            const result = await renderArchify(content);
+            return {
+                svg: null,
+                html: result.html,
+                url: '',
+                error: result.error,
+                errorLine: lineInCode(result.errorLine, content)
+            };
         }
 
         // --- MERMAID CLIENT-SIDE RENDERING ---
@@ -238,6 +252,7 @@ class RendererAdapter {
             try {
                 const json = JSON.parse(trimmed);
                 if (json.type === 'excalidraw') return 'excalidraw';
+                if (isArchifyDocument(json)) return 'archify';
                 if (json.$schema && json.$schema.includes('vega-lite')) return 'vegalite';
                 if (json.$schema && json.$schema.includes('vega')) return 'vega';
                 if (json.signals && json.scales && json.axes) return 'vega';

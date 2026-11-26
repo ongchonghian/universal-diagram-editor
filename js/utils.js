@@ -1,6 +1,7 @@
 // Utility functions for Kroki Universal Diagram Generator
 import { DIAGRAM_TYPES } from './config.js';
 import pako from 'pako';
+import { ARCHIFY_DIAGRAM_LABELS } from './services/archify.js';
 
 
 
@@ -95,6 +96,12 @@ export const detectSpecificModel = (code, type) => {
         if (/<(\w+:)?collaboration/i.test(cleanCode)) return 'Collaboration (Swimlanes)';
         if (/<(\w+:)?process/i.test(cleanCode)) return 'Process Flow';
         if (/<(\w+:)?definitions/i.test(cleanCode)) return 'BPMN Definition';
+    }
+
+    if (type === 'archify') {
+        // The diagram kind is read from the code as typed, so the badge keeps up while the JSON is incomplete
+        const kind = /"diagram_type"\s*:\s*"(\w+)"/.exec(cleanCode)?.[1];
+        if (ARCHIFY_DIAGRAM_LABELS[kind]) return ARCHIFY_DIAGRAM_LABELS[kind];
     }
 
     return DIAGRAM_TYPES[type]?.label || 'Diagram';
