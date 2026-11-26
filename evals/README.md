@@ -74,6 +74,7 @@ An `image` case also names a picture in `fixtures/`, which goes to the model wit
 | `no-removals` | The semantic diff reports zero removed elements (Mermaid, PlantUML, BPMN). For Mermaid and PlantUML, an element counts as removed only when its id is missing from the new code. `{ "no-removals": ["Flow_3"] }` allows the ids that the requested change replaces. |
 | `bpmn-layout` | The BPMN holds layout data |
 | `bpmn-no-warnings` | bpmn-moddle reports zero warnings |
+| `bpmn-containers-drawn` | Every lane and pool has a shape in the layout section, so the visual editor draws the lanes and pools |
 | `bounds-unchanged` | Every BPMN shape from `startCode` keeps its position and size |
 
 A case passes when every check passes. A check that cannot run (for example, the diagram server is unreachable) makes the case "unverified". A provider or network fault makes the case "error". Pass rates leave out "error" cases.

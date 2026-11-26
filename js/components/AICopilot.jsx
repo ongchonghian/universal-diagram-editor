@@ -20,9 +20,18 @@ function describeStep(step) {
             ? { icon: 'fa-eye', tone: 'text-indigo-600', text: 'Looked at the render' }
             : { icon: 'fa-eye-slash', tone: 'text-slate-500', text: 'Could not render the draft to look at' };
     }
+    if (step.action === 'layout') {
+        return step.status === 'valid'
+            ? { icon: 'fa-project-diagram', tone: 'text-emerald-600', text: 'Laid out the diagram' }
+            : { icon: 'fa-times', tone: 'text-red-600', text: 'Laid out the diagram, but the result has an error' };
+    }
     const action = step.action === 'write' ? `Wrote ${typeName(step.type)}` : 'Edited';
     if (step.status === 'rejected') return { icon: 'fa-undo', tone: 'text-slate-500', text: `${action}: the edit did not match the draft` };
-    if (step.status === 'valid') return { icon: 'fa-check', tone: 'text-emerald-600', text: `${action}: parsed` };
+    if (step.status === 'valid') {
+        const layout = { kept: ', layout kept', regenerated: ', laid out again', created: ', laid out' }[step.layout] || '';
+        const lint = step.lint ? `, ${step.lint === 1 ? '1 finding' : `${step.lint} findings`}` : '';
+        return { icon: 'fa-check', tone: 'text-emerald-600', text: `${action}: parsed${layout}${lint}` };
+    }
     if (step.status === 'unverified') return { icon: 'fa-question', tone: 'text-amber-600', text: `${action}: could not check` };
     return { icon: 'fa-times', tone: 'text-red-600', text: `${action}: parse error` };
 }
@@ -96,6 +105,20 @@ const ProposalCard = ({ proposal, editorCode, editorType, onReview }) => {
                     {!proposal.verified && proposal.error && <span className="block font-mono text-[11px] mt-0.5 whitespace-pre-wrap">{proposal.error}</span>}
                 </span>
             </div>
+            {proposal.layout === 'regenerated' && (
+                <div className="px-3 py-1.5 text-[11px] text-amber-800 bg-amber-50 border-t border-amber-100">
+                    <i className="fas fa-project-diagram mr-1"></i>
+                    The change adds, removes or reconnects elements, so the app laid out the diagram again. Shapes you arranged by hand move.
+                </div>
+            )}
+            {proposal.lint?.length > 0 && (
+                <details className="px-3 py-1.5 text-[11px] text-slate-600 bg-slate-50 border-t border-slate-100">
+                    <summary className="cursor-pointer">{proposal.lint.length === 1 ? '1 modelling finding' : `${proposal.lint.length} modelling findings`}</summary>
+                    <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                        {proposal.lint.map((finding, i) => <li key={i}>{finding}</li>)}
+                    </ul>
+                </details>
+            )}
             {stale && (
                 <div className="px-3 py-1.5 text-[11px] text-slate-500 bg-slate-50 border-t border-slate-100">
                     The editor has changed since Smith made this proposal. The review compares the proposal with the current code.

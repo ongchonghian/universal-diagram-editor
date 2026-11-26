@@ -2,7 +2,7 @@
 
 **Syntext Smith** is the assistant built into the Universal Diagram Generator. Smith helps users create, edit and fix diagrams through natural language. Smith writes native diagram code (Mermaid, PlantUML, BPMN XML and so on) with tools, and the real parser checks every edit before the user sees the result.
 
-This page describes the code as of 26 November 2026, after Phase 5 of the Smith rebuild (render-and-look, and pictures in the chat). A later phase adds a BPMN layout pipeline.
+This page describes the code as of 26 November 2026, after Phase 6 of the Smith rebuild (the BPMN pipeline).
 
 ## How a chat request works
 
@@ -17,10 +17,10 @@ This page describes the code as of 26 November 2026, after Phase 5 of the Smith 
 
 | Tool | What the tool does |
 |---|---|
-| `read_diagram` | Returns the draft with line numbers |
+| `read_diagram` | Returns the draft with line numbers. For BPMN, the draft leaves out the layout section (see "BPMN"). |
 | `edit_diagram` | Applies exact `old_text` → `new_text` replacements in order. Each `old_text` must appear exactly once; otherwise the tool applies none of the replacements and tells the model why. |
 | `write_diagram` | Replaces the whole draft. The call names the notation (`type`), so the diagram type travels as a typed value rather than a guess from the code. |
-| `render_diagram` | Renders the draft, converts the picture to a PNG of at most 1,568 pixels on the long side, and returns the PNG for the model to look at. The system prompt asks the model to look once after a new diagram or a structural change, to fix overlaps, crossing lines and labels that cannot be read, and never after a rename. |
+| `render_diagram` | Not available for BPMN, because the app owns the BPMN layout. For other notations: renders the draft, converts the picture to a PNG of at most 1,568 pixels on the long side, and returns the PNG for the model to look at. The system prompt asks the model to look once after a new diagram or a structural change, to fix overlaps, crossing lines and labels that cannot be read, and never after a rename. |
 | `suggest_next_steps` | Sets the follow-up suggestion chips. When this call is the only call in a step, the turn ends without another model call. |
 
 ## Validation
@@ -30,7 +30,7 @@ One validator, `validateDiagram()` in `js/services/diagram-tools/validate.js`, s
 | Language | Check |
 |---|---|
 | Mermaid | `mermaid.parse`, a check for colons in timeline sections, then a full render |
-| BPMN | `bpmn-moddle` reads the XML and returns its warnings. The tool loop does not require layout data; the evaluation set's layout check does. |
+| BPMN | `bpmn-moddle` reads the XML and returns its warnings. The tool loop checks the XML without its layout section, then the BPMN pipeline adds the layout and lints the process (see "BPMN"). |
 | Vega-Lite | `vegaLite.compile` |
 | Vega | `vega.parse` |
 | PlantUML, C4 and every other type | Rendered by the Kroki server. C4 code goes to the `c4plantuml` endpoint. |
@@ -43,8 +43,20 @@ Every type except Mermaid is sent to the Kroki server, both for the code preview
 
 The **Auto-Fix (AI)** button in the preview's error panel calls `fixWithSmith()`, which runs the same tool loop with the preview error, at temperature 0, without the suggestions tool and without `render_diagram`. The button works for every diagram type.
 
+- BPMN that parses but has no layout section needs no model: the app lays the diagram out, and the trail shows "Laid out the diagram".
 - A verified repair in the same notation is written straight into the editor, without a review step. The repair is one undo step, so Ctrl+Z (Cmd+Z on Mac) in the editor restores the earlier code.
 - Every other outcome leaves the code unchanged and shows a message in the error panel: a repair that still fails, a check that could not run, a rewrite into another notation, or a turn with no change.
+
+## BPMN
+
+Smith reads and writes semantic BPMN only. The app owns the layout (`js/services/diagram-tools/bpmn-pipeline.js`).
+
+- **What Smith sees:** the user turn and `read_diagram` show the XML without its layout section (`bpmndi:BPMNDiagram`), with a note that the layout is hidden. A layout section that Smith writes anyway is dropped. For a typical diagram, the XML without its layout is about a third of the full text, and Smith resends that text at every step.
+- **Keeping the user's layout:** after each change, the pipeline compares the structure with the diagram the turn began with. The structure is the elements and their kinds, the connections, the lanes with their elements, the pools and the message flows. Names and other attributes are not part of the structure. When the structure is unchanged, for example after a rename, the original layout section is put back unchanged, so every shape stays where the user put it.
+- **A new layout:** when elements are added, removed or reconnected, the app lays the diagram out again. Each process is arranged by `bpmn-auto-layout`. The pipeline then places each lane as a horizontal band holding its own elements, wraps each pool around its process, stacks the pools at one width, and routes message flows between the pools. `bpmn-auto-layout` draws neither lanes nor pools. The semantic XML stays exactly as Smith wrote it; only the layout section is new.
+- **What the user sees:** the trail says "layout kept", "laid out again" or "laid out". When the layout was made again, the proposal card and the review warn that shapes arranged by hand move.
+- **Lint:** `js/services/diagram-tools/bpmn-lint.js` reports dead ends, steps that cannot be reached, splitting gateways without a name, unnamed branches of a splitting gateway, flows without a source or target, lanes without elements, and processes without a start event. Smith receives the findings with each tool result and fixes them unless the user asked for the diagram that way. The proposal card lists any findings that remain.
+- **The editor's layout button:** **Auto-Generate Layout** in the preview, and the app's auto-layout for BPMN, use the same layout (`applyBpmnAutoLayout()` in `js/utils.js`). Before Phase 6 that function lost lanes, and it failed to lay out the contents of pools.
 
 ## Pictures
 
@@ -118,6 +130,7 @@ Model calls go through a provider-neutral layer in `js/services/llm/`. The layer
 | `js/services/llm/` | Provider-neutral model layer: `index.js`, `types.js`, `sse.js` and one adapter per provider |
 | `js/services/ai-service.js` | Settings and running token totals |
 | `js/services/diagram-tools/validate.js`, `render.js` | Shared validator and renderer wrapper |
+| `js/services/diagram-tools/bpmn-pipeline.js`, `bpmn-lint.js` | BPMN without its layout for the model, keeping or making the layout, and the modelling findings |
 | `js/services/diagram-tools/rasterise.js`, `look.js` | SVG to PNG, attached pictures to image parts, and the render that `render_diagram` returns |
 | `evals/` | Evaluation set, checks and runner (see `evals/README.md`) |
 | `js/components/dialogs/AISettingsModal.jsx` | Settings dialog |

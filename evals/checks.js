@@ -14,7 +14,17 @@ import { validateDiagram } from '../js/services/diagram-tools/validate.js';
 import { renderDiagram, svgHasContent } from '../js/services/diagram-tools/render.js';
 import { diffUtils } from '../js/utils/diff-utils.js';
 
-const CHECK_NAMES = ['parses', 'renders', 'contains', 'keeps', 'typeIn', 'no-removals', 'bpmn-layout', 'bpmn-no-warnings', 'bounds-unchanged'];
+const CHECK_NAMES = ['parses', 'renders', 'contains', 'keeps', 'typeIn', 'no-removals', 'bpmn-layout', 'bpmn-no-warnings', 'bounds-unchanged', 'bpmn-containers-drawn'];
+
+/** Ids of the lanes and pools in BPMN XML that the layout section draws no shape for. */
+export function undrawnContainers(xml) {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length) return null;
+    const ids = [...doc.getElementsByTagNameNS('*', 'lane'), ...doc.getElementsByTagNameNS('*', 'participant')]
+        .map(e => e.getAttribute('id')).filter(Boolean);
+    const drawn = new Set([...doc.getElementsByTagNameNS('*', 'BPMNShape')].map(s => s.getAttribute('bpmnElement')));
+    return ids.filter(id => !drawn.has(id));
+}
 
 /** The name of a check entry, whether the entry is a string or a one-key object. */
 export const checkName = (check) => (typeof check === 'string' ? check : Object.keys(check)[0]);
@@ -117,6 +127,12 @@ export async function runChecks(caseDef, output) {
                     const v = await getValidation();
                     if (v.status !== 'valid') results.push(fail(name, 'The XML does not parse.'));
                     else results.push(v.warnings.length ? fail(name, v.warnings.slice(0, 3).join(' | ')) : pass(name));
+                    break;
+                }
+                case 'bpmn-containers-drawn': {
+                    const missing = undrawnContainers(code);
+                    if (missing === null) results.push(fail(name, 'The XML does not parse.'));
+                    else results.push(missing.length ? fail(name, `No shape for: ${missing.join(', ')}`) : pass(name));
                     break;
                 }
                 case 'bounds-unchanged': {

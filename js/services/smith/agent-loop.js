@@ -154,6 +154,8 @@ export function proposalOf(draft) {
         baseType: draft.baseType,
         status,
         verified: status === 'valid',
-        error: draft.validation?.error || null
+        error: draft.validation?.error || null,
+        ...(draft.layout ? { layout: draft.layout } : {}),
+        ...(draft.lint?.length ? { lint: draft.lint } : {})
     };
 }

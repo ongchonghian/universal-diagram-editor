@@ -113,3 +113,15 @@ describe('runChecks', () => {
         expect(lost).toMatchObject({ status: 'fail', detail: 'Removed: Start' });
     });
 });
+
+describe('bpmn-containers-drawn', () => {
+    it('names the lanes and pools without a shape', async () => {
+        const { undrawnContainers } = await import('./checks.js');
+        const xml = `<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI">
+  <bpmn:collaboration id="C"><bpmn:participant id="Pool" processRef="P" /></bpmn:collaboration>
+  <bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="L1" /><bpmn:lane id="L2" /></bpmn:laneSet></bpmn:process>
+  <bpmndi:BPMNDiagram id="D"><bpmndi:BPMNPlane id="X" bpmnElement="C"><bpmndi:BPMNShape id="Pool_di" bpmnElement="Pool" /><bpmndi:BPMNShape id="L1_di" bpmnElement="L1" /></bpmndi:BPMNPlane></bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+        expect(undrawnContainers(xml)).toEqual(['L2']);
+    });
+});

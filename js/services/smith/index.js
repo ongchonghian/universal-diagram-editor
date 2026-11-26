@@ -3,8 +3,10 @@
  */
 import { aiService } from '../ai-service.js';
 import { LLMError } from '../llm/index.js';
-import { runAgentLoop } from './agent-loop.js';
-import { TOOL_DEFINITIONS } from './tools.js';
+import { runAgentLoop, proposalOf } from './agent-loop.js';
+import { TOOL_DEFINITIONS, createDraft } from './tools.js';
+import { validateDiagram } from '../diagram-tools/validate.js';
+import { hasLayout, layoutBpmn } from '../diagram-tools/bpmn-pipeline.js';
 import { buildSystemPrompt, buildUserTurn, buildFixTurn } from './prompt.js';
 
 function readyConfig() {
@@ -60,10 +62,40 @@ export async function askSmith({ request, images = [], messages = [], code, type
 }
 
 /**
+ * BPMN that parses but has no layout section needs a layout, not a model: the app lays the diagram out.
+ * @returns {Promise<object|null>} a result shaped like runAgentLoop's, or null when this repair does not apply
+ */
+export async function layoutOnly(code, type) {
+    if (type !== 'bpmn' || !code?.trim() || hasLayout(code)) return null;
+    if ((await validateDiagram(code, 'bpmn')).status !== 'valid') return null;
+    const draft = createDraft(code, 'bpmn');
+    try {
+        draft.code = await layoutBpmn(code);
+    } catch {
+        return null;
+    }
+    draft.layout = 'created';
+    draft.validation = await validateDiagram(draft.code, 'bpmn', { requireLayout: true });
+    const step = { action: 'layout', status: draft.validation.status, error: draft.validation.error, layout: 'created' };
+    return {
+        text: 'The diagram had no layout section, so the app laid the diagram out. The AI was not needed.',
+        draft,
+        trail: [step],
+        proposal: proposalOf(draft),
+        suggestions: [],
+        usage: { inputTokens: 0, outputTokens: 0, calls: 0 },
+        steps: 0,
+        limitReached: false
+    };
+}
+
+/**
  * Repair a diagram that fails to render. Works for every diagram type.
  * @param {object} options { code, type, error, signal, onEvent }
  */
 export async function fixWithSmith({ code, type, error, signal, onEvent }) {
+    const laidOut = await layoutOnly(code, type);
+    if (laidOut) return laidOut;
     const config = readyConfig();
     const result = await runAgentLoop({
         config,

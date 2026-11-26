@@ -159,7 +159,7 @@ CFG --> MMain
 To avoid the "God Component" anti-pattern in `App.jsx`, logic is extracted into domain-specific hooks:
 - `useDiagramState`: Manages core state (text, diagram type, view mode), file I/O, and Mermaid AST sync.
 - `useRemoteRenderer`: Encapsulates Kroki interactions, loading states, stats, and error markers.
-- `useAutoLayout`: Handles BPMN auto-layout logic, missing DI detection, and dialogs.
+- `useAutoLayout`: Handles BPMN auto-layout logic, missing DI detection, and dialogs. The layout itself comes from `applyBpmnAutoLayout()` in `js/utils.js`, which calls the BPMN pipeline in `js/services/diagram-tools/bpmn-pipeline.js`; that pipeline draws lanes as bands and wraps pools around their processes.
 - `useCopilot`: Manages Syntext Smith's panel visibility, and applies a proposal written in another notation by switching the editor's diagram type. Proposals in the same notation are reviewed one change at a time in `DiffReviewPane`, inside the code view.
 
 **Source Files**

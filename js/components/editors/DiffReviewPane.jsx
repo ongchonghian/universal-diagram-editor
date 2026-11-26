@@ -132,6 +132,11 @@ export const DiffReviewPane = ({ original, proposal, currentType, onApply, onCan
                         The editor has changed since Smith made this proposal. The comparison is with the current code.
                     </p>
                 )}
+                {proposal.layout === 'regenerated' && (
+                    <p className="mt-1 text-xs text-amber-700">
+                        The change adds, removes or reconnects elements, so the app laid out the diagram again: the layout section changes as well.
+                    </p>
+                )}
                 {!retyped && rejected.size > 0 && (
                     <p className="mt-1 text-xs text-amber-700">
                         Smith checked the full proposal only. After you apply, the preview shows whether the code without the rejected changes still works.
