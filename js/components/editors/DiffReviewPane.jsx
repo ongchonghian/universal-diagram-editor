@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DIAGRAM_TYPES } from '../../config.js';
 import { mergeHunks, describeHunk, mergedLineOf } from '../../utils/hunks.js';
 import { SemanticDiffModal } from '../dialogs/SemanticDiffModal.jsx';
+import { Button } from '../common.jsx';
 
 /** The Monaco language id for a diagram type. */
 export const monacoLanguageOf = (type) => (
@@ -11,7 +12,7 @@ export const monacoLanguageOf = (type) => (
                 : type
 );
 
-const typeName = (type) => DIAGRAM_TYPES[type]?.name || type;
+const typeName = (type) => DIAGRAM_TYPES[type]?.label || DIAGRAM_TYPES[type]?.name || type;
 
 /**
  * Review a Smith proposal in the code pane, one change (hunk) at a time.
@@ -112,61 +113,72 @@ export const DiffReviewPane = ({ original, proposal, currentType, onApply, onCan
             : { tone: 'text-red-700', icon: 'fa-exclamation-circle', text: 'Not verified: the proposal still has an error' };
 
     return (
-        <section className="absolute inset-0 z-30 flex flex-col bg-white" aria-label="Review Smith's change">
-            <header className="flex-none px-3 py-2 border-b border-slate-200 bg-indigo-50/60">
-                <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                        <i className="fas fa-code-branch text-indigo-500"></i>
-                        Review Smith's change · {typeName(proposal.type)}
-                    </h2>
-                    <span className={`text-xs flex items-center gap-1 ${status.tone}`}>
-                        <i className={`fas ${status.icon}`}></i>{status.text}
+        <section className="absolute inset-0 z-30 flex flex-col bg-white animate-fade-in" aria-label="Review Smith's change">
+            <header className="flex-none px-3 py-2.5 border-b border-slate-200 bg-white">
+                <div className="flex items-start gap-2.5">
+                    <span className="w-7 h-7 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs shrink-0" aria-hidden="true">
+                        <i className="fas fa-code-branch"></i>
                     </span>
+                    <div className="min-w-0 flex-1">
+                        <h2 className="text-[13px] font-semibold text-slate-900 leading-tight flex items-center gap-2">
+                            Review Smith's change
+                            <span className="h-5 px-1.5 inline-flex items-center rounded text-[11px] font-medium bg-slate-100 text-slate-600">{typeName(proposal.type)}</span>
+                        </h2>
+                        <p className={`mt-1 text-xs flex items-center gap-1.5 ${status.tone}`}>
+                            <i className={`fas ${status.icon}`} aria-hidden="true"></i>{status.text}
+                        </p>
+                    </div>
                 </div>
-                {retyped ? (
-                    <p className="mt-1 text-xs text-slate-600">
-                        Smith rewrote the diagram in {typeName(proposal.type)}. Applying replaces the whole diagram and switches the editor from {typeName(currentType)} to {typeName(proposal.type)}.
-                    </p>
-                ) : proposal.baseCode !== original && (
-                    <p className="mt-1 text-xs text-slate-600">
-                        The editor has changed since Smith made this proposal. The comparison is with the current code.
-                    </p>
-                )}
-                {proposal.layout === 'regenerated' && (
-                    <p className="mt-1 text-xs text-amber-700">
-                        The change adds, removes or reconnects elements, so the app laid out the diagram again: the layout section changes as well.
-                    </p>
-                )}
-                {!retyped && rejected.size > 0 && (
-                    <p className="mt-1 text-xs text-amber-700">
-                        Smith checked the full proposal only. After you apply, the preview shows whether the code without the rejected changes still works.
-                    </p>
+                {(retyped || proposal.baseCode !== original || proposal.layout === 'regenerated' || (!retyped && rejected.size > 0)) && (
+                    <div className="mt-2 ml-[38px] space-y-1 text-xs leading-relaxed">
+                        {retyped ? (
+                            <p className="text-slate-600">
+                                Smith rewrote the diagram in {typeName(proposal.type)}. Applying replaces the whole diagram and switches the editor from {typeName(currentType)} to {typeName(proposal.type)}.
+                            </p>
+                        ) : proposal.baseCode !== original && (
+                            <p className="text-slate-600">
+                                The editor has changed since Smith made this proposal. The comparison is with the current code.
+                            </p>
+                        )}
+                        {proposal.layout === 'regenerated' && (
+                            <p className="text-amber-700">
+                                The change adds, removes or reconnects elements, so the app laid out the diagram again: the layout section changes as well.
+                            </p>
+                        )}
+                        {!retyped && rejected.size > 0 && (
+                            <p className="text-amber-700">
+                                Smith checked the full proposal only. After you apply, the preview shows whether the code without the rejected changes still works.
+                            </p>
+                        )}
+                    </div>
                 )}
             </header>
 
             {!retyped && hunks && hunks.length > 0 && (
-                <ol className="flex-none max-h-40 overflow-y-auto border-b border-slate-200 divide-y divide-slate-100 text-xs" aria-label="Changes">
+                <ol className="flex-none max-h-40 overflow-y-auto ui-scroll border-b border-slate-200 divide-y divide-slate-100 text-xs bg-slate-50/60" aria-label="Changes">
                     {hunks.map((hunk, i) => {
                         const accepted = isAccepted(i);
                         return (
-                            <li key={i} className={`flex items-center gap-2 px-3 py-1.5 ${accepted ? '' : 'bg-slate-50'}`}>
-                                <button onClick={() => reveal(i)} className="flex-1 text-left text-slate-700 hover:text-indigo-700" title="Show this change">
-                                    <span className="text-slate-400 mr-1.5">{i + 1}.</span>
+                            <li key={i} className="flex items-center gap-2 pl-3 pr-2 h-9">
+                                <button onClick={() => reveal(i)} className="flex-1 min-w-0 text-left truncate text-slate-700 hover:text-indigo-700" title="Show this change">
+                                    <span className="inline-block w-5 text-slate-400 tabular-nums">{i + 1}.</span>
                                     <span className={accepted ? '' : 'line-through text-slate-400'}>{describeHunk(hunk)}</span>
                                 </button>
-                                <div className="flex rounded border border-slate-200 overflow-hidden" role="group" aria-label={`Change ${i + 1}`}>
+                                <div className="flex items-center p-0.5 rounded-md bg-slate-100 shrink-0" role="group" aria-label={`Change ${i + 1}`}>
                                     <button
                                         onClick={() => toggle(i, true)}
                                         aria-pressed={accepted}
-                                        className={`px-2 py-0.5 ${accepted ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                                        className={`h-6 px-2 inline-flex items-center gap-1 rounded font-medium transition-colors ${accepted ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800'}`}
                                     >
+                                        <i className="fas fa-check text-[10px]" aria-hidden="true"></i>
                                         Accept
                                     </button>
                                     <button
                                         onClick={() => toggle(i, false)}
                                         aria-pressed={!accepted}
-                                        className={`px-2 py-0.5 border-l border-slate-200 ${!accepted ? 'bg-slate-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                                        className={`h-6 px-2 inline-flex items-center gap-1 rounded font-medium transition-colors ${!accepted ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800'}`}
                                     >
+                                        <i className="fas fa-times text-[10px]" aria-hidden="true"></i>
                                         Reject
                                     </button>
                                 </div>
@@ -179,39 +191,37 @@ export const DiffReviewPane = ({ original, proposal, currentType, onApply, onCan
             <div className="flex-1 relative min-h-0">
                 <div ref={containerRef} className="absolute inset-0" />
                 {monacoMissing && (
-                    <p className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">The code editor has not loaded yet, so the change cannot be shown.</p>
+                    <p className="absolute inset-0 flex items-center justify-center text-[13px] text-slate-500">The code editor has not loaded yet, so the change cannot be shown.</p>
                 )}
                 {hunks && hunks.length === 0 && !retyped && (
-                    <p className="absolute top-2 left-1/2 -translate-x-1/2 z-10 text-xs bg-white border border-slate-200 rounded px-2 py-1 shadow-sm text-slate-600">
+                    <p className="absolute top-3 left-1/2 -translate-x-1/2 z-10 text-xs bg-white border border-slate-200 rounded-md px-2.5 py-1 shadow-sm text-slate-600">
                         The proposal matches the current code.
                     </p>
                 )}
             </div>
 
-            <footer className="flex-none px-3 py-2 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
-                <span className="text-xs text-slate-500">
-                    {retyped ? 'Replaces the whole diagram' : hunks ? `${acceptedCount} of ${hunks.length} changes accepted` : 'Comparing…'}
+            <footer className="flex-none h-12 px-3 border-t border-slate-200 bg-slate-50/70 flex items-center justify-between gap-2">
+                <span className="text-xs text-slate-500 tabular-nums truncate">
+                    {retyped ? 'Replaces the whole diagram' : hunks ? `${acceptedCount} of ${hunks.length} ${hunks.length === 1 ? 'change' : 'changes'} accepted` : 'Comparing…'}
                 </span>
-                <div className="flex gap-2">
-                    <button onClick={onCancel} className="px-3 py-1.5 text-xs font-medium rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+                <div className="flex gap-2 shrink-0">
+                    <Button variant="ghost" size="sm" onClick={onCancel}>
                         Cancel
-                    </button>
+                    </Button>
                     {!retyped && ['bpmn', 'mermaid', 'plantuml'].includes(proposal.type) && (
-                        <button
-                            onClick={() => setShowVisual(true)}
-                            disabled={nothingToApply}
-                            className="px-3 py-1.5 text-xs font-medium rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                        >
-                            <i className="fas fa-search-plus mr-1"></i>Visual diff
-                        </button>
+                        <Button variant="secondary" size="sm" icon="fas fa-search-plus" onClick={() => setShowVisual(true)} disabled={nothingToApply}>
+                            Visual diff
+                        </Button>
                     )}
-                    <button
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        icon="fas fa-check"
                         onClick={() => onApply(merged)}
                         disabled={readOnly || nothingToApply || (!retyped && hunks === null)}
-                        className="px-3 py-1.5 text-xs font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
                     >
-                        <i className="fas fa-check mr-1"></i>Apply
-                    </button>
+                        Apply
+                    </Button>
                 </div>
             </footer>
 
