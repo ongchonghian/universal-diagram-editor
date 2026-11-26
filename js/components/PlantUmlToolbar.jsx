@@ -13,16 +13,19 @@ export const PlantUmlToolbar = ({ contextModel, onInsert, onSnippetSelect }) => 
     };
 
     return (
-        <div className="flex-none p-2 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex-none h-10 px-2 bg-slate-50 border-b border-slate-200 flex items-center gap-1 overflow-x-auto no-scrollbar" role="toolbar" aria-label="Insert a snippet">
+            {(!snippets || snippets.length === 0) && (
+                <span className="px-1 text-xs text-slate-400">Snippets appear here when the cursor is inside a diagram.</span>
+            )}
             {snippets.map((snippet, idx) => (
                 <button
                     key={idx}
                     onClick={() => handleSnippetClick(snippet)}
-                    className="flex flex-col items-center justify-center w-12 h-12 bg-white border border-slate-200 rounded hover:bg-indigo-50 hover:border-indigo-200 transition-all flex-shrink-0 group relative"
+                    className="h-7 px-2 inline-flex items-center gap-1.5 bg-white border border-slate-200 rounded-md text-xs text-slate-600 whitespace-nowrap shadow-sm hover:border-indigo-300 hover:text-indigo-700 transition-colors flex-shrink-0 group"
                     title={snippet.label}
                 >
-                    <i className={`fas ${snippet.icon} text-slate-500 group-hover:text-indigo-600 mb-1 text-sm`}></i>
-                    <span className="text-[10px] text-slate-400 group-hover:text-indigo-500 leading-none truncate w-full text-center px-1">{snippet.label}</span>
+                    <i className={`fas ${snippet.icon} text-[11px] text-slate-400 group-hover:text-indigo-600`} aria-hidden="true"></i>
+                    <span>{snippet.label}</span>
                 </button>
             ))}
         </div>

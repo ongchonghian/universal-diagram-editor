@@ -6,6 +6,8 @@ import { MermaidToolbar } from '../MermaidToolbar.jsx';
 import { SnippetInsertionDialog } from '../dialogs/SnippetInsertionDialog.jsx';
 import { fixWithSmith } from '../../services/smith/index.js';
 import { DiffReviewPane, monacoLanguageOf } from './DiffReviewPane.jsx';
+import { DIAGRAM_TYPES } from '../../config.js';
+import { Button } from '../common.jsx';
 
 export const CodeEditorView = ({
     textInput,
@@ -125,10 +127,31 @@ export const CodeEditorView = ({
         }
     };
 
+    const usesTemplates = ['mermaid', 'plantuml', 'vega', 'vegalite'].includes(diagramType);
+    const typeLabel = DIAGRAM_TYPES[diagramType]?.label || diagramType;
+
+    // The empty editor's main button: a template gallery for text notations, a blank document for the others
+    const handleCreateNew = () => {
+        if (usesTemplates) {
+            setShowTemplates(true);
+        } else if (diagramType === 'bpmn') {
+            const defaultXml = `<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">\n  <bpmn:process id="Process_1" isExecutable="false">\n    <bpmn:startEvent id="StartEvent_1" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id="BPMNDiagram_1">\n    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">\n      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">\n        <dc:Bounds x="412" y="240" width="36" height="36" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>`;
+            setTextInput(defaultXml);
+        } else if (diagramType === 'excalidraw') {
+            const defaultData = { type: "excalidraw", version: 2, source: "https://excalidraw.com", elements: [], appState: { viewBackgroundColor: "#ffffff", gridSize: null }, files: {} };
+            setTextInput(JSON.stringify(defaultData, null, 2));
+        } else if (diagramType === 'c4') {
+            const defaultData = { nodes: [], edges: [] };
+            setTextInput(JSON.stringify(defaultData, null, 2));
+        } else {
+            setTextInput('// Start typing or selecting a template...');
+        }
+    };
+
     return (
-        <div className="flex-1 min-h-0 flex transition-opacity duration-300 opacity-100 z-10 relative">
-            {/* Editor Panel */}
-            <div className="w-1/2 flex flex-col border-r border-slate-200 relative">
+        <div className="flex-1 min-h-0 flex flex-col md:flex-row z-10 relative">
+            {/* Editor Panel: beside the preview from tablet width up, above the preview on a phone */}
+            <div className="h-1/2 md:h-auto md:w-1/2 min-w-0 overflow-hidden flex flex-col border-b md:border-b-0 md:border-r border-slate-200 relative bg-white">
                 {!readOnly && diagramType === 'plantuml' && (
                     <PlantUmlToolbar 
                         detectedModel={detectedModel} 
@@ -154,9 +177,14 @@ export const CodeEditorView = ({
                         readOnly={readOnly}
                     />
                 </div>
-                <div className="flex-none px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                <div className="flex-none h-7 px-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 tabular-nums">
                     <span>Ln {cursorPos.line}, Col {cursorPos.col}</span>
-                    <span>{stats.length} chars {stats.method && `| ${stats.method}`}</span>
+                    <span className="flex items-center gap-2">
+                        <span>{(textInput || '').length.toLocaleString('en-GB')} {(textInput || '').length === 1 ? 'character' : 'characters'}</span>
+                        <span className="w-px h-3 bg-slate-300" aria-hidden="true"></span>
+                        <span>{DIAGRAM_TYPES[diagramType]?.label || diagramType}</span>
+                        {readOnly && (<><span className="w-px h-3 bg-slate-300" aria-hidden="true"></span><span className="text-amber-700"><i className="fas fa-lock mr-1" aria-hidden="true"></i>Read-only</span></>)}
+                    </span>
                 </div>
                 
                 {/* Smith's proposal, reviewed one change at a time over the editor. The editor stays
@@ -182,46 +210,28 @@ export const CodeEditorView = ({
                     />
                 )}
 
-                {/* Empty State Overlay */}
+                {/* Empty State */}
                 {!proposal && (!textInput || !textInput.trim()) && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm pointer-events-auto z-20">
-                    <div className="text-center p-8 bg-white rounded-xl shadow-xl border border-slate-200 max-w-sm w-full mx-4">
-                        <i className="fas fa-code text-4xl text-indigo-500 mb-4"></i>
-                        <h3 className="text-lg font-bold text-slate-900 mb-2">Editor Empty</h3>
-                        <p className="text-sm text-slate-600 mb-6">Start a new diagram or open an existing file.</p>
-                        <div className="space-y-3">
-                            <button 
-                                onClick={() => {
-                                    if (['mermaid', 'plantuml', 'vega', 'vegalite'].includes(diagramType)) {
-                                        setShowTemplates(true);
-                                    } else if (diagramType === 'bpmn') {
-                                        const defaultXml = `<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">\n  <bpmn:process id="Process_1" isExecutable="false">\n    <bpmn:startEvent id="StartEvent_1" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id="BPMNDiagram_1">\n    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">\n      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">\n        <dc:Bounds x="412" y="240" width="36" height="36" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>`;
-                                        setTextInput(defaultXml);
-                                    } else if (diagramType === 'excalidraw') {
-                                        const defaultData = { type: "excalidraw", version: 2, source: "https://excalidraw.com", elements: [], appState: { viewBackgroundColor: "#ffffff", gridSize: null }, files: {} };
-                                        setTextInput(JSON.stringify(defaultData, null, 2));
-                                    } else if (diagramType === 'c4') {
-                                        const defaultData = { nodes: [], edges: [] };
-                                        setTextInput(JSON.stringify(defaultData, null, 2));
-                                    } else {
-                                        setTextInput('// Start typing or selecting a template...');
-                                    }
-                                }}
-                                className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm flex items-center justify-center"
-                            >
-                                <i className="fas fa-plus mr-2"></i>
-                                Create New
-                            </button>
-                            <button 
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-full px-4 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm flex items-center justify-center"
-                            >
-                                <i className="fas fa-folder-open mr-2"></i>
-                                Open File...
-                            </button>
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white p-6">
+                        <div className="w-full max-w-xs text-center">
+                            <span className="mx-auto mb-4 w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center" aria-hidden="true">
+                                <i className="fas fa-code"></i>
+                            </span>
+                            <h3 className="text-[15px] font-semibold text-slate-900">Start a diagram</h3>
+                            <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+                                {usesTemplates ? `Pick a ${typeLabel} template to start from, or open a file from your computer.` : `Create a blank ${typeLabel} diagram, or open a file from your computer.`}
+                            </p>
+                            <div className="mt-5 flex flex-col gap-2">
+                                <Button variant="primary" size="lg" icon={usesTemplates ? 'fas fa-th-large' : 'fas fa-plus'} onClick={handleCreateNew}>
+                                    {usesTemplates ? 'Choose a template' : 'Create a blank diagram'}
+                                </Button>
+                                <Button variant="secondary" size="lg" icon="fas fa-folder-open" onClick={() => fileInputRef.current?.click()}>
+                                    Open a file
+                                </Button>
+                            </div>
+                            <p className="mt-4 text-xs text-slate-400">You can also drop a file anywhere on this page.</p>
                         </div>
                     </div>
-                </div>
                 )}
             </div>
 
