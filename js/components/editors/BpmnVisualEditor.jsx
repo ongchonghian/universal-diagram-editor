@@ -61,13 +61,19 @@ const customModule = {
 // If we register OUR handler to 'lane.split' in __init__, it might conflict.
 // Actually, handlers are registered specifically via commandStack.registerHandler.
 
+function ModelingExtension(commandStack) {
+    // Register our custom handler for 'custom.lane.split' to avoid collision with default 'lane.split'
+    commandStack.registerHandler('custom.lane.split', CustomSplitLaneHandler);
+    commandStack.registerHandler('custom.lane.transpose', CustomTransposeHandler);
+}
+
+// bpmn-js reads parameter names to inject services. The production build minifies those names,
+// so the service is named here instead.
+ModelingExtension.$inject = [ 'commandStack' ];
+
 const customModelingModule = {
     __init__: [ 'modelingExtension' ],
-    modelingExtension: [ 'type', function(commandStack, modeling) {
-        // Register our custom handler for 'custom.lane.split' to avoid collision with default 'lane.split'
-        commandStack.registerHandler('custom.lane.split', CustomSplitLaneHandler);
-        commandStack.registerHandler('custom.lane.transpose', CustomTransposeHandler);
-    }]
+    modelingExtension: [ 'type', ModelingExtension ]
 };
 
 
