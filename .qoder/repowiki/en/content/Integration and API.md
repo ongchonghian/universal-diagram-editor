@@ -483,7 +483,9 @@ The application integrates Syntext Smith, an AI assistant that helps users creat
 - **Workflow**:
     - The user enters a request, for example "Create a login flow".
     - Smith edits the working copy, reads each validation result, and repairs the copy when the parser reports an error.
-    - The reply shows a proposal card. The user reviews the change in the "Verify Changes" dialog and applies the change to the editor.
+    - The reply shows a proposal card. The user reviews each change in the code pane, then applies the accepted changes as one undo step.
+    - The user can also attach a picture, such as a whiteboard photo, for Smith to turn into a diagram.
+- **Measured**: the evaluation set in `evals/` records Smith's pass rate per diagram group. See "Measured results" in [Syntext Smith](file://Advanced Features/Syntext Smith (AI Copilot).md).
 
 ### Configuration
 - **API Key**: Users provide a key for the chosen provider in the settings dialog. Keys are kept in `sessionStorage` for the browser tab, and also in `localStorage` as plain text when the user ticks "Remember keys in this browser". A local OpenAI-compatible server can run without a key.
@@ -493,6 +495,8 @@ The application integrates Syntext Smith, an AI assistant that helps users creat
 - [js/services/ai-service.js](file://js/services/ai-service.js)
 - [js/services/smith/index.js](file://js/services/smith/index.js)
 - [js/components/AICopilot.jsx](file://js/components/AICopilot.jsx)
+- [js/components/editors/DiffReviewPane.jsx](file://js/components/editors/DiffReviewPane.jsx)
+- [evals/README.md](file://evals/README.md)
 
 **Section sources**
 - [js/config.js](file://js/config.js#L6-L116)
