@@ -9,12 +9,15 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
     const [errorLine, setErrorLine] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [svgContent, setSvgContent] = useState(null);
+    // A whole page from a renderer that returns HTML in place of SVG (Archify)
+    const [htmlContent, setHtmlContent] = useState(null);
 
     useEffect(() => {
         if (!textInput.trim()) {
             setUrl('');
             setPreviewImage(null);
             setSvgContent(null);
+            setHtmlContent(null);
             setPreviewError(null);
             setStats({ length: 0, method: '' });
             return;
@@ -34,6 +37,7 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
              });
 
              if (result.skipped) {
+                 setHtmlContent(null);
                  setSvgContent(null);
                  setPreviewImage(null);
                  setLoading(false);
@@ -42,6 +46,7 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
 
              if (result.error) {
                  setPreviewError(result.error.message);
+                 setHtmlContent(null);
                  setSvgContent(null);
                  setPreviewImage(null);
                  
@@ -69,7 +74,14 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
                         }]);
                     }
                 }
+             } else if (result.html) {
+                 setHtmlContent(result.html);
+                 setSvgContent(null);
+                 setPreviewImage(null);
+                 setUrl('');
+                 setStats({ length: textInput.length, method: 'POST' });
              } else {
+                 setHtmlContent(null);
                  setSvgContent(result.svg);
                  setPreviewImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(result.svg)}`);
                  setUrl(result.url);
@@ -98,6 +110,7 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
         errorLine,
         previewImage,
         svgContent,
+        htmlContent,
         handleDownloadSvg,
         handleDownloadPng
     };

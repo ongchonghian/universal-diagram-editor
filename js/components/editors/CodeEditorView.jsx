@@ -24,6 +24,7 @@ export const CodeEditorView = ({
     setPreviewError,
     previewImage,
     svgContent,
+    htmlContent,
     bpmnMissingDI,
     onInlineAutoLayout,
     autoLayoutProcessing,
@@ -236,6 +237,7 @@ export const CodeEditorView = ({
             {/* Preview Panel */}
             <PreviewPanel 
                 svgContent={svgContent}
+                htmlContent={htmlContent}
                 previewImage={previewImage}
                 loading={loading}
                 error={previewError}

@@ -15,7 +15,7 @@ import {
 
 /** The notation list, grouped by the kind of diagram a user has in mind. */
 export const NOTATION_GROUPS = [
-    { label: 'Many kinds of diagram', types: ['mermaid', 'plantuml', 'graphviz', 'nomnoml', 'pikchr', 'blockdiag'] },
+    { label: 'Many kinds of diagram', types: ['mermaid', 'plantuml', 'graphviz', 'nomnoml', 'pikchr', 'blockdiag', 'archify'] },
     { label: 'Business processes', types: ['bpmn'] },
     { label: 'Data and architecture', types: ['erd', 'c4'] },
     { label: 'Charts', types: ['vegalite', 'vega'] },

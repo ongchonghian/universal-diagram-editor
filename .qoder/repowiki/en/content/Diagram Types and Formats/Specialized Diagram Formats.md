@@ -192,6 +192,26 @@ Preview-->>User : Rendered preview
 - [config.js](file://js/config.js#L106-L107)
 - [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
+### Archify
+- Purpose: architecture, workflow, sequence, data flow, lifecycle, ERD, class, tree, timeline and waterfall diagrams, written as JSON for the [Archify](https://github.com/tt-a1i/archify) renderer.
+- Syntax highlights: one JSON document per diagram. `diagram_type` names the diagram kind, and `schema_version` names the version of that kind's schema.
+- Integration approach:
+  - The Archify renderer needs Node, so the browser cannot run the renderer. The editor's own server runs it: `server/vite-plugin-archify.js` adds `POST /api/archify/render` to `npm run dev` and `npm run preview`.
+  - `server/archify-render.js` finds Archify in `ARCHIFY_HOME`, or else in `~/.claude/skills/archify` or `~/.agents/skills/archify`, writes the code to a temporary folder and runs `archify render`.
+  - Archify returns a standalone HTML page, not an SVG. `RendererAdapter.render` returns the page as `html`, and `PreviewPanel` shows the page in a sandboxed frame (`allow-scripts allow-downloads`), so the page's script has no access to the editor's stored data.
+  - The header's SVG and PNG buttons need an SVG, so they stay disabled for Archify. The export menu inside the preview downloads the diagram.
+  - `RendererAdapter.detectType` opens a `.json` file as Archify when `diagram_type` is one of Archify's kinds.
+- Limits:
+  - A static build served without the editor's server has no renderer. The preview then explains how to start the editor with `npm run dev`.
+  - The address accepts `application/json` only, so another website cannot start a render from the user's browser.
+
+**Section sources**
+- [archify.js](file://js/services/archify.js)
+- [archify-render.js](file://server/archify-render.js)
+- [vite-plugin-archify.js](file://server/vite-plugin-archify.js)
+- [RendererAdapter.js](file://js/services/RendererAdapter.js)
+- [PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
+
 ### BPMN (BPMN 2.0)
 - Purpose: Business Process Model and Notation for workflow modeling.
 - Syntax highlights: XML-based with namespaces, processes, tasks, and flows.

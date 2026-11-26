@@ -88,6 +88,7 @@ const App = () => {
         errorLine,
         previewImage,
         svgContent,
+        htmlContent,
         handleDownloadSvg,
         handleDownloadPng
     } = useRemoteRenderer(textInput, diagramType, editorRef, isC4PlantUML, bpmnMissingDI);
@@ -233,8 +234,8 @@ const App = () => {
                     />
                     <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-folder-open" onClick={() => fileInputRef.current?.click()}>Open</Button>
                     <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-save" onClick={handleDownloadSource} disabled={!textInput.trim()}>Save</Button>
-                    <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-download" onClick={handleDownloadSvg} disabled={!svgContent} title="Download as SVG">SVG</Button>
-                    <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-image" onClick={handleDownloadPng} disabled={!svgContent} title="Download as PNG">PNG</Button>
+                    <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-download" onClick={handleDownloadSvg} disabled={!svgContent} title={htmlContent ? "Use the export menu inside the preview to download this diagram as SVG" : "Download as SVG"}>SVG</Button>
+                    <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-image" onClick={handleDownloadPng} disabled={!svgContent} title={htmlContent ? "Use the export menu inside the preview to download this diagram as PNG" : "Download as PNG"}>PNG</Button>
                     <ToolbarDivider />
 
                     {/* Tools */}
@@ -306,6 +307,7 @@ const App = () => {
                             setPreviewError={setPreviewError}
                             previewImage={previewImage}
                             svgContent={svgContent}
+                            htmlContent={htmlContent}
                             bpmnMissingDI={bpmnMissingDI}
                             onInlineAutoLayout={handleInlineAutoLayout}
                             autoLayoutProcessing={autoLayoutProcessing}
