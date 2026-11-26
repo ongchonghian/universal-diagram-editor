@@ -3,14 +3,11 @@
 <cite>
 **Referenced Files in This Document**
 - [index.html](file://index.html)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [utils.js](file://js/utils.js)
 - [config.js](file://js/config.js)
 - [C4VisualEditor.jsx](file://js/components/editors/c4/C4VisualEditor.jsx)
@@ -29,15 +26,15 @@
 
 ## Introduction
 This document explains the visual editor implementations for BPMN and Mermaid within the Universal Diagram Editor. It covers:
-- BPMN visual editing powered by bpmn-js, including drag-and-drop, element manipulation, properties panel integration, and validation constraints.
-- Mermaid visual editing with AST-based synchronization, node/edge creation/modification, connection management, and real-time preview generation.
+- BPMN visual editing powered by bpmn-js (an npm package), including the standard modeler palette, element manipulation, and custom context pad, renderer, lane split and lane transpose modules.
+- Mermaid visual editing: a router that sends each diagram type to a sub-editor. Today only the pie chart editor edits anything; other types show a code-only message or the "Universal Mode" panel. The AST is parsed in the app state but the sub-editors do not use it.
 - Lifecycle management: initialization, event handling, state persistence, and cleanup.
 - Differences between visual and code editing modes and how they integrate with the code editor.
 
 ## Project Structure
 The visual editors are integrated into a single-page application with:
 - A code editor (Monaco) for text-based editing.
-- A visual editor for BPMN and Mermaid.
+- A visual editor for BPMN and Mermaid (plus Excalidraw, Vega and C4 editors, which this page does not cover).
 - A specialized C4 visual editor using React Flow.
 - A preview pane for rendered diagrams.
 - A toolbar and template gallery for diagram snippets and templates.
@@ -45,7 +42,7 @@ The visual editors are integrated into a single-page application with:
 ```mermaid
 graph TB
 subgraph "UI Shell"
-App["App (index.html)"]
+App["App (App.jsx)"]
 Header["Header Controls"]
 ViewToggle["View Mode Toggle<br/>Code / Visual"]
 end
@@ -58,10 +55,10 @@ subgraph "Visual Editing"
 BPMN["BpmnVisualEditor (bpmn-js)"]
 C4["C4VisualEditor (React Flow)"]
 MermaidRouter["MermaidVisualEditor Router"]
-MermaidGeneric["MermaidGenericEditor"]
+MermaidGeneric["Universal Mode fallback"]
 MermaidFlow["MermaidFlowchartEditor"]
 MermaidSeq["MermaidSequenceEditor"]
-MermaidData["MermaidDataEditors (Timeline/Gantt/Pie/Mindmap/Journey)"]
+MermaidData["Pie (working) / Gantt / Timeline /<br/>Journey / Mindmap (placeholders)"]
 end
 subgraph "Preview"
 Preview["Preview Panel"]
@@ -76,11 +73,6 @@ MermaidRouter --> MermaidGeneric
 MermaidRouter --> MermaidFlow
 MermaidRouter --> MermaidSeq
 MermaidRouter --> MermaidData
-MermaidGeneric --> Preview
-MermaidFlow --> Preview
-MermaidSeq --> Preview
-MermaidData --> Preview
-MermaidData --> Preview
 BPMN --> Preview
 ViewToggle --> C4
 C4 --> Monaco
@@ -88,90 +80,76 @@ C4 --> Monaco
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1398-L1751)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L1-L137)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
+- [index.html](file://index.html)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 **Section sources**
-- [index.html](file://index.html#L1398-L1751)
+- [index.html](file://index.html)
 
 ## Core Components
-- BpmnVisualEditor: Loads bpmn-js, initializes the modeler, listens for changes, and synchronizes XML back to the code editor. Handles initial import and external updates.
-- MermaidVisualEditor: Routes to diagram-specific editors based on AST type and manages live preview generation via Kroki.
-- MermaidSyncController: Provides AST parsing, rendering back to code, and prevents sync loops between visual and code editors.
-- Mermaid editors: Specialized editors for flowcharts, sequences, timelines, Gantt, pie charts, mindmaps, and journeys.
+- BpmnVisualEditor: Creates a bpmn-js modeler (imported from npm), listens for changes, and synchronizes XML back to the code editor. Handles initial import and external updates.
+- MermaidVisualEditor: Routes by the `detectedModel` string to a sub-editor, or shows the "Universal Mode" panel. The Kroki preview belongs to the code view, not to this component.
+- createMermaidSyncController: A factory in `mermaid/utils.js` that provides AST parsing and rendering back to code, and prevents sync loops. `useDiagramState` holds one instance.
+- Mermaid sub-editors (`MermaidEditors.jsx`): Components for flowchart, sequence, pie, Gantt, timeline, journey and mindmap diagrams. The pie editor works; the others are placeholders.
 - MonacoWrapper: Integrates Monaco Editor with custom language support, error diagnostics, quick fixes, and hover explanations.
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L1-L137)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Architecture Overview
 The application supports two editing modes:
 - Code mode: Uses Monaco editor with syntax highlighting and diagnostics.
-- Visual mode: Uses bpmn-js for BPMN and Mermaid-specific editors for Mermaid.
+- Visual mode: Uses bpmn-js for BPMN and the Mermaid router with its sub-editors for Mermaid.
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
-participant App as "App (index.html)"
+participant App as "App (App.jsx)"
 participant Code as "MonacoWrapper"
-participant Sync as "MermaidSyncController"
+participant State as "useDiagramState"
+participant Sync as "createMermaidSyncController"
 participant Router as "MermaidVisualEditor Router"
-participant Editor as "Mermaid Editor (Flow/Seq/Data)"
-participant Kroki as "Kroki Preview"
+participant Editor as "Sub-editor (pie)"
+Code->>State : setTextInput(code)
+State->>Sync : parseCode(code)
+Sync-->>State : ast
 User->>App : Switch to Visual Mode
-App->>Router : Render MermaidVisualEditor
-Router->>Sync : parseCode(code)
-Sync-->>Router : ast
-Router->>Editor : Render editor based on ast.type
-Editor->>Kroki : POST mermaid/svg
-Kroki-->>Editor : SVG Blob
-Editor-->>App : previewUrl
-App-->>User : Live preview
-User->>Editor : Modify AST (visual)
-Editor->>Sync : renderToCode(updatedAst)
-Sync-->>Editor : newCode
-Editor-->>App : onCodeChange(newCode)
+App->>Router : ast, code, astLoaded, detectedModel
+Router->>Editor : Render sub-editor by detectedModel
+User->>Editor : Edit a pie slice
+Editor-->>Router : onChange(newCode)
+Router-->>App : onCodeChange(newCode)
 App->>Code : Update Monaco value
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1725-L1744)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L10-L117)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L51)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 ## Detailed Component Analysis
 
 ### BPMN Visual Editor (bpmn-js)
-- Initialization: Dynamically loads bpmn-js CSS and library, creates a modeler instance bound to a DOM container, and sets keyboard options.
+- Initialization: Imports `bpmn-js/lib/Modeler` and its CSS from npm, then creates a modeler instance bound to a DOM container. The modeler uses task resizing (`bpmn-js-task-resize`), a custom `uni:` moddle extension for lane visibility, and custom context pad, renderer, lane split and lane transpose modules.
 - Change synchronization: Subscribes to command stack changes and exports formatted XML to notify the code editor.
-- Error handling: Catches and reports import/export errors via the onError callback.
+- Error handling: Reports import errors via the onError callback and falls back to an empty BPMN template. Export errors are logged to the console.
 - External updates: Imports XML from the code editor when it changes, avoiding redundant imports.
 - Cleanup: Destroys the modeler instance on component unmount.
 
 ```mermaid
 sequenceDiagram
-participant App as "App (index.html)"
+participant App as "App (App.jsx)"
 participant BPMN as "BpmnVisualEditor"
 participant Modeler as "bpmn-js Modeler"
 participant Code as "MonacoWrapper"
 App->>BPMN : Provide xml, onChange, onError
-BPMN->>BPMN : Load CSS + Library
-BPMN->>Modeler : new BpmnJS({ container, keyboard })
-Modeler-->>BPMN : Ready
+BPMN->>Modeler : new BpmnModeler({ container, additionalModules })
 Modeler->>Modeler : commandStack.changed
 Modeler->>Modeler : saveXML({ format : true })
 Modeler-->>BPMN : { xml }
@@ -182,136 +160,101 @@ Modeler-->>BPMN : Done
 ```
 
 **Diagram sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L19-L90)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
-### Mermaid Visual Editor (AST-based synchronization)
-- Routing: Routes to diagram-specific editors based on AST type (flowchart, sequence, timeline, journey, gantt, pie, mindmap) or falls back to the generic editor.
-- Live preview: Generates SVG previews via Kroki with debounced requests and proper cleanup of object URLs.
-- AST synchronization: Uses a controller to parse code into AST and render AST back to code, with loop prevention and debounce.
+### Mermaid Visual Editor (router and sub-editors)
+- Routing: Matches the `detectedModel` string (Flowchart, Sequence, Pie, Gantt, Timeline, Journey, Mindmap) and renders the matching sub-editor. Any other model shows the "Universal Mode" panel, which says structure editing is best done in code.
+- Loading: Shows a "Loading visual editor..." spinner until `astLoaded` is true.
+- Toolbar: Wraps the sub-editor in an `EditorToolbar` titled `<model> Editor` with the sub-title "Visual Mode (Beta)".
+- AST synchronization: `useDiagramState` uses a controller to parse code into an AST, with loop prevention and debounce. The sub-editors receive only `code` and `onChange`.
 
 ```mermaid
 flowchart TD
-Start(["User switches to Visual"]) --> Detect["Detect diagram type from code"]
-Detect --> Route{"Type?"}
-Route --> |flowchart/graph| Flow["MermaidFlowchartEditor"]
-Route --> |sequence| Seq["MermaidSequenceEditor"]
-Route --> |timeline| TL["MermaidTimelineEditor"]
-Route --> |journey| Jour["MermaidJourneyEditor"]
-Route --> |gantt| Gantt["MermaidGanttEditor"]
-Route --> |pie| Pie["MermaidPieEditor"]
-Route --> |mindmap| Mind["MermaidMindmapEditor"]
-Route --> |other| Gen["MermaidGenericEditor"]
-Gen --> Preview["Kroki Preview"]
-Flow --> Preview
-Seq --> Preview
-TL --> Preview
-Jour --> Preview
-Gantt --> Preview
-Pie --> Preview
-Mind --> Preview
+Start(["User switches to Visual"]) --> Detect["detectedModel from code"]
+Detect --> Route{"Model?"}
+Route --> |Flowchart| Flow["MermaidFlowchartEditor"]
+Route --> |Sequence| Seq["MermaidSequenceEditor"]
+Route --> |Timeline| TL["MermaidTimelineEditor"]
+Route --> |Journey| Jour["MermaidJourneyEditor"]
+Route --> |Gantt| Gantt["MermaidGanttEditor"]
+Route --> |Pie| Pie["MermaidPieEditor"]
+Route --> |Mindmap| Mind["MermaidMindmapEditor"]
+Route --> |other| Gen["Universal Mode fallback"]
+Pie --> Code["onCodeChange(newCode)"]
 ```
 
 **Diagram sources**
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L77-L121)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 **Section sources**
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L1-L137)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
-### MermaidSyncController
+### createMermaidSyncController
 - Purpose: Centralizes AST parsing and rendering to prevent infinite sync loops and to debounce rapid changes.
 - Methods:
-  - parseCode: Debounces parsing and sets AST when MermaidAST is available.
-  - renderToCode: Marks change source as visual, renders AST to code, and resets source after a short delay.
-  - getAst/setAst: Accessors for AST state.
-  - detectType: Detects diagram type from code using MermaidAST.
+  - parseCode: Debounces parsing (300 ms) and reports the AST when MermaidAST is available; otherwise reports a simple `{ type: 'root', code, timestamp }` object.
+  - renderToCode: Marks change source as visual, renders AST to code, and resets source after 50 ms.
+  - getAst: Returns the last AST.
   - isLoaded: Checks availability of MermaidAST.
 
 ```mermaid
 classDiagram
-class MermaidSyncController {
+class createMermaidSyncController {
 -ast
 -changeSource
 -debounceTimer
 +parseCode(code, onSuccess, onError)
 +renderToCode(updatedAst) string|null
 +getAst() Object|null
-+setAst(newAst) void
-+detectType(code) string|null
 +isLoaded() boolean
 }
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### Mermaid Flowchart Editor
-- Parses AST to extract nodes and edges.
-- Inline editing of node labels with pattern-based replacement.
-- Adds new nodes and edges by appending code lines.
-- Real-time preview via Kroki.
-
-```mermaid
-sequenceDiagram
-participant User as "User"
-participant Flow as "MermaidFlowchartEditor"
-participant Sync as "MermaidSyncController"
-participant Code as "MonacoWrapper"
-User->>Flow : Double-click node label
-Flow->>Flow : Enter edit mode
-User->>Flow : Save edit
-Flow->>Flow : Replace label in code
-Flow-->>Code : onCodeChange(newCode)
-Code-->>Flow : Value updated
-Flow->>Sync : parseCode(newCode)
-Sync-->>Flow : ast
-Flow-->>Flow : Re-render nodes/edges
-```
-
-**Diagram sources**
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L62-L117)
+- Shows an "interactive node editing coming soon" note.
+- Shows the code-only message, which tells the user to edit in the code editor.
+- Does not read the code or edit nodes and edges.
 
 **Section sources**
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 ### Mermaid Sequence Editor
-- Extracts participants and messages from AST.
-- Adds participants and messages by inserting lines into the code.
-- Displays preview and element lists.
+- Placeholder that shows the code-only message.
 
 **Section sources**
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
-### Mermaid Data Editors (Timeline, Gantt, Pie, Mindmap, Journey)
-- Timeline: Adds sections and periods; displays hierarchical structure.
-- Gantt: Adds tasks with sections; shows task details.
-- Pie: Adds slices; shows labels and values.
-- Mindmap: Adds nodes; encourages indentation-based structure in code.
-- Journey: Adds tasks with scores and actors; color-coded by score.
+### Mermaid Pie Editor and the other data-chart editors
+- Pie: Reads the title and slices from the code with regular expressions, edits labels and values, adds or removes a slice, and writes the rebuilt `pie` code through `onChange`.
+- Gantt, Timeline, Journey, Mindmap: Placeholders that show the code-only message.
 
 **Section sources**
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
-### Mermaid Generic Editor
-- Displays live preview and an AST explorer panel.
-- Useful when a specialized editor is not available.
+### Universal Mode fallback
+- Shows a "Universal Mode" panel for diagram types without a sub-editor.
+- Says that structure editing is best done in code.
 
 **Section sources**
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ### MonacoWrapper Integration
-- Registers PlantUML and Mermaid Monarch grammars.
+- Registers PlantUML, Mermaid and LikeC4 Monarch grammars.
 - Provides error diagnostics, quick fixes, and hover explanations.
-- Exposes imperative methods for scrolling to line, setting markers, inserting text, and getting the editor model.
+- Exposes imperative methods for scrolling to line, setting markers, inserting text, finding and selecting text, and getting the editor model.
 
 ```mermaid
 sequenceDiagram
-participant App as "App (index.html)"
+participant App as "App (App.jsx)"
 participant Monaco as "MonacoWrapper"
 participant Lang as "Monarch Languages"
 participant Diag as "Error Providers"
@@ -323,82 +266,70 @@ App->>Monaco : insertAtCursor / setMarkers / scrollToLine
 ```
 
 **Diagram sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L100-L151)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Dependency Analysis
 - External libraries:
-  - bpmn-js for BPMN editing.
-  - MermaidAST for Mermaid AST parsing and rendering.
-  - Monaco Editor for code editing and diagnostics.
-  - Kroki for diagram preview generation.
+  - bpmn-js for BPMN editing (npm package).
+  - MermaidAST for Mermaid AST parsing and rendering (loaded from a CDN in `index.html`).
+  - Monaco Editor for code editing and diagnostics (CDN loader).
+  - Kroki for diagram preview generation (code view).
 - Internal dependencies:
-  - MermaidVisualEditor routes to specialized editors based on AST type.
-  - MermaidSyncController mediates between visual and code editors.
-  - Utilities for loading scripts/CSS and escaping regex.
+  - MermaidVisualEditor routes to sub-editors by the `detectedModel` string.
+  - createMermaidSyncController parses code into the AST held by `useDiagramState`.
+  - Utilities for model detection, debouncing and BPMN auto-layout.
 
 ```mermaid
 graph LR
 Utils["utils.js"]
-Config["config.js"]
-Monaco["MonacoWrapper.js"]
-BPMN["BpmnVisualEditor.js"]
-MermaidRouter["MermaidVisualEditor.js"]
-Sync["MermaidSyncController.js"]
-Flow["MermaidFlowchartEditor.js"]
-Seq["MermaidSequenceEditor.js"]
-Data["MermaidDataEditors.js"]
-Generic["MermaidGenericEditor.js"]
-Utils --> BPMN
-Utils --> MermaidRouter
-Config --> MermaidRouter
-Monaco --> MermaidRouter
-MermaidRouter --> Flow
-MermaidRouter --> Seq
-MermaidRouter --> Data
-MermaidRouter --> Generic
-Sync --> MermaidRouter
+Monaco["MonacoWrapper.jsx"]
+BPMN["BpmnVisualEditor.jsx"]
+MermaidRouter["MermaidVisualEditor.jsx"]
+Sync["createMermaidSyncController<br/>(mermaid/utils.js)"]
+Subs["MermaidEditors.jsx"]
+NPM["bpmn-js (npm)"]
+Utils --> Sync
+BPMN --> NPM
+MermaidRouter --> Subs
 ```
 
 **Diagram sources**
 - [utils.js](file://js/utils.js#L116-L146)
 - [config.js](file://js/config.js#L1-L116)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L1-L137)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 **Section sources**
 - [utils.js](file://js/utils.js#L116-L146)
 - [config.js](file://js/config.js#L1-L116)
 
 ## Performance Considerations
-- Debouncing: Mermaid AST parsing is debounced to avoid excessive re-renders during rapid typing.
-- Preview throttling: Visual preview requests are delayed to reduce network load.
-- Memory management: Object URLs for previews are revoked on unmount to prevent memory leaks.
-- Lazy loading: Libraries like bpmn-js and MermaidAST are loaded dynamically to minimize initial bundle size.
+- Debouncing: Mermaid AST parsing is debounced (300 ms) to avoid excessive re-renders during rapid typing.
+- Preview throttling: Preview requests in `useRemoteRenderer` are delayed by 500 ms to reduce network load.
+- Memory management: The bpmn-js modeler is destroyed on unmount.
+- Bundling: bpmn-js is bundled by Vite; MermaidAST and Monaco load from CDNs.
 
 [No sources needed since this section provides general guidance]
 
 ## Troubleshooting Guide
-- BPMN import/export errors: Errors are caught and reported via the onError callback. Ensure valid BPMN XML is provided.
-- Mermaid AST not loaded: The MermaidSyncController checks for MermaidAST availability and defers parsing until it is ready.
+- BPMN import errors: Errors are reported via the onError callback, and the editor falls back to an empty BPMN template. Ensure valid BPMN XML is provided.
+- Mermaid AST not loaded: The visual editor shows "Loading visual editor..." until `astLoaded` is true, and the sync controller reports a simple placeholder object if `window.MermaidAST` is missing.
 - Monaco diagnostics: Quick fixes and hover explanations are provided for syntax errors. Use the lightbulb actions and hover tooltips to resolve issues.
 - Preview failures: Errors are captured and displayed in the preview panel. Use the “Go to line” action to jump to the problematic line.
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L63-L66)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L28-L37)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L318-L423)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Conclusion
 The visual editors provide a seamless dual-mode editing experience:
 - Code mode offers robust syntax highlighting, diagnostics, and quick fixes.
-- Visual mode delivers intuitive manipulation for BPMN and Mermaid diagrams with real-time preview and AST-based synchronization.
-The architecture cleanly separates concerns, enabling future enhancements such as additional Mermaid diagram types and improved BPMN modeling capabilities.
+- Visual mode delivers bpmn-js modeling for BPMN, and a Mermaid router with a working pie chart editor. The other Mermaid types are code-only until their sub-editors are built.
+The architecture cleanly separates concerns, enabling future enhancements such as further Mermaid sub-editors and improved BPMN modeling capabilities.

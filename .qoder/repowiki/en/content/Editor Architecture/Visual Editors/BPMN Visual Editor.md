@@ -2,10 +2,13 @@
 
 <cite>
 **Referenced Files in This Document**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [index.html](file://index.html)
 - [config.js](file://js/config.js)
-- [react-helpers.js](file://js/react-helpers.js)
+- [CustomContextPadProvider.js](file://js/components/editors/bpmn/CustomContextPadProvider.js)
+- [CustomRenderer.js](file://js/components/editors/bpmn/CustomRenderer.js)
+- [CustomSplitLaneHandler.js](file://js/components/editors/bpmn/CustomSplitLaneHandler.js)
+- [CustomTransposeHandler.js](file://js/components/editors/bpmn/CustomTransposeHandler.js)
 - [utils.js](file://js/utils.js)
 - [index.js](file://js/error-diagnostics/index.js)
 - [explanations.js](file://js/error-diagnostics/explanations.js)
@@ -18,10 +21,9 @@
 
 ## Update Summary
 **Changes Made**
-- Updated BPMN-JS version from 16.4.0 to 18.10.1 with enhanced empty state handling
-- Enhanced empty state UI with improved visual feedback and "Create New Diagram" functionality
-- Added comprehensive library version management and update infrastructure
-- Improved error handling and validation for BPMN-JS upgrades
+- The editor imports bpmn-js 18.10.1 or later from npm (`package.json` declares `^18.10.1`). The old CDN `loadScript` loading is gone.
+- Custom modules add lane split and transpose actions, a custom renderer and a custom context pad.
+- An empty XML string imports a minimal empty BPMN template. The old "Create New Diagram" empty state is gone.
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -37,14 +39,14 @@
 ## Introduction
 This document provides comprehensive documentation for the BPMN visual editor implementation using the bpmn-js library. The editor enables interactive BPMN diagram creation and editing through a visual interface, with seamless synchronization between the visual model and XML code representation. It integrates with a broader diagramming platform that supports multiple diagram types, offering a unified editing experience with error diagnostics and quick-fix suggestions.
 
-The BPMN visual editor is built as a React component that dynamically loads bpmn-js resources from a CDN, initializes a modeler instance, and manages the lifecycle of the visual editor including initialization, rendering, change detection, XML import/export, error handling, and cleanup. The implementation has been upgraded to bpmn-js version 18.10.1 with enhanced empty state handling and improved modeler functionality.
+The BPMN visual editor is a React component that imports the bpmn-js modeler from npm, initializes a modeler instance, and manages the lifecycle of the visual editor including initialization, change detection, XML import/export, error handling, and cleanup. The modeler is created with task resizing and custom modules for lane splitting, lane transposing, rendering and the context pad.
 
 ## Project Structure
 The BPMN visual editor resides within a larger diagramming application. The relevant structure for BPMN editing includes:
-- Visual editor component: js/editors/bpmn/BpmnVisualEditor.js
+- Visual editor component: js/components/editors/BpmnVisualEditor.jsx
 - Application entry and configuration: index.html
-- Shared utilities for loading scripts and CSS: js/utils.js
-- React helpers for JSX-like syntax: js/react-helpers.js
+- Custom bpmn-js modules: js/components/editors/bpmn/*
+- Shared utilities (including BPMN auto-layout): js/utils.js
 - Diagram configuration and examples: js/config.js
 - Error diagnostics and fix suggestions: js/error-diagnostics/*
 - Library version management: js/library-registry.js
@@ -58,27 +60,25 @@ subgraph "Application"
 IndexHTML["index.html"]
 ConfigJS["js/config.js"]
 UtilsJS["js/utils.js"]
-ReactHelpers["js/react-helpers.js"]
 LibraryRegistry["js/library-registry.js"]
 HtmlRewriter["js/html-rewriter.js"]
 UpdateManager["js/update-manager.js"]
 UpdateTester["js/update-tester.js"]
 end
 subgraph "BPMN Editor"
-BpmnEditor["BpmnVisualEditor.js"]
-BpmnJS["bpmn-js 18.10.1 (CDN)"]
-EmptyState["Enhanced Empty State UI"]
+BpmnEditor["BpmnVisualEditor.jsx"]
+BpmnJS["bpmn-js 18.10.1+ (npm)"]
+CustomMods["bpmn/ custom modules<br/>(context pad, renderer, lane split, transpose)"]
+EmptyTpl["Empty BPMN template"]
 end
 subgraph "Error Diagnostics"
 ErrorIndex["js/error-diagnostics/index.js"]
 ErrorExplanations["js/error-diagnostics/explanations.js"]
 ErrorFixes["js/error-diagnostics/fixes.js"]
 end
-IndexHTML --> BpmnEditor
-BpmnEditor --> UtilsJS
-BpmnEditor --> ReactHelpers
 BpmnEditor --> BpmnJS
-BpmnEditor --> EmptyState
+BpmnEditor --> CustomMods
+BpmnEditor --> EmptyTpl
 IndexHTML --> ErrorIndex
 ErrorIndex --> ErrorExplanations
 ErrorIndex --> ErrorFixes
@@ -89,86 +89,66 @@ ConfigJS --> IndexHTML
 ```
 
 **Diagram sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L139)
-- [index.html](file://index.html#L1-L2239)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [index.html](file://index.html)
 - [utils.js](file://js/utils.js#L1-L177)
-- [react-helpers.js](file://js/react-helpers.js#L1-L39)
 - [config.js](file://js/config.js#L1-L566)
-- [index.js](file://js/error-diagnostics/index.js#L1-L846)
-- [explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
-- [fixes.js](file://js/error-diagnostics/fixes.js#L1-L694)
+- [index.js](file://js/error-diagnostics/index.js)
+- [explanations.js](file://js/error-diagnostics/explanations.js)
+- [fixes.js](file://js/error-diagnostics/fixes.js)
 - [library-registry.js](file://js/library-registry.js#L167-L200)
 - [html-rewriter.js](file://js/html-rewriter.js#L25-L51)
 - [update-manager.js](file://js/update-manager.js#L1-L200)
 - [update-tester.js](file://js/update-tester.js#L184-L219)
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L139)
-- [index.html](file://index.html#L1-L2239)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [index.html](file://index.html)
 - [utils.js](file://js/utils.js#L1-L177)
-- [react-helpers.js](file://js/react-helpers.js#L1-L39)
 - [config.js](file://js/config.js#L1-L566)
 
 ## Core Components
 The BPMN visual editor is implemented as a React functional component that encapsulates the initialization, lifecycle, and synchronization logic with bpmn-js. Key responsibilities include:
-- Loading bpmn-js CSS and JavaScript from CDN (version 18.10.1)
-- Creating and configuring the bpmn-js modeler instance
+- Importing `bpmn-js/lib/Modeler`, its CSS and `bpmn-js-task-resize` from npm (bpmn-js 18.10.1 or later)
+- Creating the modeler with the custom modules and a custom moddle extension (`uni:` prefix, lane `hideTop`, `hideBottom`, `hideLeft` and `hideRight` attributes)
 - Listening to command stack changes to export XML back to the parent component
-- Managing loading states and displaying enhanced empty state UI
 - Handling external XML updates and re-importing when necessary
+- Falling back to an empty BPMN template when the XML is blank or fails to import
 - Cleaning up the modeler instance on component unmount
-- Providing "Create New Diagram" functionality with minimal valid BPMN 2.0 XML
 
 The component exposes three props:
-- xml: Initial BPMN XML content to import
+- xml: BPMN XML content to import
 - onChange: Callback invoked whenever the diagram changes, receiving the exported XML
-- onError: Callback invoked on initialization or import errors
-
-**Updated** Enhanced empty state handling with improved visual feedback and user interaction
+- onError: Callback invoked on import errors
 
 Initialization flow:
-- Load CSS assets for diagram rendering and BPMN fonts (version 18.10.1)
-- Dynamically load bpmn-js if not already present
-- Create a modeler instance bound to a DOM container
+- Create a modeler instance bound to a DOM container (once, on mount)
 - Subscribe to commandStack.changed events to export XML
-- Import initial XML if provided
-- Set ready state and handle external XML updates
+- Import the xml prop (or the empty template when the prop is blank) in a separate effect
 
 Change detection and synchronization:
-- On commandStack.changed, export formatted XML and notify parent via onChange
-- On external XML updates, compare current XML with incoming XML and re-import if needed
+- On commandStack.changed, export formatted XML, remember it as the last XML, and notify the parent via onChange
+- On external XML updates, compare the incoming XML with the last XML and re-import only if they differ
 
 Cleanup:
 - Destroy the modeler instance when the component unmounts to free resources
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L139)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ## Architecture Overview
-The BPMN visual editor architecture centers on a React component that orchestrates bpmn-js resources and state management. The component maintains a modeler instance and coordinates with the parent application through callbacks for XML import/export and error reporting. The architecture now includes enhanced empty state handling and improved modeler functionality.
+The BPMN visual editor architecture centers on a React component that creates a bpmn-js modeler and coordinates with the parent application through callbacks for XML import/export and error reporting.
 
 ```mermaid
 sequenceDiagram
 participant App as "Parent App"
 participant Editor as "BpmnVisualEditor"
-participant Utils as "loadScript/loadCSS"
-participant Modeler as "bpmn-js Modeler 18.10.1"
-participant CDN as "CDN Resources"
-App->>Editor : Initialize with {xml, onChange, onError}
-Editor->>Utils : loadCSS(CSS URLs for 18.10.1)
-Utils->>CDN : Fetch CSS
-CDN-->>Utils : CSS Loaded
-Editor->>Utils : loadScript(bpmn-modeler 18.10.1 URL)
-Utils->>CDN : Fetch JavaScript
-CDN-->>Utils : Script Loaded
-Utils-->>Editor : Ready
-Editor->>Modeler : new BpmnJS({ container, keyboard })
-Modeler-->>Editor : Modeler Instance
+participant Modeler as "bpmn-js Modeler (npm)"
+App->>Editor : Render with {xml, onChange, onError}
+Editor->>Modeler : new BpmnModeler({ container, additionalModules, moddleExtensions })
 Editor->>Modeler : on('commandStack.changed', exportXML)
-Modeler-->>Editor : Ready
-Editor->>Modeler : importXML(xml) if provided
-Modeler-->>Editor : Import Result
-Editor-->>App : Ready State
+Editor->>Modeler : importXML(xml or empty template)
+Modeler-->>Editor : Import result (errors go to onError)
 Modeler-->>Editor : commandStack.changed
 Editor->>Modeler : saveXML({format : true})
 Modeler-->>Editor : XML
@@ -176,24 +156,21 @@ Editor-->>App : onChange(XML)
 ```
 
 **Diagram sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L19-L67)
-- [utils.js](file://js/utils.js#L116-L146)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ## Detailed Component Analysis
 
 ### BpmnVisualEditor Component
-The BpmnVisualEditor component is a React functional component that manages the lifecycle of the bpmn-js visual editor. It handles dynamic resource loading, modeler instantiation, change synchronization, and error propagation. The component now includes enhanced empty state handling with improved user experience.
+The BpmnVisualEditor component is a React functional component that manages the lifecycle of the bpmn-js visual editor. It handles modeler instantiation, change synchronization, and error propagation.
 
 Key implementation patterns:
-- Dynamic resource loading: Uses loadCSS and loadScript utilities to fetch bpmn-js assets from CDN (version 18.10.1)
-- Modeler creation: Initializes bpmn-js with a container and keyboard binding configuration
+- Npm imports: Imports the bpmn-js modeler and CSS through the Vite build, so no runtime script loading is needed
+- Modeler creation: Initializes bpmn-js with a container, the `resizeTask` module, a custom module bundle and a custom moddle extension
 - Change detection: Subscribes to commandStack.changed to export XML and notify parent
-- External synchronization: Compares current XML with incoming XML and re-imports when necessary
-- Enhanced empty state: Displays a centered empty state UI with "Create New Diagram" button
-- Loading state: Displays a centered loader overlay until the editor is ready
+- External synchronization: Compares incoming XML with the last XML and re-imports when necessary
+- Empty XML fallback: Imports an empty BPMN template when the xml prop is blank
 - Cleanup: Destroys the modeler instance on unmount
-
-**Updated** Enhanced empty state handling with improved visual feedback and user interaction
+- Attribution: Shows a small "Powered by bpmn.io" label in the lower right corner
 
 ```mermaid
 classDiagram
@@ -202,76 +179,53 @@ class BpmnVisualEditor {
 +props onChange : Function
 +props onError : Function
 -containerRef : Ref
--modelerRef : Ref
--isReady : boolean
-+initEditor()
-+handleImport(xml)
-+handleChange()
-+handleCreateNew()
-+cleanup()
+-modeler : State
+-lastXmlRef : Ref
 }
-class Utils {
-+loadCSS(href)
-+loadScript(src)
-}
-class Modeler {
+class BpmnModeler {
 +saveXML(options)
 +importXML(xml)
 +on(event, handler)
 +destroy()
 }
-class EmptyStateUI {
-+icon : "fas fa-project-diagram"
-+title : "No diagram loaded"
-+description : "Create a new BPMN diagram to get started"
-+button : "Create New Diagram"
+class CustomModules {
++CustomContextPadProvider
++CustomSplitLaneHandler
++CustomTransposeHandler
++CustomRenderer
 }
-BpmnVisualEditor --> Utils : "loads resources"
-BpmnVisualEditor --> Modeler : "creates and manages"
-BpmnVisualEditor --> EmptyStateUI : "displays enhanced UI"
+BpmnVisualEditor --> BpmnModeler : "creates and manages"
+BpmnModeler --> CustomModules : "additionalModules"
 ```
 
 **Diagram sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L139)
-- [utils.js](file://js/utils.js#L116-L146)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [CustomContextPadProvider.js](file://js/components/editors/bpmn/CustomContextPadProvider.js)
+- [CustomSplitLaneHandler.js](file://js/components/editors/bpmn/CustomSplitLaneHandler.js)
+- [CustomTransposeHandler.js](file://js/components/editors/bpmn/CustomTransposeHandler.js)
+- [CustomRenderer.js](file://js/components/editors/bpmn/CustomRenderer.js)
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L139)
-- [utils.js](file://js/utils.js#L116-L146)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
-### Enhanced Empty State Handling
-The BPMN visual editor now features enhanced empty state handling that provides users with clear guidance and easy access to create new diagrams. When no XML content is provided, the component displays a centered empty state UI with:
-
-- **Visual Icon**: A project diagram icon (fa-project-diagram) indicating the empty state
-- **Clear Title**: "No diagram loaded" messaging
-- **Helpful Description**: "Create a new BPMN diagram to get started"
-- **Action Button**: "Create New Diagram" button with plus icon and hover effects
-- **Responsive Design**: Centered layout with appropriate spacing and typography
-
-The empty state includes a click handler that generates minimal valid BPMN 2.0 XML containing:
-- A complete BPMN 2.0 definitions element
+### Empty XML Fallback
+When the xml prop is empty or only whitespace, the component imports a built-in empty BPMN template. The template contains:
+- A BPMN 2.0 definitions element with the namespace declarations
 - A process element with isExecutable="false"
-- A startEvent element
-- Proper BPMN namespace declarations
-- Basic diagram structure with bounds
+- One startEvent element
+- A diagram plane with the start event's bounds
 
-**Updated** Enhanced empty state handling with improved user experience and "Create New Diagram" functionality
+If importing the incoming XML fails, the component reports the error through onError and then imports the same empty template. The editor has no separate empty-state screen or "Create New Diagram" button.
 
-### Drag-and-Drop and Element Manipulation
-The bpmn-js modeler (version 18.10.1) provides built-in drag-and-drop capabilities for moving elements and connecting them with sequence flows. Users can:
-- Select and move BPMN elements (tasks, events, gateways)
-- Connect elements using the modeling tools
-- Modify element properties through the property panel integrated with bpmn-js
+### Element Manipulation
+The bpmn-js modeler provides its standard modeling tools for moving elements and connecting them with sequence flows. Users can select and move BPMN elements (tasks, events, gateways), connect elements using the modeling tools, and resize tasks (through `bpmn-js-task-resize`).
 
-The modeler instance listens to command stack changes, enabling undo/redo operations and maintaining a history of modifications.
+The custom modules add lane-specific behaviour:
+- `CustomContextPadProvider` adds lane split actions to the context pad.
+- `CustomSplitLaneHandler` and `CustomTransposeHandler` register the `custom.lane.split` and `custom.lane.transpose` commands.
+- `CustomRenderer` draws lanes using the `uni:` visibility attributes (`hideTop`, `hideBottom`, `hideLeft`, `hideRight`).
 
-### Keyboard Shortcuts Configuration
-The modeler is configured with keyboard binding to the window object, allowing global keyboard shortcuts for actions like:
-- Undo/Redo
-- Copy/Paste
-- Selection and manipulation commands
-
-These shortcuts integrate with the browser's keyboard input, providing a native editing experience.
+The modeler's command stack supports undo and redo, and records each change.
 
 ### Command Stack Integration
 The component subscribes to the commandStack.changed event to capture all modeling operations. On each change:
@@ -281,96 +235,68 @@ The component subscribes to the commandStack.changed event to capture all modeli
 
 ### XML Import/Export Workflow
 Import:
-- On initialization, if an xml prop is provided, the component attempts to import the XML into the modeler
-- Errors during import are caught and reported via the onError callback
+- When the xml prop changes (and on first render), the component imports it into the modeler
+- Errors during import are reported via the onError callback, and the editor then imports the empty template
 
 Export:
 - On commandStack.changed, the component saves the current diagram as XML with formatting
 - The formatted XML is sent to the parent component through onChange
 
 External Updates:
-- When the xml prop changes externally, the component compares the current XML with the incoming XML
+- When the xml prop changes externally, the component compares it with the last XML
 - If they differ, it re-imports the new XML into the modeler
 
 ```mermaid
 flowchart TD
-Start(["Component Mount"]) --> LoadResources["Load CSS and Script (18.10.1)"]
-LoadResources --> CreateModeler["Create Modeler Instance"]
+Start(["Component Mount"]) --> CreateModeler["Create Modeler Instance"]
 CreateModeler --> Subscribe["Subscribe to commandStack.changed"]
-Subscribe --> Ready["Set Ready State"]
-Ready --> ImportXML{"Has Initial XML?"}
-ImportXML --> |Yes| DoImport["Import XML"]
-ImportXML --> |No| CheckEmptyState["Check Empty State"]
-CheckEmptyState --> ShowEmptyState["Display Enhanced Empty State UI"]
-ShowEmptyState --> CreateNew{"User Clicks Create New?"}
-CreateNew --> |Yes| GenerateDefault["Generate Minimal BPMN 2.0 XML"]
-GenerateDefault --> NotifyParent["Notify Parent via onChange"]
-CreateNew --> |No| WaitChanges["Wait for Changes"]
-DoImport --> WaitChanges
+Subscribe --> ImportXML{"xml prop blank?"}
+ImportXML --> |Yes| ImportEmpty["Import empty BPMN template"]
+ImportXML --> |No| DoImport["Import XML"]
+DoImport --> ImportOk{"Import succeeded?"}
+ImportOk --> |No| ReportError["onError(message), then import empty template"]
+ImportOk --> |Yes| WaitChanges["Wait for Changes"]
+ImportEmpty --> WaitChanges
+ReportError --> WaitChanges
 WaitChanges --> ExportOnChange["On Change: Export XML"]
 ExportOnChange --> NotifyParent["Notify Parent via onChange"]
 NotifyParent --> ExternalUpdate{"External XML Update?"}
-ExternalUpdate --> |Yes| CompareXML["Compare Current vs Incoming XML"]
+ExternalUpdate --> |Yes| CompareXML["Compare Last vs Incoming XML"]
 CompareXML --> NeedsImport{"Different?"}
-NeedsImport --> |Yes| Reimport["Re-import XML"]
+NeedsImport --> |Yes| DoImport
 NeedsImport --> |No| WaitChanges
 ExternalUpdate --> |No| WaitChanges
-Ready --> Unmount["Unmount"]
+WaitChanges --> Unmount["Unmount"]
 Unmount --> Cleanup["Destroy Modeler"]
 ```
 
 **Diagram sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L19-L90)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L19-L90)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
-### Property Panel Integration
-The bpmn-js modeler (version 18.10.1) includes a property panel that displays and allows editing of selected element properties. This panel integrates seamlessly with the visual editor, enabling:
-- Editing element names and descriptions
-- Modifying element attributes (e.g., task name, event conditions)
-- Adjusting sequence flow labels and properties
-
-**Updated** Enhanced property panel integration with improved modeler functionality
-
-### Validation Constraints
-The modeler enforces BPMN schema compliance during import and modeling operations. Validation includes:
-- Ensuring all required BPMN elements are properly defined
-- Verifying correct element relationships and connections
-- Maintaining valid XML structure during export
-
-**Updated** Enhanced validation with improved modeler functionality
-
-### Custom BPMN Diagram Workflows
-The visual editor supports custom BPMN workflows by:
-- Allowing users to create custom processes with start/end events, tasks, and sequence flows
-- Enabling swimlane layouts through collaboration elements
-- Supporting complex branching and merging with gateways
-
-**Updated** Enhanced workflow support with improved modeler capabilities
+### Properties and Validation
+`BpmnVisualEditor.jsx` does not include a properties panel. Users edit names directly on the canvas and edit other attributes in the XML code view. The modeler reports malformed XML through importXML errors, which the component sends to onError.
 
 ## Dependency Analysis
 The BPMN visual editor depends on several modules and external resources:
-- bpmn-js library (CDN version 18.10.1): Provides the visual modeling capabilities
-- React and JSX runtime: Enables component-based architecture
-- Shared utilities: Handle dynamic resource loading and CSS injection
-- Error diagnostics: Integrated for error parsing and fix suggestions
-- Library registry: Manages version information and update infrastructure
+- bpmn-js library (npm, `^18.10.1`): Provides the visual modeling capabilities
+- bpmn-js-task-resize (npm): Adds task resizing
+- Custom modules in `js/components/editors/bpmn/`: Lane split, lane transpose, renderer and context pad
+- React: Enables component-based architecture (the file uses JSX)
+- Error diagnostics: Used by the app for error parsing and fix suggestions
+- Library registry: Still lists bpmn-js under CDN tracking, although the editor imports the npm package
 - HTML rewriter: Handles version replacement in HTML content
 - Update manager: Orchestrates library update workflow
 - Update tester: Tests library compatibility and functionality
 
-**Updated** Enhanced dependency management with comprehensive version control infrastructure
-
 ```mermaid
 graph TB
-BpmnEditor["BpmnVisualEditor.js"] --> Utils["utils.js"]
-BpmnEditor --> ReactHelpers["react-helpers.js"]
-BpmnEditor --> BpmnJS["bpmn-js 18.10.1 (CDN)"]
-BpmnEditor --> Config["config.js"]
-BpmnEditor --> ErrorDiagnostics["error-diagnostics/index.js"]
-BpmnEditor --> EmptyState["Enhanced Empty State UI"]
-ErrorDiagnostics --> ErrorExplanations["explanations.js"]
+BpmnEditor["BpmnVisualEditor.jsx"] --> BpmnJS["bpmn-js 18.10.1+ (npm)"]
+BpmnEditor --> TaskResize["bpmn-js-task-resize (npm)"]
+BpmnEditor --> CustomMods["bpmn/ custom modules"]
+ErrorDiagnostics["error-diagnostics/index.js"] --> ErrorExplanations["explanations.js"]
 ErrorDiagnostics --> ErrorFixes["fixes.js"]
 LibraryRegistry["library-registry.js"] --> HtmlRewriter["html-rewriter.js"]
 HtmlRewriter --> UpdateManager["update-manager.js"]
@@ -378,52 +304,36 @@ UpdateManager --> UpdateTester["update-tester.js"]
 ```
 
 **Diagram sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L139)
-- [utils.js](file://js/utils.js#L1-L177)
-- [react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [config.js](file://js/config.js#L1-L566)
-- [index.js](file://js/error-diagnostics/index.js#L1-L846)
-- [explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
-- [fixes.js](file://js/error-diagnostics/fixes.js#L1-L694)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [index.js](file://js/error-diagnostics/index.js)
+- [explanations.js](file://js/error-diagnostics/explanations.js)
+- [fixes.js](file://js/error-diagnostics/fixes.js)
 - [library-registry.js](file://js/library-registry.js#L167-L200)
 - [html-rewriter.js](file://js/html-rewriter.js#L25-L51)
 - [update-manager.js](file://js/update-manager.js#L1-L200)
 - [update-tester.js](file://js/update-tester.js#L184-L219)
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L139)
-- [utils.js](file://js/utils.js#L1-L177)
-- [react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [config.js](file://js/config.js#L1-L566)
-- [index.js](file://js/error-diagnostics/index.js#L1-L846)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [index.js](file://js/error-diagnostics/index.js)
 
 ## Performance Considerations
-- Resource loading: The editor dynamically loads CSS and JavaScript from CDN (version 18.10.1). Network latency can impact initialization time. Consider preloading resources or caching strategies for improved performance.
+- Bundle size: bpmn-js is bundled by Vite with the app, so the editor needs no network fetch for the modeler itself. The bundle grows by the size of the library.
 - Memory management: The modeler instance is destroyed on component unmount to prevent memory leaks. Ensure proper cleanup in complex applications with frequent editor mounts/unmounts.
 - Change frequency: Frequent command stack changes trigger XML exports. Debouncing or throttling can reduce unnecessary re-renders in the parent component.
-- Rendering: Large BPMN diagrams may impact rendering performance. Consider optimizing diagram complexity or using lazy loading for very large models.
-- Empty state optimization: The enhanced empty state UI is lightweight and only rendered when no XML content is present, minimizing performance impact.
-
-**Updated** Enhanced performance considerations with improved empty state handling
+- Rendering: Large BPMN diagrams may impact rendering performance. Consider optimizing diagram complexity.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
-- Initialization failures: If the editor fails to load bpmn-js resources (version 18.10.1), check network connectivity and CDN availability. The onError callback receives a descriptive error message.
-- Import errors: XML import failures typically indicate malformed BPMN XML. Use the error diagnostics to identify the problematic element or tag.
+- Import errors: XML import failures typically indicate malformed BPMN XML. The component reports the message through onError and then imports the empty template. Use the error diagnostics to identify the problematic element or tag.
 - Change detection delays: If XML updates seem delayed, verify that commandStack.changed events are firing and that the onChange callback is properly implemented.
-- Keyboard shortcuts not working: Ensure the modeler is bound to the window object and that no other components intercept keyboard events.
-- Empty state issues: If the empty state UI doesn't display correctly, verify that the component renders when xml prop is falsy and that the empty state button triggers the handleCreateNew function.
-
-**Updated** Enhanced troubleshooting with empty state and version-specific issues
+- Editor does not refresh after a code edit: The component skips re-importing when the incoming XML equals the last XML it saw, so check that the code change actually altered the XML text.
+- Modeler fails to construct: Check the browser console for errors thrown during `new BpmnModeler(...)`, for example from the custom modules.
 
 Integration with error diagnostics:
 - The application includes comprehensive error parsing and fix suggestion systems. When BPMN errors occur, the system extracts line/column information and provides actionable suggestions for corrections.
 
-**Updated** Enhanced error diagnostics integration with improved modeler functionality
-
 ## Conclusion
-The BPMN visual editor provides a robust, React-based solution for creating and editing BPMN diagrams using the bpmn-js library (version 18.10.1). Its architecture emphasizes dynamic resource loading, seamless XML synchronization, and comprehensive error handling. By leveraging the modeler's command stack and property panel, users can efficiently build complex BPMN workflows while maintaining bidirectional synchronization with the underlying XML representation. The integration with error diagnostics enhances the editing experience by providing immediate feedback and automated fixes for common syntax issues.
+The BPMN visual editor provides a React-based solution for creating and editing BPMN diagrams using the bpmn-js library (version 18.10.1 or later, imported from npm). Its architecture emphasizes npm-bundled modeling, XML synchronization through the command stack, and an empty-template fallback when the XML is blank or invalid. Custom modules add lane splitting, lane transposing and custom lane rendering. The integration with error diagnostics enhances the editing experience by providing immediate feedback and automated fixes for common syntax issues.
 
-**Updated** Enhanced conclusion reflecting the BPMN-JS version upgrade and improved empty state handling
-
-The implementation now includes comprehensive library version management infrastructure, allowing for systematic updates and compatibility testing of bpmn-js and other dependencies. The enhanced empty state UI provides users with clear guidance and easy access to create new diagrams, significantly improving the user experience for first-time users and those starting fresh projects.
+The project also keeps a library registry and update infrastructure for its CDN-loaded libraries. That registry still lists bpmn-js under CDN tracking, although the editor imports the npm package.

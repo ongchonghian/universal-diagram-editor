@@ -4,9 +4,8 @@
 **Referenced Files in This Document**
 - [index.html](file://index.html)
 - [js/config.js](file://js/config.js)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
 </cite>
@@ -28,54 +27,51 @@ This document explains how state diagrams are supported and rendered within the 
 
 ## Project Structure
 The state diagram capability is part of the Mermaid visual editor stack. The relevant components include:
-- A Mermaid visual editor router that selects the appropriate editor based on AST type
-- A generic Mermaid editor that renders live previews via a remote service and exposes an AST explorer
+- `MermaidVisualEditor`, which selects a sub-editor from the detected model name and shows the Universal Mode fallback for state diagrams
+- A preview pane that renders the diagram through the remote Kroki service
 - Monaco editor integration with Mermaid language support and error diagnostics
 - Configuration snippets and templates for state diagrams
 - Error explanations and quick-fix suggestions tailored to Mermaid syntax
 
 ```mermaid
 graph TB
-UI["UI Shell<br/>index.html"] --> Router["Mermaid Visual Editor Router<br/>js/editors/mermaid/index.js"]
-Router --> Generic["Mermaid Generic Editor<br/>js/editors/mermaid/MermaidGenericEditor.js"]
-Generic --> Monaco["Monaco Editor<br/>js/components/MonacoWrapper.js"]
+UI["UI Shell<br/>index.html"] --> Router["Mermaid Visual Editor<br/>js/components/editors/mermaid/MermaidVisualEditor.jsx"]
+Router --> Generic["Universal Mode fallback<br/>(state diagrams)"]
+UI --> Monaco["Monaco Editor<br/>js/components/editors/MonacoWrapper.jsx"]
 Monaco --> Diagnostics["Error Diagnostics<br/>js/error-diagnostics/*"]
 UI --> Config["Diagram Snippets & Templates<br/>js/config.js"]
 ```
 
 **Diagram sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/config.js](file://js/config.js#L1-L566)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
-- [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L694)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
+- [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
 
 **Section sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/config.js](file://js/config.js#L1-L566)
 
 ## Core Components
-- Mermaid Visual Editor Router: Routes to diagram-specific editors based on AST type. For Mermaid state diagrams, the router falls back to the generic editor because state diagrams are grouped with other “class-like” diagrams.
-- Mermaid Generic Editor: Provides live preview rendering via a remote service and displays an AST explorer panel. It also shows a placeholder for future visual editing capabilities.
+- Mermaid Visual Editor: `MermaidVisualEditor` routes to a sub-editor by checking the detected model name for Flowchart, Sequence, Pie, Gantt, Timeline, Journey or Mindmap. "State Diagram" matches none of these, so the Universal Mode fallback appears.
+- Universal Mode fallback: A panel with the message "Visual editing for this diagram type is generic. Structure editing is best done via code." State diagrams are therefore edited as code in Monaco.
 - Monaco Editor Integration: Registers Mermaid language support, including syntax highlighting and bracket/label recognition. It also registers error providers for quick fixes and hover explanations.
 - Error Diagnostics: Offers explanations and automated quick fixes for common Mermaid syntax issues, including bracket/label mismatches and arrow syntax problems.
 - Configuration: Supplies Mermaid state diagram snippets and templates for quick insertion and examples.
 
 Key responsibilities:
-- Preview synchronization: The editor fetches a Mermaid SVG from a remote service and updates the preview URL on code changes.
-- AST exploration: The generic editor surfaces the parsed AST structure for inspection.
+- Preview synchronization: The preview pane fetches a Mermaid SVG from the Kroki service and refreshes the image when the code changes.
+- Visual editing: The Mermaid visual editor offers no state diagram editing. Authoring happens in Monaco.
 - Language support: Monaco recognizes Mermaid keywords, labels, arrows, and edge labels, enabling accurate syntax highlighting and bracket matching.
 - Error assistance: Quick fixes and hover explanations help resolve common state diagram syntax issues.
 
 **Section sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L244-L303)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
-- [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L694)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
+- [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
 - [js/config.js](file://js/config.js#L166-L175)
 
 ## Architecture Overview
@@ -85,26 +81,25 @@ The state diagram workflow integrates code mode with visual preview and error as
 sequenceDiagram
 participant User as "User"
 participant UI as "UI Shell<br/>index.html"
-participant Router as "Mermaid Router<br/>index.js"
-participant Editor as "Generic Editor<br/>MermaidGenericEditor.js"
-participant Monaco as "Monaco Editor<br/>MonacoWrapper.js"
+participant Router as "MermaidVisualEditor<br/>MermaidVisualEditor.jsx"
+participant Editor as "Universal Mode fallback"
+participant Monaco as "Monaco Editor<br/>MonacoWrapper.jsx"
 participant Diag as "Error Diagnostics<br/>explanations.js/fixes.js"
 participant Remote as "Kroki Preview Service"
 User->>UI : Enter Mermaid state diagram code
-UI->>Router : Provide AST and code
-Router->>Editor : Route to generic editor (state)
-Editor->>Monaco : Initialize editor with Mermaid language
+UI->>Router : Provide AST, code and detected model
+Router->>Editor : No state branch, show fallback panel
+UI->>Monaco : Initialize editor with Mermaid language
 Monaco->>Monaco : Syntax highlighting and bracket matching
 Monaco->>Diag : Provide quick fixes and hover explanations
-Editor->>Remote : POST code to generate SVG
-Remote-->>Editor : SVG Blob URL
-Editor-->>User : Live preview image
+UI->>Remote : Request SVG for the code
+Remote-->>UI : SVG
+UI-->>User : Preview image
 ```
 
 **Diagram sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L60)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L53)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L168)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L611-L655)
 
@@ -122,29 +117,27 @@ These snippets serve as canonical examples for building state machines in code m
 
 **Section sources**
 - [js/config.js](file://js/config.js#L166-L175)
-- [index.html](file://index.html#L210-L216)
+- [index.html](file://index.html)
 
 ### Visual Representation and Live Preview
-The generic editor renders a live preview by posting Mermaid code to a remote service and displaying the resulting SVG. The preview updates with a short delay to avoid excessive requests during rapid typing.
+The preview pane renders the diagram by sending the Mermaid code to the Kroki service and displaying the resulting SVG. The preview updates 500 ms after the last keystroke, to avoid excessive requests during rapid typing.
 
 ```mermaid
 flowchart TD
 Start(["User edits code"]) --> Debounce["Debounce change"]
-Debounce --> Post["POST code to preview service"]
-Post --> Response{"HTTP 200 OK?"}
-Response --> |Yes| CreateURL["Create object URL from blob"]
-Response --> |No| Error["Log error"]
+Debounce --> Post["Request SVG from Kroki"]
+Post --> Response{"Render succeeded?"}
+Response --> |Yes| CreateURL["Build image from the SVG"]
+Response --> |No| Error["Show error and mark the line"]
 CreateURL --> Display["Display SVG in preview pane"]
 Error --> Display
 ```
 
 **Diagram sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L24-L53)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L35-L45)
+- [js/hooks/useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js)
 
 **Section sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L24-L53)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L35-L45)
+- [js/hooks/useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js)
 
 ### Syntax Highlighting and Bracket Matching
 Monaco’s Mermaid language provider recognizes:
@@ -156,7 +149,7 @@ Monaco’s Mermaid language provider recognizes:
 Bracket and label pairs are auto-closed and matched, aiding in constructing balanced state diagrams.
 
 **Section sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L250-L302)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Error Diagnostics and Quick Fixes
 The editor provides:
@@ -178,7 +171,7 @@ These diagnostics improve the developer experience when writing complex state ma
 These constructs are highlighted and validated by Monaco’s language provider.
 
 **Section sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L266-L283)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/config.js](file://js/config.js#L166-L175)
 
 ### Composite States and Nested Hierarchies
@@ -228,36 +221,34 @@ The state diagram feature depends on:
 ```mermaid
 graph TB
 Config["Snippets & Templates<br/>js/config.js"] --> UI["UI Shell<br/>index.html"]
-Router["Mermaid Router<br/>js/editors/mermaid/index.js"] --> Editor["Generic Editor<br/>MermaidGenericEditor.js"]
-Editor --> Monaco["Monaco Editor<br/>MonacoWrapper.js"]
+Router["MermaidVisualEditor<br/>js/components/editors/mermaid/MermaidVisualEditor.jsx"] --> Editor["Universal Mode fallback"]
+UI --> Monaco["Monaco Editor<br/>MonacoWrapper.jsx"]
 Monaco --> Diagnostics["Error Diagnostics<br/>explanations.js/fixes.js"]
-Editor --> Preview["Kroki Preview Service"]
+UI --> Preview["Kroki Preview Service"]
 ```
 
 **Diagram sources**
 - [js/config.js](file://js/config.js#L166-L175)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L77-L116)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L53)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L168)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L611-L655)
 
 **Section sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L77-L116)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L53)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L168)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L611-L655)
 - [js/config.js](file://js/config.js#L166-L175)
 
 ## Performance Considerations
-- Preview throttling: A debounce delay prevents excessive network requests when typing rapidly.
-- Memory management: Preview URLs are revoked on unmount to prevent memory leaks.
+- Preview throttling: A 500 ms debounce prevents excessive network requests when typing rapidly.
+- Preview format: The SVG returns as a data URI for the image, so no object URLs need revoking.
 - Monaco initialization: Language providers are registered once and reused across sessions.
 
 **Section sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L51-L60)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L42-L44)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/hooks/useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js)
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -275,7 +266,7 @@ Quick fixes and hover explanations are provided automatically.
 ## Conclusion
 The application provides a robust foundation for authoring Mermaid state diagrams:
 - Code mode with syntax highlighting and bracket matching
-- Live preview via a remote service
+- Live preview via the Kroki service
 - Integrated error diagnostics with quick fixes and explanations
 - Canonical snippets and templates for state diagram patterns
 
@@ -292,4 +283,4 @@ This combination enables developers to build complex state machines with confide
 
 **Section sources**
 - [js/config.js](file://js/config.js#L166-L175)
-- [index.html](file://index.html#L210-L216)
+- [index.html](file://index.html)

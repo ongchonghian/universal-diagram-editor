@@ -2,12 +2,10 @@
 
 <cite>
 **Referenced Files in This Document**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
-- [index.js](file://js/editors/mermaid/index.js)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js)
 - [index.js](file://js/error-diagnostics/index.js)
@@ -25,24 +23,25 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the bi-directional synchronization system between code and visual editors for Mermaid diagrams. It focuses on the Mermaid AST-based synchronization mechanism, including change detection, loop prevention, debouncing, controller architecture, and the parseCode and renderToCode methods. It also covers error handling, conflict resolution, and practical scenarios for real-time synchronization.
+This document explains the synchronization system between code and visual editors for Mermaid diagrams. It focuses on the Mermaid AST-based synchronization controller, including change detection, loop prevention, debouncing, and the parseCode and renderToCode methods. It also covers error handling and the current state of the visual editors: the code-to-AST direction is live, while the visual-to-code direction currently works only through the pie editor, which writes code directly.
 
 ## Project Structure
 The synchronization system spans several modules:
-- A controller that manages AST state, change source tracking, and debounced parsing.
-- A router that selects the appropriate visual editor based on AST type.
-- Editor components that convert AST to UI and back to code.
+- A controller (`createMermaidSyncController` in `mermaid/utils.js`) that manages AST state, change source tracking, and debounced parsing. The `useDiagramState` hook owns the controller and calls `parseCode`.
+- A router (`MermaidVisualEditor`) that selects the sub-editor from the detected model name.
+- Sub-editors in `MermaidEditors.jsx` that receive the code and write changed code back. They do not receive the AST.
 - An editor wrapper that integrates Monaco with syntax highlighting and diagnostics.
 - Error diagnostics that explain and fix common syntax issues.
 
 ```mermaid
 graph TB
 subgraph "Mermaid Editors"
-MS["MermaidSyncController<br/>parseCode, renderToCode, detectType"]
-MR["MermaidVisualEditor Router<br/>routes to specific editors"]
-FE["Flowchart Editor"]
-SE["Sequence Editor"]
-DE["Data Editors (Gantt, Timeline, Pie, Mindmap, Journey)"]
+MS["MermaidSyncController<br/>parseCode, renderToCode, getAst, isLoaded"]
+MR["MermaidVisualEditor Router<br/>routes by detected model name"]
+FE["Flowchart Editor<br/>(placeholder)"]
+SE["Sequence Editor<br/>(placeholder)"]
+DE["Pie Editor (working)<br/>Gantt, Timeline, Journey, Mindmap (placeholders)"]
+UM["Universal Mode fallback"]
 end
 subgraph "Editor Integration"
 MW["MonacoWrapper<br/>Monaco + syntax + diagnostics"]
@@ -52,102 +51,93 @@ EX["explanations.js"]
 FX["fixes.js"]
 ED["error-diagnostics/index.js"]
 end
-MW --> MR
-MR --> MS
+MW --> MS
 MR --> FE
 MR --> SE
 MR --> DE
-MS --> EX
-MS --> FX
+MR --> UM
 ED --> MW
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L10-L276)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L110)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L6-L306)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [index.js](file://js/error-diagnostics/index.js#L1-L303)
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [index.js](file://js/error-diagnostics/index.js#L1-L303)
 
 ## Core Components
 - MermaidSyncController: central state machine for AST, change source, and debounced parsing.
-- MermaidVisualEditor: routes to specific editors based on AST type.
-- Editor components: transform AST into UI and back to code.
+- MermaidVisualEditor: routes to a sub-editor based on the detected model name (for example "Flowchart" or "Pie Chart"), or shows the Universal Mode fallback.
+- Editor components: `MermaidPieEditor` reads and rewrites code; the other sub-editors are placeholders.
 - MonacoWrapper: integrates Monaco editor with syntax and diagnostics.
 - Error diagnostics: explanations and quick fixes for common errors.
 
 Key responsibilities:
 - parseCode(code, onSuccess, onError): converts code to AST (code→visual).
 - renderToCode(updatedAst): converts AST back to code (visual→code).
-- detectType(code): identifies diagram type for routing.
+- detectSpecificModel(code, type) in `utils.js`: identifies the diagram model name for routing. `useDiagramState` calls it, not the controller.
 - Debounce and changeSource tracking to prevent sync loops.
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L12-L229)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L11-L296)
 - [index.js](file://js/error-diagnostics/index.js#L13-L145)
 
 ## Architecture Overview
 The synchronization pipeline operates in two directions:
-- Code→Visual: parseCode debounces incoming code, checks changeSource, and parses to AST.
-- Visual→Code: renderToCode sets changeSource to visual, renders AST to code, and resets changeSource after a short delay.
+- Code→Visual: `useDiagramState` calls parseCode on every text change. parseCode debounces the code (300 ms), checks changeSource, and parses to an AST.
+- Visual→Code: renderToCode sets changeSource to visual, renders AST to code, and resets changeSource after 50 ms. `App.jsx` passes the controller's renderToCode to the visual editor's `onChange`, but no sub-editor calls `onChange` today. The pie editor calls `onCodeChange` with new code instead.
 
 ```mermaid
 sequenceDiagram
 participant Code as "Code Editor (Monaco)"
+participant State as "useDiagramState"
 participant Ctrl as "MermaidSyncController"
-participant AST as "AST State"
-participant Visual as "Visual Editor"
-participant Render as "Kroki Preview"
-Code->>Ctrl : onChange(code)
-Ctrl->>Ctrl : debounce timer reset
+participant Visual as "MermaidVisualEditor"
+participant Pie as "MermaidPieEditor"
+Code->>State : onChange(code), stored as textInput
+State->>Ctrl : parseCode(textInput)
+Ctrl->>Ctrl : debounce timer reset (300 ms)
 Ctrl->>Ctrl : if changeSource != "visual" then parse
-Ctrl->>AST : update AST
-AST-->>Visual : astLoaded + ast
-Visual->>Render : previewUrl(code)
-Render-->>Visual : blob URL
-Visual->>Ctrl : onChange(ast)
-Ctrl->>Ctrl : set changeSource="visual"
-Ctrl->>Ctrl : renderToCode(ast)
-Ctrl->>AST : setAst(updatedAst)
-Ctrl->>Code : onCodeChange(renderedCode)
-Ctrl->>Ctrl : reset changeSource after delay
+Ctrl-->>State : onSuccess(ast), stored as mermaidAst
+State-->>Visual : code, detectedModel, astLoaded
+Visual->>Pie : code, onChange
+Pie->>State : onCodeChange(newCode) sets textInput
+State-->>Code : updated code
+Note over Ctrl,Visual: renderToCode(ast) sets changeSource="visual" for 50 ms<br/>but no sub-editor calls the ast onChange today
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L58)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L70-L105)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L38-L50)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L134-L140)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Detailed Component Analysis
 
 ### MermaidSyncController
 The controller encapsulates:
 - AST state: current parsed AST.
-- changeSource: tracks origin of changes ('code' | 'visual' | null).
+- changeSource: tracks origin of changes ('visual' | null).
 - debounceTimer: delays parsing to coalesce rapid edits.
 - Methods:
-  - parseCode(code, onSuccess, onError): debounced AST parse with changeSource guard.
-  - renderToCode(updatedAst): sets changeSource='visual', renders AST to code, resets changeSource.
-  - getAst/setAst: accessors for AST.
-  - detectType(code): detects diagram type via MermaidAST.
+  - parseCode(code, onSuccess, onError): debounced (300 ms) AST parse with changeSource guard.
+  - renderToCode(updatedAst): sets changeSource='visual', renders AST to code, resets changeSource after 50 ms.
+  - getAst(): accessor for AST.
   - isLoaded(): checks MermaidAST availability.
 
 Change detection and loop prevention:
@@ -156,21 +146,22 @@ Change detection and loop prevention:
 
 Debounce implementation:
 - parseCode clears and restarts a timer before parsing.
-- Delay chosen to balance responsiveness and stability.
+- The delay is 300 ms, chosen to balance responsiveness and stability.
 
 Error handling:
-- parseCode catches exceptions and invokes onError with message.
-- renderToCode catches exceptions, logs error, resets changeSource, and returns null.
+- parseCode catches exceptions and invokes onError with message (`useDiagramState` logs the message to the console).
+- When `window.MermaidAST` has not loaded, parseCode calls onSuccess with a placeholder `{ type: 'root', code, timestamp }` node.
+- renderToCode catches exceptions, resets changeSource, and returns null.
 
 Timing mechanisms:
-- renderToCode schedules changeSource reset after a small delay to allow next code change to proceed.
+- renderToCode schedules changeSource reset after 50 ms to allow next code change to proceed.
 
 Conflict resolution:
 - changeSource prevents infinite loops by blocking code→visual→code cycles.
 - Debounce ensures only the latest code is parsed.
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 #### Controller Class Diagram
 ```mermaid
@@ -182,69 +173,63 @@ class MermaidSyncController {
 +parseCode(code, onSuccess, onError) void
 +renderToCode(updatedAst) string|null
 +getAst() Object
-+setAst(newAst) void
-+detectType(code) string|null
 +isLoaded() boolean
 }
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### Visual Editor Router
-The router selects the appropriate editor based on AST type:
-- flowchart → MermaidFlowchartEditor
-- sequence → MermaidSequenceEditor
-- timeline/journey → timeline/journey editors
-- gantt/pie → gantt/pie editors
-- mindmap → mindmap editor
-- others → MermaidGenericEditor
+The router selects the sub-editor by matching the detected model name:
+- Flowchart → MermaidFlowchartEditor
+- Sequence → MermaidSequenceEditor
+- Pie → MermaidPieEditor
+- Gantt → MermaidGanttEditor
+- Timeline → MermaidTimelineEditor
+- Journey → MermaidJourneyEditor
+- Mindmap → MermaidMindmapEditor
+- others → the Universal Mode fallback panel, which says structure editing is best done via code
 
-It also generates a preview URL from code via Kroki and handles loading states.
+While `astLoaded` is false, the router shows a "Loading visual editor..." spinner. The router wraps the sub-editor in an `EditorToolbar` titled "<model> Editor" with the sub-title "Visual Mode (Beta)". The preview is separate: the preview panel renders the diagram, not the visual editor.
 
 **Section sources**
-- [index.js](file://js/editors/mermaid/index.js#L77-L121)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ### Flowchart Editor
-Converts AST to nodes and edges, supports inline editing of node labels, and adds nodes/edges by updating code.
+`MermaidFlowchartEditor` is a placeholder. It shows a "Flowchart Editor: interactive node editing coming soon" note plus the "Code-Only Editing" message from `VisualEditingNotAvailable`.
 
 Key behaviors:
-- Extracts nodes and edges from AST.
-- Handles node label edit via inline input and saves changes by replacing the label in code.
-- Adds nodes and edges by appending new lines to code.
+- Receives `code` and `onChange`, and does not call `onChange`.
+- Does not read the AST, and does not edit nodes or edges.
 
 **Section sources**
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L17-L124)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 ### Sequence Editor
-Displays participants and messages, supports adding participants and messages by inserting lines into code.
+`MermaidSequenceEditor` is a one-line placeholder that returns the "Code-Only Editing" message.
 
 **Section sources**
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L8-L50)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
-### Data Editors (Gantt, Timeline, Pie, Mindmap, Journey)
-Provide specialized UIs for data-centric diagrams:
-- Timeline: extracts sections and periods.
-- Gantt: extracts tasks and sections.
-- Pie: extracts slices.
-- Mindmap: encourages code editing for hierarchical structures.
-- Journey: extracts tasks with scores and actors.
+### Data-Chart Editors (Pie, Gantt, Timeline, Mindmap, Journey)
+These editors live in `MermaidEditors.jsx`:
+- Pie: reads the slices from the code with regular expressions (`title ...` and `"label" : value`), lets the user edit the title, labels and values and add or remove a slice, and writes the regenerated code through `onChange`. This is the only working visual editor.
+- Gantt, Timeline, Journey, Mindmap: placeholders that return the "Code-Only Editing" message.
 
 **Section sources**
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L6-L306)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 ### Monaco Integration
 MonacoWrapper integrates Monaco editor with:
-- Language registration for Mermaid and PlantUML.
-- Error providers for quick fixes and hover explanations.
+- Language registration for Mermaid, PlantUML and LikeC4.
+- Error providers (quick fixes and hover explanations) for Mermaid, PlantUML, XML and Structurizr.
 - Content change handling and cursor position reporting.
 
-Monaco emits onChange(value) which triggers synchronization.
+Monaco emits onChange(value), which updates `textInput` in `useDiagramState` and triggers synchronization.
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L174-L303)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L310-L423)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Error Diagnostics
 Error diagnostics provide:
@@ -262,8 +247,8 @@ These integrate with Monaco to show squiggly underlines and quick fixes.
 
 ## Dependency Analysis
 - MermaidSyncController depends on window.MermaidAST for parsing and rendering.
-- MermaidVisualEditor depends on AST type to route to the correct editor.
-- Editor components depend on AST to populate UI and on code updates to persist changes.
+- MermaidVisualEditor depends on the detected model name to route to the correct editor.
+- Editor components depend on the code they receive, and persist changes by calling `onChange` with new code.
 - MonacoWrapper depends on Monaco editor APIs and error diagnostics modules.
 - Error diagnostics modules are shared across editors and Monaco integration.
 
@@ -271,38 +256,37 @@ These integrate with Monaco to show squiggly underlines and quick fixes.
 graph TB
 CTRL["MermaidSyncController"]
 AST["AST State"]
+HOOK["useDiagramState"]
 VIS["MermaidVisualEditor"]
 FLOW["Flowchart Editor"]
 SEQ["Sequence Editor"]
-DATA["Data Editors"]
+DATA["Data-chart Editors"]
 MON["MonacoWrapper"]
 ERR["Error Diagnostics"]
 CTRL --> AST
-VIS --> CTRL
+HOOK --> CTRL
+HOOK --> VIS
 VIS --> FLOW
 VIS --> SEQ
 VIS --> DATA
-MON --> VIS
+MON --> HOOK
 MON --> ERR
-CTRL --> ERR
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L10-L276)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L110)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L6-L306)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [index.js](file://js/error-diagnostics/index.js#L1-L303)
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [index.js](file://js/error-diagnostics/index.js#L1-L303)
 
@@ -310,8 +294,8 @@ CTRL --> ERR
 - Debounce delay: parseCode uses a fixed delay to batch rapid edits and reduce parsing overhead.
 - AST caching: controller maintains AST in memory to avoid repeated parsing until new code arrives.
 - ChangeSource gating: prevents redundant parsing when visual edits trigger code updates.
-- Preview throttling: visual editor uses a short delay to avoid excessive preview requests.
-- Monaco lazy initialization: Monaco is initialized only once and reused across sessions.
+- Preview: the preview panel, not the visual editor, requests the rendered diagram.
+- Monaco providers: error providers are registered once, guarded by a flag.
 
 [No sources needed since this section provides general guidance]
 
@@ -322,10 +306,10 @@ Common synchronization issues and resolutions:
   - Resolution: changeSource blocks parseCode when set to 'visual'; ensure renderToCode resets changeSource promptly.
 - Parser not loaded:
   - Cause: window.MermaidAST unavailable.
-  - Resolution: check isLoaded() and wait for library to load; onError callbacks should surface this.
+  - Resolution: check isLoaded() and wait for the library to load. The visual editor shows a loading spinner until then, and parseCode passes a placeholder root node to onSuccess in the meantime.
 - Stale preview:
-  - Cause: preview URL not updated after code changes.
-  - Resolution: router regenerates preview URL on code change with a short delay.
+  - Cause: the preview panel has not re-rendered after a code change.
+  - Resolution: check the preview panel error message; rendering is handled by `useRemoteRenderer`, not by the Mermaid visual editor.
 - Error markers not appearing:
   - Cause: Monaco markers not set or error diagnostics not invoked.
   - Resolution: ensure parseError and toMonacoMarker are used; Monaco provider registration is required.
@@ -334,9 +318,9 @@ Common synchronization issues and resolutions:
   - Resolution: extend getFixSuggestions with additional patterns or improve error extraction.
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L58)
-- [index.js](file://js/editors/mermaid/index.js#L25-L53)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L310-L423)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L332-L366)
 - [index.js](file://js/error-diagnostics/index.js#L261-L298)
@@ -347,7 +331,7 @@ Common synchronization issues and resolutions:
 Behavior:
 - If changeSource is 'visual', return immediately to prevent loop.
 - Clear existing debounce timer and schedule new one.
-- On timeout, check MermaidAST availability; parse code to AST; call onSuccess(ast).
+- On timeout, check MermaidAST availability. If the library is missing, call onSuccess with a placeholder root node. Otherwise parse the code to an AST and call onSuccess(ast).
 - On error, call onError with message.
 
 Debounce flow:
@@ -357,54 +341,45 @@ Start(["parseCode(code)"]) --> Guard{"changeSource == 'visual'?"}
 Guard --> |Yes| Return["Return (no-op)"]
 Guard --> |No| Clear["Clear debounceTimer"]
 Clear --> Schedule["Set debounceTimer (delay)"]
-Schedule --> Timeout{"Timer fires"}
+Schedule --> Timeout{"Timer fires after 300 ms"}
 Timeout --> CheckAST{"window.MermaidAST available?"}
-CheckAST --> |No| OnError["onError('MermaidAST not loaded')"]
+CheckAST --> |No| Placeholder["onSuccess({ type: 'root', code, timestamp })"]
 CheckAST --> |Yes| Parse["ast = MermaidAST.parse(code)"]
-Parse --> OnSuccess["onSuccess(ast)"]
-OnError --> End(["Exit"])
+Parse --> |parse succeeds| OnSuccess["onSuccess(ast)"]
+Parse --> |parse throws| OnError["onError(message)"]
+Placeholder --> End(["Exit"])
+OnError --> End
 OnSuccess --> End
 Return --> End
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L38)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L38)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### renderToCode Method (Visual → Code)
 Behavior:
 - Set changeSource to 'visual' and update AST.
 - Attempt to render AST to code via MermaidAST.
 - Reset changeSource after a short delay to allow next code change.
-- On error, log and reset changeSource, returning null.
+- On error, reset changeSource and return null.
 
 Timing and reset:
-- A short delay ensures subsequent code changes are not blocked by the 'visual' flag.
+- The 50 ms delay ensures subsequent code changes are not blocked by the 'visual' flag.
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L45-L58)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### Editor-to-Code Updates
-- Flowchart editor replaces node label text in code using multiple bracket variants.
-- Sequence editor inserts participant and message lines at appropriate positions.
-- Data editors append new elements to code.
+- Pie editor regenerates the whole pie code (the `pie` line, title and slices) from its own state on every edit.
+- Flowchart, sequence, Gantt, timeline, journey and mindmap editors do not change code.
 
-These operations trigger onCodeChange, which feeds back into the sync loop.
+The pie editor's change reaches `onCodeChange`, which sets `textInput` and feeds back into the sync loop. Because this path does not use renderToCode, the changeSource guard is not set for it, and parseCode re-parses the new code after the debounce.
 
 **Section sources**
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L70-L105)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L38-L50)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L44-L45)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L118-L119)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L171-L171)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L264-L264)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L30-L39)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L110-L113)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L163-L167)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L256-L259)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L30-L39)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 ### Error Handling and Diagnostics
 - parseError extracts line/column and assigns error code.
@@ -424,38 +399,37 @@ These operations trigger onCodeChange, which feeds back into the sync loop.
 graph TB
 CTRL["MermaidSyncController"]
 AST["AST State"]
+HOOK["useDiagramState"]
 VIS["MermaidVisualEditor"]
 FLOW["Flowchart Editor"]
 SEQ["Sequence Editor"]
-DATA["Data Editors"]
+DATA["Data-chart Editors"]
 MON["MonacoWrapper"]
 ERR["Error Diagnostics"]
 CTRL --> AST
-VIS --> CTRL
+HOOK --> CTRL
+HOOK --> VIS
 VIS --> FLOW
 VIS --> SEQ
 VIS --> DATA
-MON --> VIS
+MON --> HOOK
 MON --> ERR
-CTRL --> ERR
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L10-L276)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L110)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L6-L306)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [index.js](file://js/error-diagnostics/index.js#L1-L303)
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [index.js](file://js/error-diagnostics/index.js#L1-L303)
 
@@ -463,8 +437,8 @@ CTRL --> ERR
 - Debounce delay: parseCode uses a fixed delay to batch rapid edits and reduce parsing overhead.
 - AST caching: controller maintains AST in memory to avoid repeated parsing until new code arrives.
 - ChangeSource gating: prevents redundant parsing when visual edits trigger code updates.
-- Preview throttling: visual editor uses a short delay to avoid excessive preview requests.
-- Monaco lazy initialization: Monaco is initialized only once and reused across sessions.
+- Preview: the preview panel, not the visual editor, requests the rendered diagram.
+- Monaco providers: error providers are registered once, guarded by a flag.
 
 [No sources needed since this section provides general guidance]
 
@@ -475,10 +449,10 @@ Common synchronization issues and resolutions:
   - Resolution: changeSource blocks parseCode when set to 'visual'; ensure renderToCode resets changeSource promptly.
 - Parser not loaded:
   - Cause: window.MermaidAST unavailable.
-  - Resolution: check isLoaded() and wait for library to load; onError callbacks should surface this.
+  - Resolution: check isLoaded() and wait for the library to load. The visual editor shows a loading spinner until then, and parseCode passes a placeholder root node to onSuccess in the meantime.
 - Stale preview:
-  - Cause: preview URL not updated after code changes.
-  - Resolution: router regenerates preview URL on code change with a short delay.
+  - Cause: the preview panel has not re-rendered after a code change.
+  - Resolution: check the preview panel error message; rendering is handled by `useRemoteRenderer`, not by the Mermaid visual editor.
 - Error markers not appearing:
   - Cause: Monaco markers not set or error diagnostics not invoked.
   - Resolution: ensure parseError and toMonacoMarker are used; Monaco provider registration is required.
@@ -487,9 +461,9 @@ Common synchronization issues and resolutions:
   - Resolution: extend getFixSuggestions with additional patterns or improve error extraction.
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L58)
-- [index.js](file://js/editors/mermaid/index.js#L25-L53)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L310-L423)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L332-L366)
 - [index.js](file://js/error-diagnostics/index.js#L261-L298)

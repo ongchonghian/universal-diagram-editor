@@ -6,13 +6,10 @@
 - [index.html](file://index.html)
 - [utils.js](file://js/utils.js)
 - [react-helpers.js](file://js/react-helpers.js)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js)
 - [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
@@ -71,13 +68,10 @@ UI["js/components/ui.js<br/>Button, StatusBadge, Loader,<br/>EmptyState, Editabl
 PU["js/components/PlantUmlComponents.js<br/>Toolbar, TemplateGalleryModal,<br/>InteractiveSvgPreview, ContextMenu"]
 end
 subgraph "Editors"
-MVE["js/editors/mermaid/index.js<br/>MermaidVisualEditor router"]
-MSC["js/editors/mermaid/MermaidSyncController.js<br/>parseCode/renderToCode"]
-MGEN["js/editors/mermaid/MermaidGenericEditor.js"]
-MFCE["js/editors/mermaid/MermaidFlowchartEditor.js"]
-MSE["js/editors/mermaid/MermaidSequenceEditor.js"]
-MDATA["js/editors/mermaid/MermaidDataEditors.js"]
-BVE["js/editors/bpmn/BpmnVisualEditor.js"]
+MVE["js/components/editors/mermaid/MermaidVisualEditor.jsx<br/>MermaidVisualEditor router<br/>and Universal Mode fallback"]
+MSC["js/components/editors/mermaid/utils.js<br/>parseCode/renderToCode"]
+MED["js/components/editors/mermaid/MermaidEditors.jsx<br/>Pie editor and placeholder editors"]
+BVE["js/components/editors/BpmnVisualEditor.jsx"]
 end
 subgraph "Styles"
 CSS["styles.css"]
@@ -90,10 +84,7 @@ HTML --> PU
 HTML --> MVE
 HTML --> BVE
 MVE --> MSC
-MVE --> MGEN
-MVE --> MFCE
-MVE --> MSE
-MVE --> MDATA
+MVE --> MED
 CFG --> PU
 CFG --> MVE
 CFG --> BVE
@@ -106,46 +97,40 @@ CSS --> HTML
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L60-L371)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L1-L566)
 - [utils.js](file://js/utils.js#L1-L177)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L1-L137)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [ui.js](file://js/components/ui.js#L1-L175)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [ui.js](file://js/components/ui.js)
 - [styles.css](file://styles.css#L1-L370)
 
 **Section sources**
-- [index.html](file://index.html#L1-L120)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L1-L116)
 - [utils.js](file://js/utils.js#L1-L177)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L1-L137)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [ui.js](file://js/components/ui.js#L1-L175)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [ui.js](file://js/components/ui.js)
 - [styles.css](file://styles.css#L1-L370)
 
 ## Core Components
 - Diagram type registry: Centralized configuration of supported diagram types, extensions, language IDs, documentation links, and example content.
-- Editor routing: A Mermaid visual editor router that selects the appropriate specialized editor based on AST type.
+- Editor routing: A Mermaid visual editor router that selects the sub-editor from the detected diagram model, and shows a "Universal Mode" message when no sub-editor matches.
 - Error diagnostics: Structured error parsing, categorization, suggestions, and Monaco integration.
 - Utilities: Encoding, compression, detection helpers, external script/CSS loaders, debouncing, and regex escaping.
 - UI components: Reusable buttons, badges, loaders, editable text, and section headers.
@@ -154,11 +139,11 @@ CSS --> HTML
 
 **Section sources**
 - [config.js](file://js/config.js#L6-L116)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L20-L121)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - [utils.js](file://js/utils.js#L14-L85)
-- [ui.js](file://js/components/ui.js#L16-L175)
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L8-L249)
+- [ui.js](file://js/components/ui.js)
+- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
 - [styles.css](file://styles.css#L1-L370)
 
 ## Architecture Overview
@@ -183,20 +168,18 @@ HTML->>CFG : Load DIAGRAM_TYPES, snippets, templates
 HTML->>UTIL : Initialize encodeKroki, loadScript, loadCSS
 HTML->>ERR : Register Monaco providers (code actions, hover)
 User->>MVE : Select Mermaid diagram
-MVE->>UTIL : Fetch preview via Kroki
-MVE-->>User : Render live preview
+MVE-->>User : Render the matching sub-editor or the Universal Mode message
 User->>BVE : Select BPMN diagram
-BVE->>UTIL : Load bpmn-js CSS/JS
-BVE-->>User : Render visual BPMN editor
+BVE-->>User : Render visual BPMN editor (bpmn-js bundled from npm)
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L60-L520)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L60-L116)
 - [utils.js](file://js/utils.js#L14-L146)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L474-L509)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L24-L60)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L19-L75)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ## Detailed Component Analysis
 
@@ -222,11 +205,11 @@ Practical steps to add a new diagram type:
 **Section sources**
 - [config.js](file://js/config.js#L6-L116)
 - [utils.js](file://js/utils.js#L35-L85)
-- [index.html](file://index.html#L70-L87)
+- [index.html](file://index.html)
 
 ### Language Configuration and Syntax Highlighting
 Monaco language registration and token providers are set up per diagram type:
-- PlantUML and Mermaid languages are registered with Monarch tokenizers.
+- PlantUML, Mermaid and LikeC4 languages are registered with Monarch tokenizers.
 - Error providers and hover providers are registered for these languages.
 - The Monaco wrapper sets language dynamically and applies theme and editor options.
 
@@ -236,8 +219,8 @@ Customization points:
 - Adjust Monaco options (theme, fonts, minimap, etc.) in the wrapper.
 
 **Section sources**
-- [index.html](file://index.html#L654-L724)
-- [utils.js](file://js/utils.js#L474-L509)
+- [index.html](file://index.html)
+- [utils.js](file://js/utils.js)
 
 ### Template Registration and Snippet Systems
 Template and snippet systems enable rapid authoring:
@@ -259,8 +242,8 @@ Customization points:
 External libraries and services are loaded dynamically:
 - External scripts: loadScript handles AMD conflict mitigation and caching.
 - External CSS: loadCSS prevents duplicate link tags.
-- Visual editors: BPMN editor loads bpmn-js CSS and JS on demand.
-- Preview generation: Mermaid editor fetches SVG previews from Kroki.
+- Visual editors: the BPMN editor imports bpmn-js from the npm package, so Vite bundles bpmn-js and its CSS with the app. The Mermaid editors load the Mermaid AST library (`window.MermaidAST`) from `esm.sh` in `index.html`.
+- Preview generation: the hook `js/hooks/useRemoteRenderer.js` fetches SVG previews from Kroki through the renderer adapter. The Mermaid visual editor has no preview of its own.
 
 Best practices:
 - Check for existing resources before loading.
@@ -269,8 +252,8 @@ Best practices:
 
 **Section sources**
 - [utils.js](file://js/utils.js#L116-L158)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L22-L66)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L32-L60)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ### Application Settings and UI Customization
 Theme and styling options:
@@ -280,17 +263,17 @@ Theme and styling options:
 
 Editor preferences:
 - Monaco wrapper exposes theme, language, and editor options.
-- Visual editors support preview toggles and loading states.
+- The Mermaid visual editor shows a loading spinner until the Mermaid AST library has loaded.
 
 Export settings:
 - Encoding and compression pipeline uses pako for URL-safe base64 encoding.
-- Preview fetching uses Kroki endpoints for rendering.
+- Preview fetching in `useRemoteRenderer` uses Kroki endpoints for rendering.
 
 **Section sources**
 - [index.html](file://index.html#L32-L45)
 - [styles.css](file://styles.css#L1-L370)
 - [utils.js](file://js/utils.js#L14-L28)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L32-L60)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ### Configuration Object Structure
 The configuration object structure includes:
@@ -308,7 +291,7 @@ These structures are consumed by:
 **Section sources**
 - [config.js](file://js/config.js#L6-L116)
 - [config.js](file://js/config.js#L118-L565)
-- [index.html](file://index.html#L70-L371)
+- [index.html](file://index.html)
 
 ### Dependency Injection Patterns
 The application uses minimal dependency injection:
@@ -323,24 +306,24 @@ Where to inject:
 
 **Section sources**
 - [react-helpers.js](file://js/react-helpers.js#L4-L38)
-- [index.html](file://index.html#L649-L724)
+- [index.html](file://index.html)
 
 ### Runtime Configuration Changes
 Runtime behaviors:
 - Monaco language switching via model.setLanguage.
 - Preview URL updates trigger re-renders.
 - Visual editor readiness gates prevent inconsistent states.
-- Debounce timers manage expensive operations (e.g., AST parsing).
+- Debounce timers manage expensive operations (for example, the 300 ms debounce on Mermaid AST parsing).
 
 How to change:
 - Update Monaco language dynamically by passing language prop.
-- Modify debounce timing for AST parsing or preview generation.
+- Change the debounce timing for Mermaid AST parsing in `createMermaidSyncController`.
 - Toggle visual editor availability based on feature flags.
 
 **Section sources**
-- [index.html](file://index.html#L721-L724)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L58)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L24-L60)
+- [index.html](file://index.html)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ### Utility Functions: Encoding, Compression, and External Services
 Encoding and compression:
@@ -360,7 +343,7 @@ Integration examples:
 **Section sources**
 - [utils.js](file://js/utils.js#L7-L28)
 - [utils.js](file://js/utils.js#L116-L176)
-- [index.html](file://index.html#L378-L387)
+- [index.html](file://index.html)
 
 ### Practical Examples
 
@@ -377,7 +360,7 @@ Outcome:
 **Section sources**
 - [config.js](file://js/config.js#L6-L116)
 - [utils.js](file://js/utils.js#L35-L85)
-- [index.html](file://index.html#L654-L681)
+- [index.html](file://index.html)
 
 #### Example 2: Customizing the User Interface
 Steps:
@@ -391,20 +374,20 @@ Outcome:
 **Section sources**
 - [index.html](file://index.html#L32-L45)
 - [styles.css](file://styles.css#L1-L370)
-- [ui.js](file://js/components/ui.js#L16-L175)
+- [ui.js](file://js/components/ui.js)
 
 #### Example 3: Integrating Additional External Services
 Steps:
 - Use loadScript to load external libraries.
 - Use loadCSS to inject styles.
-- Implement a fetch-based preview mechanism similar to Mermaid’s.
+- Implement a fetch-based preview mechanism similar to `useRemoteRenderer`.
 
 Outcome:
 - Seamless integration of new rendering engines or tools.
 
 **Section sources**
 - [utils.js](file://js/utils.js#L116-L158)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L32-L60)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ## Dependency Analysis
 The following diagram shows key dependencies among modules:
@@ -412,11 +395,12 @@ The following diagram shows key dependencies among modules:
 ```mermaid
 graph TB
 CFG["config.js"] --> PU["PlantUmlComponents.js"]
-CFG --> MVE["MermaidVisualEditor.js"]
-CFG --> BVE["BpmnVisualEditor.js"]
-UTIL["utils.js"] --> MVE
-UTIL --> BVE
-ERR["error-diagnostics/index.js"] --> MVE
+APP["App.jsx"] --> MVE["MermaidVisualEditor.jsx"]
+APP --> BVE["BpmnVisualEditor.jsx"]
+MVE --> MED["MermaidEditors.jsx"]
+MVE --> MSC["mermaid/utils.js"]
+UTIL["utils.js"] --> MSC
+ERR["error-diagnostics/index.js"]
 EXPL["explanations.js"] --> ERR
 FIX["fixes.js"] --> ERR
 UI["ui.js"] --> PU
@@ -425,31 +409,31 @@ CSS["styles.css"] --> HTML["index.html"]
 
 **Diagram sources**
 - [config.js](file://js/config.js#L6-L116)
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L1-L137)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
+- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [utils.js](file://js/utils.js#L1-L177)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
-- [ui.js](file://js/components/ui.js#L1-L175)
+- [ui.js](file://js/components/ui.js)
 - [styles.css](file://styles.css#L1-L370)
-- [index.html](file://index.html#L1-L120)
+- [index.html](file://index.html)
 
 **Section sources**
 - [config.js](file://js/config.js#L6-L116)
 - [utils.js](file://js/utils.js#L1-L177)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [ui.js](file://js/components/ui.js#L1-L175)
+- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [ui.js](file://js/components/ui.js)
 - [styles.css](file://styles.css#L1-L370)
-- [index.html](file://index.html#L1-L120)
+- [index.html](file://index.html)
 
 ## Performance Considerations
-- Debounce expensive operations: Use debounce for preview generation and AST parsing.
-- Lazy loading: Load external libraries only when needed (e.g., bpmn-js, Mermaid AST).
+- Debounce expensive operations: Use debounce for Mermaid AST parsing and similar work.
+- Lazy loading: Load external libraries only when needed (for example, the Mermaid AST library).
 - Memory management: Revoke object URLs and dispose editors to prevent leaks.
 - Minimize re-renders: Keep configuration immutable and pass only necessary props.
 - Compression: Use pako compression for efficient URL encoding of diagram sources.
@@ -476,7 +460,7 @@ Diagnostic workflow:
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L276)
 - [error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L332-L366)
 - [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
-- [index.html](file://index.html#L474-L509)
+- [index.html](file://index.html)
 
 ## Conclusion
 The Universal Diagram application provides a flexible configuration and customization framework:
@@ -500,7 +484,7 @@ Adhering to the patterns and best practices outlined here will help you extend t
 **Section sources**
 - [config.js](file://js/config.js#L6-L116)
 - [config.js](file://js/config.js#L118-L565)
-- [index.html](file://index.html#L70-L371)
+- [index.html](file://index.html)
 
 ### Appendix B: Error Parsing Flow
 ```mermaid

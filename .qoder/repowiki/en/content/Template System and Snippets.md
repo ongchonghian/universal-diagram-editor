@@ -6,14 +6,11 @@
 - [js/config.js](file://js/config.js)
 - [js/utils.js](file://js/utils.js)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js)
-- [js/editors/mermaid/MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js)
 - [js/components/ui.js](file://js/components/ui.js)
 </cite>
@@ -63,18 +60,15 @@ subgraph "PlantUML"
 PUC["js/components/PlantUmlComponents.js"]
 end
 subgraph "Mermaid Editors"
-MEI["js/editors/mermaid/index.js"]
-MGE["js/editors/mermaid/MermaidGenericEditor.js"]
-MFE["js/editors/mermaid/MermaidFlowchartEditor.js"]
-MSE["js/editors/mermaid/MermaidSequenceEditor.js"]
-MDE["js/editors/mermaid/MermaidDataEditors.js"]
-MSC["js/editors/mermaid/MermaidSyncController.js"]
+MEI["js/components/editors/mermaid/MermaidVisualEditor.jsx<br/>Router and Universal Mode fallback"]
+MED["js/components/editors/mermaid/MermaidEditors.jsx<br/>Pie editor and placeholder editors"]
+MSC["js/components/editors/mermaid/utils.js"]
 end
 subgraph "Monaco Editor"
-MW["js/components/MonacoWrapper.js"]
+MW["js/components/editors/MonacoWrapper.jsx"]
 end
 subgraph "BPMN"
-BVE["js/editors/bpmn/BpmnVisualEditor.js"]
+BVE["js/components/editors/BpmnVisualEditor.jsx"]
 end
 subgraph "Error Diagnostics"
 EDI["js/error-diagnostics/index.js"]
@@ -84,10 +78,7 @@ CFG --> MW
 IDX --> CFG
 IDX --> MW
 IDX --> MEI
-MEI --> MGE
-MEI --> MFE
-MEI --> MSE
-MEI --> MDE
+MEI --> MED
 MEI --> MSC
 MW --> EDI
 IDX --> BVE
@@ -96,23 +87,20 @@ END --> PUC
 
 **Diagram sources**
 - [js/config.js](file://js/config.js#L1-L566)
-- [index.html](file://index.html#L62-L371)
+- [index.html](file://index.html)
 - [js/components/PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [js/editors/mermaid/MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
+- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
 - [js/components/ui.js](file://js/components/ui.js#L83-L119)
 
 **Section sources**
 - [js/config.js](file://js/config.js#L1-L566)
-- [index.html](file://index.html#L62-L371)
+- [index.html](file://index.html)
 
 ## Core Components
 - Enhanced template gallery and snippet insertion for PlantUML:
@@ -129,26 +117,23 @@ END --> PUC
   - Dynamic snippet toolbar that adapts to detected model with expandable snippet categories
   - Template gallery modal with responsive grid layout displaying categorized templates with icons and descriptions
 - Mermaid visual editors:
-  - Router selects editor by AST type with enhanced support for new diagram types
-  - Specialized editors for flowcharts, sequences, timelines, gantt, pie, mindmaps, journeys, and git graphs
-  - Generic editor for other diagram types with improved empty state handling
+  - Router selects the sub-editor by detected diagram model (flowchart, sequence, pie, Gantt, timeline, journey, mindmap)
+  - Only the pie chart editor edits the diagram. The flowchart editor shows a "coming soon" note, and the sequence, Gantt, timeline, journey and mindmap editors show a code-only message
+  - Other diagram types (class, state, ER, git graph, quadrant and so on) show the "Universal Mode" message inside `MermaidVisualEditor`, which points the user back to the code view
 - Monaco editor integration:
   - Syntax highlighting for PlantUML and Mermaid with enhanced error diagnostics
   - Error diagnostics with hover explanations and quick fixes for all diagram types
 - BPMN visual editor:
   - Visual editing powered by bpmn-js with XML export/import
 - Empty state management:
-  - Dedicated EmptyState component for user-friendly placeholders
-  - Context-aware empty states for different editor types and scenarios
+  - `ui.js` defines an EmptyState component for placeholders; the current editors do not yet render it
 
 **Section sources**
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [js/editors/mermaid/MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
+- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/components/ui.js](file://js/components/ui.js#L83-L119)
 
 ## Architecture Overview
@@ -158,17 +143,17 @@ The template and snippet system centers around configuration-driven data and enh
   - Exclusive loading of relevant snippets (e.g., Sequence snippets only for sequence diagrams)
   - Minimal common set (Notes, Titles) appended to all views
   - Fallback "Basic UML" set for undetected or generic diagram types
-- Mermaid editors parse code into an AST and route to specialized editors with comprehensive template support
+- Mermaid editors parse code into an AST and route to sub-editors by detected diagram model, with comprehensive template support
 - Monaco provides language support and diagnostics for PlantUML, Mermaid, and BPMN with enhanced error handling
 - Error diagnostics module parses errors and generates actionable suggestions for all diagram types
-- Empty state management provides user-friendly placeholders across all editor types
+- The EmptyState component in `ui.js` provides placeholders for empty content
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
 participant PUC as "PlantUmlComponents.js"
 participant CFG as "config.js"
-participant MW as "MonacoWrapper.js"
+participant MW as "MonacoWrapper"
 participant EDI as "error-diagnostics/index.js"
 User->>PUC : Click "Insert" button
 PUC->>CFG : Read PLANTUML_SNIPPETS[detectedModel]
@@ -184,7 +169,7 @@ MW-->>User : Hover explanation + lightbulb quick fix
 **Diagram sources**
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L8-L47)
 - [js/config.js](file://js/config.js#L118-L192)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L318-L423)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 
 ## Detailed Component Analysis
@@ -201,7 +186,6 @@ MW-->>User : Hover explanation + lightbulb quick fix
 - Template gallery modal:
   - Grid layout of templates with consistent styling and responsive design
   - Selecting a template injects complete code into the editor with proper formatting
-  - Enhanced empty state handling for template loading and display
 
 ```mermaid
 sequenceDiagram
@@ -220,12 +204,12 @@ MW-->>User : Editor updated with complete template
 **Diagram sources**
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L52-L95)
 - [js/config.js](file://js/config.js#L194-L565)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L42-L57)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 **Section sources**
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L8-L95)
 - [js/config.js](file://js/config.js#L118-L565)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L42-L84)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Comprehensive Mermaid Template System
 - Enhanced template gallery:
@@ -238,26 +222,25 @@ MW-->>User : Editor updated with complete template
   - Consistent styling and user experience across all template types
 
 **Section sources**
-- [index.html](file://index.html#L322-L490)
+- [index.html](file://index.html)
 
 ### Mermaid Visual Editor Routing and Editors
-- Enhanced router:
-  - Determines diagram type from AST and routes to appropriate editor with expanded type support
-  - Falls back to generic editor for unsupported types with improved error handling
-- Specialized editors:
-  - Flowchart editor: node/edge list with inline editing and enhanced empty state management
-  - Sequence editor: participant/message lists with add controls and improved validation
-  - Data editors: timeline, gantt, pie, mindmap, journey with add controls and enhanced user interaction
-  - Git graph editor: branch visualization with interactive controls
-  - Quadrant chart editor: priority matrix with coordinate-based positioning
-- Generic editor:
-  - Live preview and AST property panel with improved empty state handling
-  - Enhanced error diagnostics and user feedback mechanisms
+- Router:
+  - `MermaidVisualEditor` shows a loading spinner until the Mermaid AST library has loaded
+  - Then `MermaidVisualEditor` picks a sub-editor from the detected diagram model string and passes only `code` and `onChange` (the sub-editors do not receive the AST)
+  - Types without a sub-editor fall through to the "Universal Mode" message
+- Sub-editors in `MermaidEditors.jsx`:
+  - Pie chart editor: reads the title and the `"label" : value` slices from the code, lets the user edit labels and values and add a slice, and writes the new code back
+  - Flowchart editor: a "coming soon" note followed by the code-only message
+  - Sequence, Gantt, timeline, journey and mindmap editors: the code-only message (`VisualEditingNotAvailable`)
+- Universal Mode fallback:
+  - A message inside `MermaidVisualEditor`: "Visual editing for this diagram type is generic. Structure editing is best done via code."
+  - The Mermaid visual editor shows no preview or AST view of its own; the preview panel in the code view renders the diagram
 
 ```mermaid
 flowchart TD
-Start(["Code Change"]) --> Parse["Parse to AST"]
-Parse --> Type{"AST Type?"}
+Start(["Code Change"]) --> Parse["Parse to AST (300 ms debounce)"]
+Parse --> Type{"Detected model?"}
 Type --> |flowchart| Flow["MermaidFlowchartEditor"]
 Type --> |sequence| Seq["MermaidSequenceEditor"]
 Type --> |timeline| TL["MermaidTimelineEditor"]
@@ -265,47 +248,30 @@ Type --> |journey| Jour["MermaidJourneyEditor"]
 Type --> |gantt| Gantt["MermaidGanttEditor"]
 Type --> |pie| Pie["MermaidPieEditor"]
 Type --> |mindmap| Mind["MermaidMindmapEditor"]
-Type --> |gitgraph| Git["MermaidGitGraphEditor"]
-Type --> |quadrant| Quad["MermaidQuadrantEditor"]
-Type --> |class/state/er...| Gen["MermaidGenericEditor"]
-Flow --> Preview["Live Preview"]
-Seq --> Preview
-TL --> Preview
-Jour --> Preview
-Gantt --> Preview
-Pie --> Preview
-Mind --> Preview
-Git --> Preview
-Quad --> Preview
-Gen --> Preview
+Type --> |class/state/er...| Gen["Universal Mode message"]
+Pie --> Write["onCodeChange writes new code"]
 ```
 
 **Diagram sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L78-L121)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L18-L59)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L8-L36)
-- [js/editors/mermaid/MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L12-L42)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L97)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 **Section sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L10-L111)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L50)
-- [js/editors/mermaid/MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L7-L171)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L97)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 ### Mermaid Sync Controller
-- Bi-directional synchronization:
-  - parseCode: converts code to AST (code → visual)
-  - renderToCode: converts AST back to code (visual → code)
-  - Debouncing prevents infinite loops during sync with enhanced error handling
+- Synchronization (`createMermaidSyncController`):
+  - parseCode: converts code to an AST with a 300 ms debounce, and skips parsing while a visual edit is being written back
+  - renderToCode: converts an AST back to code and marks the change as visual for 50 ms to prevent loops
+  - The sub-editors do not receive the AST and write code directly, so only `App.jsx` calls renderToCode
 - Type detection:
-  - detectDiagramType via MermaidAST with expanded type support
+  - `detectSpecificModel` in `js/utils.js` produces the `detectedModel` string that the router uses
 
 ```mermaid
 sequenceDiagram
 participant Code as "Code Editor"
-participant Sync as "MermaidSyncController"
+participant Sync as "createMermaidSyncController"
 participant AST as "AST"
 participant Visual as "Visual Editor"
 Code->>Sync : parseCode(code)
@@ -313,19 +279,18 @@ Sync->>AST : window.MermaidAST.parse(code)
 AST-->>Sync : ast
 Sync-->>Visual : ast
 Visual->>Sync : renderToCode(updatedAst)
-Sync->>Code : window.MermaidAST.render(ast)
-Code-->>Sync : newCode
+Sync-->>Code : window.MermaidAST.render(ast)
 ```
 
 **Diagram sources**
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L58)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 **Section sources**
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### Enhanced Monaco Editor Integration and Error Diagnostics
 - Language registration:
-  - PlantUML and Mermaid Monarch tokenizers with expanded syntax support
+  - PlantUML, Mermaid and LikeC4 Monarch tokenizers with expanded syntax support
   - Comments, brackets, auto-closing pairs configured with enhanced error detection
 - Error providers:
   - Code action provider: quick fixes for common errors across all diagram types
@@ -333,8 +298,6 @@ Code-->>Sync : newCode
 - Error diagnostics:
   - parseError: extracts line/column, assigns error code, builds suggestions with enhanced context
   - toMonacoMarker/toMonacoCodeAction: convert to Monaco-compatible formats with improved formatting
-- Empty state integration:
-  - Error states integrated with empty state management for consistent user experience
 
 ```mermaid
 sequenceDiagram
@@ -353,17 +316,17 @@ FX-->>MW : quick fix actions
 ```
 
 **Diagram sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L318-L423)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 
 **Section sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L174-L303)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L303)
 
 ### BPMN Visual Editor
-- Uses bpmn-js to provide a visual modeling experience
-- Imports initial XML and exports XML on changes
-- Handles loading and cleanup of resources with enhanced error handling
+- Uses the npm `bpmn-js` modeler, plus task resizing and custom lane, context-pad and renderer modules, to provide a visual modeling experience
+- Imports initial XML (an empty diagram if the import fails) and exports XML on changes
+- Destroys the modeler when the editor unmounts
 
 ```mermaid
 sequenceDiagram
@@ -380,10 +343,10 @@ BVE-->>User : onChange(xml)
 ```
 
 **Diagram sources**
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L19-L90)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 **Section sources**
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L105)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ### Enhanced Empty State Management
 - Dedicated EmptyState component:
@@ -391,16 +354,7 @@ BVE-->>User : onChange(xml)
   - Consistent styling with Tailwind CSS classes for visual consistency
   - Support for child components allowing rich empty state content
 - Integration across components:
-  - Timeline editor empty state for timeline elements
-  - Gantt editor empty state for task management
-  - Pie chart editor empty state for slice management
-  - Mindmap editor empty state for node structure
-  - Journey editor empty state for task scoring
-  - Interactive SVG preview empty state for diagram rendering
-- User experience improvements:
-  - Consistent empty state patterns across all editor types
-  - Helpful messaging and guidance for first-time users
-  - Visual indicators with appropriate icons and styling
+  - The current Mermaid sub-editors do not render EmptyState; the code-only and Universal Mode messages in `MermaidEditors.jsx` and `MermaidVisualEditor.jsx` play that role
 
 **Section sources**
 - [js/components/ui.js](file://js/components/ui.js#L83-L119)
@@ -410,65 +364,51 @@ BVE-->>User : onChange(xml)
   - Templates and snippets are defined in configuration files with expanded collections and consumed by components
   - Enhanced template galleries support both PlantUML and Mermaid with unified interface
 - Editor routing:
-  - Mermaid router depends on AST type detection with expanded type support
+  - Mermaid router depends on the `detectedModel` string from `detectSpecificModel`
 - Monaco integration:
   - Components depend on Monaco APIs for language support and diagnostics with enhanced error handling
 - Error handling:
   - Error diagnostics module is used by Monaco providers with improved context awareness
 - Empty state management:
-  - UI components provide consistent empty state handling across all editor types
+  - `ui.js` defines the EmptyState component; no editor renders it yet
 
 ```mermaid
 graph LR
 CFG["js/config.js"] --> PUC["PlantUmlComponents.js"]
-CFG --> MW["MonacoWrapper.js"]
+CFG --> MW["MonacoWrapper.jsx"]
 IDX["index.html"] --> CFG
 IDX --> MW
-IDX --> MEI["Mermaid index.js"]
-MEI --> MFE["MermaidFlowchartEditor.js"]
-MEI --> MSE["MermaidSequenceEditor.js"]
-MEI --> MDE["MermaidDataEditors.js"]
-MEI --> MGE["MermaidGenericEditor.js"]
+IDX --> MEI["MermaidVisualEditor.jsx"]
+MEI --> MED["MermaidEditors.jsx"]
 MW --> EDI["error-diagnostics/index.js"]
-IDX --> BVE["BpmnVisualEditor.js"]
+IDX --> BVE["BpmnVisualEditor.jsx"]
 END["ui.js"] --> PUC
-END --> MDE
-END --> MGE
 ```
 
 **Diagram sources**
 - [js/config.js](file://js/config.js#L1-L566)
-- [index.html](file://index.html#L62-L371)
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [js/editors/mermaid/MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L1-L306)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
+- [index.html](file://index.html)
+- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
 - [js/components/ui.js](file://js/components/ui.js#L83-L119)
 
 **Section sources**
 - [js/config.js](file://js/config.js#L1-L566)
-- [index.html](file://index.html#L62-L371)
+- [index.html](file://index.html)
 
 ## Performance Considerations
 - Debouncing:
   - Mermaid AST parsing is debounced to avoid excessive re-renders with enhanced performance monitoring
 - Lazy loading:
-  - External libraries (Mermaid AST, bpmn-js) are loaded on demand with improved error handling
+  - The Mermaid AST library loads from a CDN, and the bpmn-js modeler is created only when the BPMN editor mounts
 - Efficient rendering:
-  - Visual editors update previews asynchronously and reuse object URLs with enhanced memory management
+  - The preview panel renders SVG through `useRemoteRenderer`; the visual editors do not render previews
 - Monaco optimizations:
   - Minimap, folding, and lightbulb are enabled for better UX without heavy overhead
-- Template optimization:
-  - Template galleries use virtual scrolling for large template collections
-  - Icon caching and lazy loading for improved performance
-- Empty state optimization:
-  - Conditional rendering for empty states reduces DOM complexity
-  - Optimized CSS classes for minimal styling overhead
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -481,27 +421,25 @@ Common issues and resolutions:
 - Error localization:
   - Error diagnostics extract line/column and highlight the problematic region with improved precision
 - Template loading issues:
-  - Empty state management provides clear guidance for template loading failures
-  - Fallback mechanisms ensure user experience continuity during template loading delays
+  - Templates are static data in `js/config.js`, so they load with the app
 
 Practical steps:
 - Use the lightbulb quick fix to apply suggested corrections with enhanced error context
 - Hover over error markers to read explanations with improved clarity
 - Use the error diagnostics module to programmatically parse and present errors
-- Utilize empty state placeholders for better user guidance during loading or error conditions
 - Leverage the expanded template gallery for quick-start solutions
 
 **Section sources**
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L303)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L318-L423)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/components/ui.js](file://js/components/ui.js#L83-L119)
 
 ## Conclusion
 The enhanced template and snippet system provides comprehensive diagram authoring capabilities:
-- Expanded PlantUML templates with nine diagram types streamline creation with contextual insertion and improved empty state management
+- Expanded PlantUML templates with nine diagram types streamline creation with contextual insertion
 - Comprehensive Mermaid template gallery offers quick-start solutions for all supported diagram types including flowcharts, sequence diagrams, class diagrams, state diagrams, ER diagrams, Gantt charts, pie charts, mindmaps, and user journey maps
 - Enhanced snippet system provides dynamic insertion capabilities with adaptive toolbar and expanded snippet collections
-- Mermaid visual editors offer specialized editing experiences for different diagram types with comprehensive template support and improved empty state handling
+- The Mermaid visual editor routes to a pie chart editor that edits the code, shows placeholders for other chart types, and falls back to a Universal Mode message
 - Monaco integration delivers robust syntax highlighting, diagnostics, and quick fixes with enhanced error context
-- Error diagnostics improve developer experience with actionable insights and consistent empty state management
-- Empty state management provides user-friendly placeholders across all editor types, improving the overall user experience
+- Error diagnostics improve developer experience with actionable insights
+- The EmptyState component in `ui.js` is available for placeholders, though no editor uses it yet

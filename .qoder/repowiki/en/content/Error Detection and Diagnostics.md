@@ -3,11 +3,10 @@
 <cite>
 **Referenced Files in This Document**
 - [index.html](file://index.html)
-- [kroki universal diagram generator.html](file://kroki universal diagram generator.html)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
 - [js/config.js](file://js/config.js)
 </cite>
@@ -36,15 +35,15 @@ The error detection system spans several modules:
 - Error parsing and classification: js/error-diagnostics/index.js
 - Error explanations and hover formatting: js/error-diagnostics/explanations.js
 - Fix suggestions and automated corrections: js/error-diagnostics/fixes.js
-- Monaco Editor integration: js/components/MonacoWrapper.js
+- Monaco Editor integration: js/components/editors/MonacoWrapper.jsx
 - Diagram configuration and templates: js/config.js
-- Legacy integration points in the main HTML app: index.html and kroki universal diagram generator.html
+- Application shell: index.html
 
 ```mermaid
 graph TB
 subgraph "Application"
-APP["Main App<br/>index.html / kroki universal diagram generator.html"]
-WRAP["MonacoWrapper<br/>js/components/MonacoWrapper.js"]
+APP["Main App<br/>index.html"]
+WRAP["MonacoWrapper<br/>js/components/editors/MonacoWrapper.jsx"]
 CFG["Config<br/>js/config.js"]
 end
 subgraph "Diagnostics Engine"
@@ -60,21 +59,19 @@ APP --> CFG
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1-L200)
-- [kroki universal diagram generator.html](file://kroki universal diagram generator.html#L1-L200)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L169)
+- [index.html](file://index.html)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L44)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [js/config.js](file://js/config.js#L1-L116)
 
 **Section sources**
-- [index.html](file://index.html#L1-L200)
-- [kroki universal diagram generator.html](file://kroki universal diagram generator.html#L1-L200)
+- [index.html](file://index.html)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L44)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L169)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/config.js](file://js/config.js#L1-L116)
 
 ## Core Components
@@ -94,7 +91,7 @@ Key capabilities:
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L12-L229)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L11-L296)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L309-L423)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Architecture Overview
 The system integrates error detection into the diagram editing workflow. When a diagram fails to render, the application parses the error, maps it to a structured diagnostic, and displays inline markers in Monaco. Users can hover for explanations and apply quick fixes.
@@ -127,8 +124,7 @@ Monaco-->>User : Apply code action
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L332-L366)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L309-L423)
-- [kroki universal diagram generator.html](file://kroki universal diagram generator.html#L3282-L3315)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Detailed Component Analysis
 
@@ -206,7 +202,7 @@ Key behaviors:
 - Supports end-of-file insertions for fixes targeting EOF
 
 **Section sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L309-L423)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L276)
 
 ### Error Parsing Algorithms
@@ -248,9 +244,7 @@ User feedback mechanisms:
 - Error line navigation
 
 **Section sources**
-- [kroki universal diagram generator.html](file://kroki universal diagram generator.html#L825-L877)
-- [kroki universal diagram generator.html](file://kroki universal diagram generator.html#L3282-L3315)
-- [index.html](file://index.html#L1491-L1518)
+- [index.html](file://index.html)
 
 ### Integration with Diagram Types and Templates
 The system recognizes multiple diagram types and maps them to Monaco languages:
@@ -277,7 +271,7 @@ graph TB
 IDX["index.js<br/>parseError, toMonacoMarker"]
 EXPL["explanations.js<br/>getErrorExplanation, formatForHover"]
 FIXES["fixes.js<br/>getFixSuggestions, applyFix"]
-WRAP["MonacoWrapper.js<br/>register providers, setMarkers"]
+WRAP["MonacoWrapper.jsx<br/>register providers, setMarkers"]
 CFG["config.js<br/>DIAGRAM_TYPES, PLANTUML_*"]
 WRAP --> IDX
 WRAP --> EXPL
@@ -289,16 +283,16 @@ IDX --> FIXES
 
 **Diagram sources**
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L44)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L169)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/config.js](file://js/config.js#L1-L116)
 
 **Section sources**
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L44)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L169)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/config.js](file://js/config.js#L1-L116)
 
 ## Performance Considerations
@@ -337,7 +331,6 @@ Practical steps:
 **Section sources**
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L12-L229)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L11-L296)
-- [kroki universal diagram generator.html](file://kroki universal diagram generator.html#L3387-L3396)
 
 ## Conclusion
 The error detection and diagnostic system provides robust, diagram-aware error handling with clear classifications, actionable explanations, and automated fixes. Its integration with Monaco Editor delivers immediate, contextual feedback to improve the authoring experience across Mermaid, PlantUML, BPMN/XML, GraphViz, and other supported formats.

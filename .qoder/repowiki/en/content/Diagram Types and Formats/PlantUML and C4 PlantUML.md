@@ -5,7 +5,11 @@
 - [index.html](file://index.html)
 - [config.js](file://js/config.js)
 - [utils.js](file://js/utils.js)
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
+- [TemplateGalleryModal.jsx](file://js/components/dialogs/TemplateGalleryModal.jsx)
+- [PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
+- [RendererAdapter.js](file://js/services/RendererAdapter.js)
+- [plantUmlUtils.js](file://js/utils/plantUmlUtils.js)
 - [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js)
 - [index.js](file://js/error-diagnostics/index.js)
@@ -26,38 +30,40 @@
 This document explains the PlantUML and C4 PlantUML diagram support in the Universal Diagram Generator. It covers fundamentals of PlantUML syntax, diagram declarations, comments, and language extensions; documents UML diagram types supported by PlantUML and C4 PlantUML; describes the snippet system and template gallery; and explains integration with the broader diagram ecosystem via Kroki. It also provides best practices, common patterns, and advanced features such as custom styling and external library inclusion.
 
 ## Project Structure
-The application is a single-page React application with embedded JSX and dynamic module loading. Key areas related to PlantUML and C4 PlantUML:
+The application is a single-page React application built with Vite from JSX modules. Key areas related to PlantUML and C4 PlantUML:
 - Configuration defines diagram types, PlantUML snippets, and PlantUML templates.
-- Utilities provide compression and detection logic for diagram types and models.
-- Components implement the PlantUML toolbar, template gallery, and interactive SVG preview.
+- Utilities provide model detection (`utils.js`) and snippet lookup (`js/utils/plantUmlUtils.js`), and the renderer adapter handles compression and type detection.
+- Components implement the PlantUML toolbar (`PlantUmlToolbar.jsx`), the template gallery (`dialogs/TemplateGalleryModal.jsx`) and the SVG preview with its context menu (`editors/PreviewPanel.jsx`). The older `PlantUmlComponents.js` file remains in the repository, but no module imports it.
 - Error diagnostics provide explanations and quick fixes for common syntax errors.
 
 ```mermaid
 graph TB
-A["index.html<br/>Entry point and diagram type registry"] --> B["js/config.js<br/>DIAGRAM_TYPES, PLANTUML_SNIPPETS, PLANTUML_TEMPLATES"]
-A --> C["js/utils.js<br/>Detection, compression, loaders"]
-A --> D["js/components/PlantUmlComponents.js<br/>Toolbar, Template Gallery, Interactive Preview"]
+A["index.html + App.jsx<br/>Entry point and app shell"] --> B["js/config.js<br/>DIAGRAM_TYPES, PLANTUML_SNIPPETS, PLANTUML_TEMPLATES"]
+A --> C["js/utils.js + js/services/RendererAdapter.js<br/>Detection, compression, loaders"]
+A --> D["PlantUmlToolbar.jsx, TemplateGalleryModal.jsx, PreviewPanel.jsx<br/>Toolbar, Template Gallery, Interactive Preview"]
 A --> E["js/error-diagnostics/*<br/>Explanations, Fixes, Parser"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L70-L87)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L6-L116)
 - [utils.js](file://js/utils.js#L35-L85)
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L8-L95)
+- [PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
+- [TemplateGalleryModal.jsx](file://js/components/dialogs/TemplateGalleryModal.jsx)
+- [PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L12-L229)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L11-L296)
 - [index.js](file://js/error-diagnostics/index.js#L13-L276)
 
 **Section sources**
-- [index.html](file://index.html#L70-L87)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L6-L116)
 
 ## Core Components
 - Diagram type registry: Defines supported diagram types, file extensions, Monaco language modes, documentation links, and example code. PlantUML and C4 PlantUML are included with dedicated entries and examples.
 - PlantUML snippets: A categorized collection of reusable blocks for rapid diagram authoring across multiple diagram families (Sequence, Class, Use Case, Activity, State, Component, ER, Deployment, WBS, etc.).
 - PlantUML templates: Prebuilt examples for common diagram types to accelerate getting started.
-- Detection utilities: Determine diagram type from file extension and infer specific diagram model from code content.
+- Detection utilities: The renderer adapter determines the diagram type from a file name, and `utils.js` infers the specific diagram model from code content.
 - Error diagnostics: Parse errors, extract locations, categorize issues, and provide explanations and quick fixes.
 
 **Section sources**
@@ -77,7 +83,7 @@ sequenceDiagram
 participant User as "User"
 participant Editor as "Monaco Editor"
 participant Config as "DIAGRAM_TYPES"
-participant Detect as "detectTypeFromExtension()"
+participant Detect as "rendererAdapter.detectType()"
 participant Snip as "PlantUML Snippets"
 participant Tmpl as "Template Gallery"
 participant Kroki as "Kroki API"
@@ -89,19 +95,21 @@ User->>Snip : "Insert snippet"
 Snip-->>Editor : "Insert code block"
 User->>Tmpl : "Select template"
 Tmpl-->>Editor : "Insert template code"
-Editor->>Detect : "Detect type from extension"
+Editor->>Detect : "Detect type from file name and content"
 Detect-->>Editor : "Detected type"
-Editor->>Kroki : "POST diagram code"
-Kroki-->>Editor : "SVG/PNG image"
+Editor->>Kroki : "Render request for diagram code (via renderer adapter)"
+Kroki-->>Editor : "SVG image"
 Editor->>Preview : "Render interactive SVG"
 Preview-->>User : "Clickable elements with context menu"
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L70-L87)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L6-L116)
 - [utils.js](file://js/utils.js#L35-L85)
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L8-L95)
+- [PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
+- [TemplateGalleryModal.jsx](file://js/components/dialogs/TemplateGalleryModal.jsx)
+- [PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
 
 ## Detailed Component Analysis
 
@@ -155,9 +163,10 @@ Templates demonstrate includes and relationship declarations typical of C4 model
 
 ### Snippet System
 The snippet system organizes reusable blocks by diagram family:
-- Expandable toolbar with “Show more” toggle.
+- A horizontally scrolling toolbar (`PlantUmlToolbar.jsx`) with one button per snippet.
 - Quick insertion of participants, messages, classes, interfaces, arrows, notes, activations, loops, groups, and more.
-- Automatic detection of the current diagram model to present relevant snippets.
+- Snippets with parameters open an insertion dialog first; the others insert at the cursor.
+- Automatic detection of the current diagram model to present relevant snippets (`getPlantUmlSnippets` in `js/utils/plantUmlUtils.js`).
 
 ```mermaid
 flowchart TD
@@ -168,15 +177,17 @@ Insert --> Preview["Preview updates automatically"]
 ```
 
 **Diagram sources**
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L8-L47)
+- [PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
 
 **Section sources**
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L8-L47)
+- [PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
+- [plantUmlUtils.js](file://js/utils/plantUmlUtils.js)
 - [config.js](file://js/config.js#L118-L192)
 
 ### Template Gallery
 The template gallery offers:
-- Grid of cards for common diagram types.
+- Grid of cards for common diagram types, filtered by the current diagram type.
+- A search box that matches template labels and descriptions.
 - One-click insertion of a complete diagram scaffold.
 - Descriptions and icons for discoverability.
 
@@ -193,17 +204,18 @@ Modal-->>User : "Close modal"
 ```
 
 **Diagram sources**
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L52-L95)
+- [TemplateGalleryModal.jsx](file://js/components/dialogs/TemplateGalleryModal.jsx)
 
 **Section sources**
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L52-L95)
+- [TemplateGalleryModal.jsx](file://js/components/dialogs/TemplateGalleryModal.jsx)
 - [config.js](file://js/config.js#L194-L565)
 
 ### Interactive Preview and Context Menu
 The interactive preview:
-- Renders SVG from PlantUML via Kroki.
+- Renders SVG from PlantUML via Kroki, in the preview panel (`PreviewPanel.jsx`).
 - Highlights clickable elements (text and groups).
-- Provides a context menu with actions such as adding notes, messages, and navigating to definitions.
+- Jumps to the matching text in the code editor when the user clicks an element.
+- Provides a context menu with a Rename action and an Insert Snippet list for the current diagram model.
 
 ```mermaid
 flowchart TD
@@ -215,10 +227,10 @@ E --> F["Show context menu on demand"]
 ```
 
 **Diagram sources**
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L153-L248)
+- [PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
 
 **Section sources**
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L153-L248)
+- [PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
 
 ### Error Diagnostics and Quick Fixes
 The error diagnostics pipeline:
@@ -250,7 +262,7 @@ Markers --> Actions["toMonacoCodeAction()"]
 
 ## Dependency Analysis
 - Configuration-driven: The diagram type registry centralizes metadata for PlantUML and C4 PlantUML, including example code and documentation links.
-- Detection-driven: Utilities infer diagram type from file extension and code content to route editors and snippets appropriately.
+- Detection-driven: The renderer adapter infers the diagram type from the file name, and `utils.js` infers the model from code content, to route editors and snippets appropriately.
 - Error diagnostics: Independent modules provide parsing, categorization, explanations, and fixes, decoupled from the editor UI.
 
 ```mermaid
@@ -258,7 +270,8 @@ graph TB
 Config["js/config.js"] --> Registry["DIAGRAM_TYPES"]
 Config --> Snippets["PLANTUML_SNIPPETS"]
 Config --> Templates["PLANTUML_TEMPLATES"]
-Utils["js/utils.js"] --> Detect["detectTypeFromExtension()"]
+Adapter["js/services/RendererAdapter.js"] --> Detect["detectType()"]
+Utils["js/utils.js"]
 Utils --> DetectModel["detectSpecificModel()"]
 Diag["js/error-diagnostics/*"] --> Parse["parseError()"]
 Diag --> Explain["getErrorExplanation()"]
@@ -280,7 +293,7 @@ Diag --> Fixes["getFixSuggestions()"]
 ## Performance Considerations
 - Compression: Source code is compressed before sending to the Kroki service to reduce payload size.
 - Debouncing: Parsing and preview generation are debounced to avoid excessive network requests during rapid edits.
-- Lazy loading: External libraries (e.g., BPMN visual editor) are loaded on demand to minimize initial bundle size.
+- Bundling: Vite bundles the app and its npm packages (including bpmn-js), and a few CDN scripts load from `index.html`.
 
 Practical tips:
 - Keep diagram code concise to improve parsing and rendering performance.
@@ -289,7 +302,7 @@ Practical tips:
 
 **Section sources**
 - [utils.js](file://js/utils.js#L14-L28)
-- [index.js](file://js/editors/mermaid/index.js#L24-L53)
+- [RendererAdapter.js](file://js/services/RendererAdapter.js)
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -299,7 +312,7 @@ Common issues and resolutions:
 - XML/BPMN parsing errors: For BPMN, the system detects unclosed tags and malformed XML and offers targeted guidance.
 
 Quick actions:
-- Use the context menu in the interactive preview to add notes, messages, and navigation targets.
+- Use the context menu in the interactive preview to rename a selected element or insert a snippet.
 - Apply Monaco quick fixes to auto-insert missing tokens or correct syntax.
 - Consult hover explanations for detailed guidance and examples.
 
@@ -307,7 +320,7 @@ Quick actions:
 - [explanations.js](file://js/error-diagnostics/explanations.js#L89-L131)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L111-L176)
 - [index.js](file://js/error-diagnostics/index.js#L174-L235)
-- [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L100-L148)
+- [PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
 
 ## Conclusion
 The Universal Diagram Generator provides robust support for PlantUML and C4 PlantUML through a curated snippet system, a rich template gallery, intelligent error diagnostics, and an interactive preview. By leveraging configuration-driven detection, compression, and modular diagnostics, it delivers a smooth authoring experience across UML and C4 architecture diagramming needs.

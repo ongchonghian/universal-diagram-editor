@@ -28,7 +28,7 @@ The application is a single-page React-like application embedded in a single HTM
 - Export controls and handlers for SVG/PNG downloads
 - URL generation and sharing via the Kroki service
 - Preview rendering and error reporting
-- Visual editors for BPMN and Mermaid
+- Visual editors for BPMN, and the Mermaid pie chart editor
 - Utilities for compression and type detection
 
 ```mermaid
@@ -44,29 +44,29 @@ Preview --> Errors["Error Reporting"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1600-L1759)
-- [index.html](file://index.html#L1561-L1598)
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 
 **Section sources**
-- [index.html](file://index.html#L1600-L1759)
+- [index.html](file://index.html)
 
 ## Core Components
 - Export handlers for SVG and PNG downloads
 - URL generation using Kroki with compression
 - Preview rendering and error diagnostics
-- Visual editors for BPMN and Mermaid
+- Visual editors for BPMN, and the Mermaid pie chart editor
 - Utility functions for compression and type detection
 
 Key responsibilities:
 - Export handlers convert SVG content to downloadable files.
 - URL generation encodes diagram source using compression and constructs a shareable URL.
 - Preview rendering fetches SVG from the Kroki service and displays it.
-- Visual editors enable design-driven editing and live previews.
+- Visual editors enable design-driven editing. The live preview comes from the preview panel in the code view.
 
 **Section sources**
-- [index.html](file://index.html#L1561-L1598)
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L14-L28)
 
 ## Architecture Overview
@@ -92,7 +92,7 @@ UI->>Browser : "Open share URL"
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L14-L28)
 
 ## Detailed Component Analysis
@@ -119,10 +119,10 @@ EndNoop --> End
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1561-L1598)
+- [index.html](file://index.html)
 
 **Section sources**
-- [index.html](file://index.html#L1561-L1598)
+- [index.html](file://index.html)
 
 ### URL Encoding and Sharing
 - Compression: The diagram source is compressed using a deflate algorithm and then base64-encoded with URL-safe characters.
@@ -144,11 +144,11 @@ Share-->>User : "copy/open link"
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L14-L28)
 
 **Section sources**
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L14-L28)
 
 ### Preview Rendering and Error Handling
@@ -169,32 +169,32 @@ ShowError --> End
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1473-L1518)
+- [index.html](file://index.html)
 
 **Section sources**
-- [index.html](file://index.html#L1473-L1518)
+- [index.html](file://index.html)
 
 ### Visual Editors and Collaboration Features
-- BPMN visual editor: Provides a visual modeling experience with real-time XML updates and a loading overlay while resources are fetched.
-- Mermaid visual editor: Generates a temporary preview via POST to the Mermaid endpoint and debounces requests to improve responsiveness.
-- Interactive PlantUML preview: Allows clicking on diagram elements to navigate to the corresponding code and right-click context menus for quick actions.
+- BPMN visual editor: Provides a visual modeling experience with real-time XML updates, built on the bundled bpmn-js modeler.
+- Mermaid visual editor: Edits pie charts and writes the new code back. The Mermaid preview itself comes from the preview panel in the code view, which fetches the SVG from Kroki and waits 500 ms after the last edit.
+- Interactive preview (PlantUML and Mermaid): Allows clicking on diagram elements to select the corresponding text in the code, double-clicking to rename, and right-click context menus for quick actions.
 
 ```mermaid
 graph TB
 BPMN["BPMN Visual Editor"] --> XML["XML Output"]
-Mermaid["Mermaid Visual Editor"] --> Live["Live Preview"]
+Mermaid["Mermaid Visual Editor<br/>pie chart editing"] --> Code["Updated Mermaid code"]
 PlantUML["Interactive SVG Preview"] --> CodeNav["Navigate to Code"]
 PlantUML --> Context["Context Actions"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L729-L784)
-- [index.html](file://index.html#L786-L808)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L153-L248)
 
 **Section sources**
-- [index.html](file://index.html#L729-L784)
-- [index.html](file://index.html#L786-L808)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L153-L248)
 
 ### File Format Detection and Conversion
@@ -208,8 +208,8 @@ PlantUML --> Context["Context Actions"]
 ## Dependency Analysis
 - Export handlers depend on SVG content availability and the browser’s Blob and canvas APIs.
 - URL generation depends on the compression utility and the Kroki base URL constant.
-- Preview rendering depends on the Mermaid AST loader and the Kroki service endpoints.
-- Visual editors depend on external libraries for BPMN and Mermaid rendering.
+- Preview rendering depends on the Kroki service endpoints. The Mermaid visual editor also depends on the Mermaid AST loader.
+- The BPMN visual editor depends on the bpmn-js npm package, and the Mermaid visual editor depends on the Mermaid AST library loaded from `esm.sh`.
 
 ```mermaid
 graph TB
@@ -225,12 +225,12 @@ Editors --> External["External Libraries"]
 
 **Diagram sources**
 - [js/utils.js](file://js/utils.js#L14-L28)
-- [index.html](file://index.html#L1444-L1522)
-- [index.html](file://index.html#L729-L784)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L14-L28)
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
 
 ## Performance Considerations
 - PNG export resolution: The canvas is scaled up by a factor to improve perceived quality. Adjust the multiplier to balance quality and file size.
@@ -244,19 +244,19 @@ Practical tips:
 - Keep diagram source concise to minimize compression overhead and URL length.
 
 **Section sources**
-- [index.html](file://index.html#L1573-L1598)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L18-L23)
-- [index.html](file://index.html#L1473-L1522)
+- [index.html](file://index.html)
 
 ## Troubleshooting Guide
 Common issues and resolutions:
 - Rendering errors: Errors are parsed to extract line and column numbers and marked in the editor. Use the “Go to line” link to fix syntax.
 - Large URLs: If the URL exceeds the limit, the system automatically switches to POST; ensure the backend supports POST to the service endpoint.
-- Missing external resources: Visual editors rely on external libraries; ensure network access and that resources load successfully.
+- Missing external resources: The Mermaid visual editor relies on the Mermaid AST library from `esm.sh`, and Monaco loads from a CDN; ensure network access and that these resources load successfully.
 
 **Section sources**
-- [index.html](file://index.html#L1495-L1518)
-- [index.html](file://index.html#L1476-L1484)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 
 ## Conclusion
 The export and sharing system centers on efficient compression, robust preview rendering, and flexible export formats. Users can share diagrams via short, state-preserving URLs and download high-quality assets. Visual editors enhance collaboration by enabling design-driven editing and direct navigation between visuals and code.

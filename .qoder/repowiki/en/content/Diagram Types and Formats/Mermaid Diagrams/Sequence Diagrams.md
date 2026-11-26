@@ -2,17 +2,13 @@
 
 <cite>
 **Referenced Files in This Document**
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
-- [index.js](file://js/editors/mermaid/index.js)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js)
-- [react-helpers.js](file://js/react-helpers.js)
 - [index.html](file://index.html)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
 </cite>
 
 ## Table of Contents
@@ -27,70 +23,70 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains how sequence diagrams are modeled and edited within the application. It focuses on the Mermaid sequence diagram editor, participant and message management, AST synchronization for real-time updates, and practical guidance for building robust sequence diagrams. It also covers advanced topics such as participant reuse, custom styling, and combined fragments (loop, alt, opt, par, etc.) as supported by the underlying Mermaid language.
+This document explains how sequence diagrams are modeled and edited within the application. It focuses on how the Mermaid visual editor treats sequence diagrams today (a placeholder), the AST sync controller, how participants and messages are written in code, and practical guidance for building robust sequence diagrams. It also covers advanced topics such as participant reuse, custom styling, and combined fragments (loop, alt, opt, par, etc.) as supported by the underlying Mermaid language.
 
 ## Project Structure
 The sequence diagram feature spans several modules:
 - Editor routing and preview generation
-- Sequence-specific editor UI
+- A sequence editor component that is a placeholder (code-only)
 - AST synchronization controller
 - Monaco editor integration with Mermaid language support
 - Error diagnostics and quick fixes
-- Generic fallback editor for unsupported diagram types
+- The Universal Mode fallback for diagram types without a visual editor
 
 ```mermaid
 graph TB
 subgraph "UI Layer"
 A["index.html<br/>Main App"]
-B["MermaidVisualEditor<br/>(index.js)"]
-C["MermaidSequenceEditor<br/>(MermaidSequenceEditor.js)"]
-D["MonacoWrapper<br/>(MonacoWrapper.js)"]
+B["MermaidVisualEditor<br/>(MermaidVisualEditor.jsx)"]
+C["MermaidSequenceEditor<br/>(MermaidEditors.jsx, placeholder)"]
+D["MonacoWrapper<br/>(MonacoWrapper.jsx)"]
 end
 subgraph "Mermaid Engine"
 E["Mermaid AST Parser<br/>(window.MermaidAST)"]
-F["MermaidSyncController<br/>(MermaidSyncController.js)"]
+F["createMermaidSyncController<br/>(mermaid/utils.js)"]
 end
 subgraph "Diagnostics"
 G["explanations.js"]
 H["fixes.js"]
 end
 A --> B
+A --> D
 B --> C
-B --> D
-C --> F
+A --> F
 F --> E
 D --> G
 D --> H
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L2062-L2429)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L107)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L168)
+- [index.html](file://index.html)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L12-L301)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L32-L693)
 
 **Section sources**
-- [index.html](file://index.html#L2062-L2429)
-- [index.js](file://js/editors/mermaid/index.js#L20-L121)
+- [index.html](file://index.html)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ## Core Components
-- Sequence Editor: Parses AST to present participants and messages, and supports adding new participants and messages directly in the code.
-- AST Sync Controller: Prevents infinite loops during bidirectional synchronization, debounces parsing, and renders code from AST.
+- Sequence Editor: `MermaidSequenceEditor` is a one-line placeholder that returns the "Code-Only Editing" message. It lists no participants or messages and has no add buttons.
+- AST Sync Controller: `createMermaidSyncController` prevents infinite loops during synchronization, debounces parsing by 300 ms, and can render code from an AST.
 - Monaco Editor: Provides Mermaid language support, syntax highlighting, error markers, and quick fixes.
 - Error Diagnostics: Offers explanations and automated fixes for common syntax errors.
 
 Key responsibilities:
-- Participants: Extracted from AST and displayed in the sidebar; new participants inserted via code insertion.
-- Messages: Extracted from AST and shown with from/to actors and optional text; new messages appended to the code.
-- Real-time updates: Code changes trigger AST parsing; AST changes trigger code rendering, with safeguards against loops.
+- Participants: Written in the Monaco code editor, with `participant` and `actor` keywords.
+- Messages: Written in code as arrow lines between participants.
+- Real-time updates: Code changes trigger AST parsing in `useDiagramState`, and the preview pane refreshes 500 ms after the last change. No sub-editor passes an AST back, so the code-rendering path stays idle.
 
 **Section sources**
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L107)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L247-L303)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L12-L301)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L32-L693)
 
@@ -100,67 +96,56 @@ The sequence diagram workflow connects the UI, AST synchronization, and Mermaid 
 ```mermaid
 sequenceDiagram
 participant User as "User"
-participant UI as "MermaidSequenceEditor"
-participant Sync as "MermaidSyncController"
-participant AST as "window.MermaidAST"
 participant Monaco as "MonacoWrapper"
-User->>UI : Edit code or click "Add Participant"/"Add Message"
-UI->>Monaco : onCodeChange(newCode)
-Monaco-->>UI : onChange(newCode)
-UI->>Sync : parseCode(newCode)
-Sync->>AST : parse(code)
-AST-->>Sync : ast
-Sync-->>UI : ast
-UI->>UI : Update participants/messages from ast
-UI->>Sync : renderToCode(updatedAst)
-Sync->>AST : render(ast)
-AST-->>Sync : code
-Sync-->>UI : code
-UI->>Monaco : Replace editor content with rendered code
+participant Sync as "Sync controller"
+participant AST as "window.MermaidAST"
+participant UI as "MermaidVisualEditor"
+User->>Monaco: Edit code
+Monaco->>Sync: parseCode(newCode)
+Sync->>AST: parse(code)
+AST-->>Sync: ast
+Sync-->>UI: ast (props)
+UI->>UI: Sequence model detected, show placeholder
 ```
 
 **Diagram sources**
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L107)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L58)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L134-L140)
-- [index.html](file://index.html#L2101-L2106)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [index.html](file://index.html)
 
 ## Detailed Component Analysis
 
 ### Sequence Editor
-The sequence editor extracts participants and messages from the AST and displays them in a sidebar. It also provides actions to add participants and messages by inserting new lines into the code.
+`MermaidSequenceEditor` sits in `MermaidEditors.jsx`. `MermaidVisualEditor` renders the component when the detected model name contains "Sequence", inside the shared `EditorToolbar` titled "Sequence Diagram Editor" with the sub-title "Visual Mode (Beta)".
 
-- Participant extraction: Iterates over ast.participants and builds a label/id map.
-- Message extraction: Iterates over ast.messages and builds from/to/text tuples.
-- Adding participants: Inserts a participant line after the sequenceDiagram header.
-- Adding messages: Appends a message line between the first two participants.
+The component receives `code` and `onChange`, and returns `VisualEditingNotAvailable` with the type "Sequence Diagram". Participants and messages are therefore written directly in Monaco, for example by adding a `participant` line below the `sequenceDiagram` header.
 
 ```mermaid
 flowchart TD
-Start(["User clicks Add Participant"]) --> FindHeader["Find sequenceDiagram header position"]
-FindHeader --> InsertLine["Insert 'participant ActorN' line"]
-InsertLine --> TriggerOnChange["Trigger onCodeChange(newCode)"]
-TriggerOnChange --> End(["Code updated"])
+Start(["Model name contains Sequence"]) --> Placeholder["MermaidSequenceEditor"]
+Placeholder --> Message["Code-Only Editing message"]
+Message --> End(["User edits code in Monaco"])
 ```
 
 **Diagram sources**
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1774-L1778)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 **Section sources**
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L107)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 ### AST Synchronization Controller
-The controller manages bidirectional synchronization between code and AST:
-- parseCode: Debounces parsing, prevents loops when triggered by visual changes, and parses code into AST.
-- renderToCode: Renders AST back to code, sets a change source flag to prevent loops, and resets it asynchronously.
-- get/setAst: Accessors for current AST state.
-- detectType: Detects diagram type from code using the AST library.
+The controller (`createMermaidSyncController`) supports synchronization between code and AST:
+- parseCode: Debounces parsing by 300 ms, prevents loops when triggered by visual changes, and parses code into AST. If the library has not loaded, parseCode returns a stand-in root node holding the code.
+- renderToCode: Renders AST back to code, sets a change source flag to prevent loops, and resets the flag after 50 ms.
+- getAst: Returns the last AST.
 - isLoaded: Checks availability of the AST library.
 
 ```mermaid
 sequenceDiagram
-participant UI as "MermaidSequenceEditor"
-participant Ctrl as "MermaidSyncController"
+participant UI as "useDiagramState / App.jsx"
+participant Ctrl as "Sync controller"
 participant AST as "window.MermaidAST"
 UI->>Ctrl : parseCode(code)
 Ctrl->>Ctrl : Debounce and guard changeSource
@@ -174,10 +159,10 @@ Ctrl-->>UI : code
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L58)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### Monaco Editor Integration
 Monaco registers Mermaid language support with:
@@ -194,13 +179,10 @@ Providers --> Ready["Monaco Ready"]
 ```
 
 **Diagram sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L247-L303)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L310-L423)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L168)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L247-L303)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L310-L423)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Error Diagnostics
 The system provides:
@@ -254,41 +236,39 @@ F --> F5["end"]
 The sequence diagram feature depends on:
 - Monaco editor for syntax highlighting and diagnostics
 - Mermaid AST library for parsing and rendering
-- React helpers for JSX-like syntax
-- Index HTML orchestration for loading libraries and wiring components
+- React and JSX for the editor components
+- `index.html`, which loads the Mermaid AST library from esm.sh
 
 ```mermaid
 graph TB
-ReactHelpers["react-helpers.js"] --> SeqEditor["MermaidSequenceEditor.js"]
-ReactHelpers --> SyncCtrl["MermaidSyncController.js"]
-ReactHelpers --> Monaco["MonacoWrapper.js"]
-SeqEditor --> SyncCtrl
+MVE["MermaidVisualEditor.jsx"] --> SeqEditor["MermaidSequenceEditor<br/>MermaidEditors.jsx"]
+UseState["useDiagramState.js"] --> SyncCtrl["createMermaidSyncController<br/>mermaid/utils.js"]
 SyncCtrl --> AST["window.MermaidAST"]
-Monaco --> Explanations["explanations.js"]
+Monaco["MonacoWrapper.jsx"] --> Explanations["explanations.js"]
 Monaco --> Fixes["fixes.js"]
-IndexHTML["index.html"] --> SeqEditor
-IndexHTML --> SyncCtrl
-IndexHTML --> Monaco
+IndexHTML["index.html"] --> AST
+IndexHTML --> MVE
 ```
 
 **Diagram sources**
-- [react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L10)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L12)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L12)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [useDiagramState.js](file://js/hooks/useDiagramState.js)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L1-L11)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L1-L6)
-- [index.html](file://index.html#L53-L85)
+- [index.html](file://index.html)
 
 **Section sources**
-- [react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [index.html](file://index.html#L53-L85)
+- [useDiagramState.js](file://js/hooks/useDiagramState.js)
+- [index.html](file://index.html)
 
 ## Performance Considerations
-- Debouncing: The AST parse operation is debounced to avoid excessive re-renders during rapid typing.
+- Debouncing: The AST parse operation is debounced by 300 ms to avoid excessive re-renders during rapid typing.
 - Change-source gating: The controller prevents infinite loops by tracking whether the change originated from code or visual edits.
-- Lazy loading: Libraries (Monaco, Mermaid AST, Excalidraw) are loaded dynamically to reduce initial bundle size.
-- Preview throttling: Preview generation is delayed to minimize network requests.
+- Library loading: The Mermaid AST library loads from esm.sh, and the visual editor shows a "Loading visual editor..." spinner until the library is ready.
+- Preview throttling: Preview generation waits 500 ms after the last change to minimize network requests.
 
 [No sources needed since this section provides general guidance]
 
@@ -308,7 +288,7 @@ Automated assistance:
 **Section sources**
 - [explanations.js](file://js/error-diagnostics/explanations.js#L12-L301)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L32-L693)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L310-L423)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Conclusion
-The sequence diagram feature integrates a Mermaid-aware editor with AST-driven synchronization, Monaco-powered diagnostics, and a streamlined UI for participants and messages. By leveraging combined fragments and robust error handling, it enables efficient modeling of object interactions with real-time feedback and safe bidirectional editing.
+The sequence diagram feature combines Monaco-powered Mermaid editing and diagnostics, an AST sync controller, and a live Kroki preview. The sequence visual editor is a placeholder today, so users model object interactions in code, using combined fragments and the error diagnostics for feedback.

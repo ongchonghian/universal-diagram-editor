@@ -2,15 +2,14 @@
 
 <cite>
 **Referenced Files in This Document**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [index.html](file://index.html)
 - [config.js](file://js/config.js)
 - [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js)
 - [index.js](file://js/error-diagnostics/index.js)
 - [PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
+- [CodeEditorView.jsx](file://js/components/editors/CodeEditorView.jsx)
 - [react-helpers.js](file://js/react-helpers.js)
 - [library-registry.js](file://js/library-registry.js)
 - [update-manager.js](file://js/update-manager.js)
@@ -19,8 +18,8 @@
 
 ## Update Summary
 **Changes Made**
-- Updated Monaco Editor dependency from 0.44.0 to 0.53.0
-- Enhanced React Flow integration with version 12.10.0
+- Corrected the Monaco Editor version: the code loads 0.44.0 from cdnjs (`index.html`, `MonacoWrapper.jsx` and `library-registry.js` all agree)
+- React Flow (`@xyflow/react`) is at version 12.10.0 in `package.json`
 - Improved dependency management system with centralized library registry
 - Added comprehensive version checking and update management
 - Enhanced error diagnostics system with better provider registration
@@ -39,13 +38,13 @@
 ## Introduction
 This document provides comprehensive documentation for the Monaco Editor integration and wrapper component used in the Universal Diagram Generator. The integration focuses on advanced code editing features for PlantUML and Mermaid languages, including syntax highlighting, error markers with squiggly underlines, diagnostic providers, custom language registration, bracket matching, auto-closing pairs, and comment configurations. It also covers the enhanced error detection system with code action providers for quick fixes, hover providers for contextual explanations, marker management, editor lifecycle including AMD loader configuration, initialization patterns, cleanup procedures, and exposed imperative methods for parent components.
 
-**Updated** Enhanced with Monaco Editor 0.53.0 upgrade and improved React Flow integration with version 12.10.0, featuring centralized dependency management and comprehensive version checking.
+**Updated** The code loads Monaco Editor 0.44.0 from a CDN, and the project also has a centralized library registry with version checking.
 
 ## Project Structure
 The Monaco Editor integration is implemented as a React wrapper component that integrates with the Monaco Editor library. The project structure organizes the integration into several key areas:
 
 - **MonacoWrapper**: Core wrapper component that manages Monaco Editor lifecycle and exposes imperative methods
-- **Language Registration**: Custom language providers for PlantUML and Mermaid with Monarch tokens
+- **Language Registration**: Custom language providers for PlantUML, Mermaid and LikeC4 with Monarch tokens
 - **Error Diagnostics**: Comprehensive error parsing, explanations, and fix suggestions
 - **Configuration**: Diagram type definitions and language mappings
 - **Integration**: Seamless integration with the main application and other editors
@@ -74,7 +73,7 @@ Checker[Version Checker]
 Updater[Update Manager]
 end
 subgraph "External Dependencies"
-Monaco[Monaco Editor 0.53.0]
+Monaco[Monaco Editor 0.44.0]
 AMD[AMD Loader]
 ReactFlow[React Flow 12.10.0]
 end
@@ -93,23 +92,23 @@ ReactFlow --> UpdateSystem
 ```
 
 **Diagram sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [index.html](file://index.html#L598-L727)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L6-L116)
 - [library-registry.js](file://js/library-registry.js#L57-L69)
-- [update-manager.js](file://js/update-manager.js#L1-L461)
+- [update-manager.js](file://js/update-manager.js)
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [index.html](file://index.html#L598-L727)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [index.html](file://index.html)
 
 ## Core Components
 
 ### MonacoWrapper Component
 The MonacoWrapper serves as the central integration point for Monaco Editor, providing:
 
-- **AMD Loader Configuration**: Configures Monaco's AMD loader for dynamic module loading
-- **Language Registration**: Registers custom PlantUML and Mermaid languages with Monarch tokens
+- **AMD Loader Configuration**: Configures Monaco's AMD loader (`window.require`, supplied by the loader script in `index.html`) for dynamic module loading
+- **Language Registration**: Registers custom PlantUML, Mermaid and LikeC4 languages with Monarch tokens
 - **Editor Lifecycle Management**: Handles initialization, updates, and cleanup
 - **Imperative Methods**: Exposes methods for parent components to control the editor
 - **Error Provider Registration**: Sets up code actions and hover providers for diagnostics
@@ -121,14 +120,13 @@ Key features include:
 - Theme customization support
 - Minimap integration with configurable scaling
 
-**Updated** Enhanced with improved provider registration and better error handling for the upgraded Monaco Editor version.
+If `window.require` is missing, the wrapper logs a console warning and does not create an editor.
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L92-L151)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Custom Language Registration
-The integration registers two custom languages with sophisticated syntax highlighting:
+The integration registers three custom languages: PlantUML and Mermaid (described below), plus LikeC4 for C4 models. `MonacoWrapper.jsx` also contains a Structurizr DSL registration function, but the initialisation code does not call it.
 
 #### PlantUML Language Configuration
 - **Monarch Tokens Provider**: Comprehensive tokenization for PlantUML syntax
@@ -147,8 +145,7 @@ The integration registers two custom languages with sophisticated syntax highlig
 - **String Handling**: Label and edge label support with bracket delimiters
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L174-L242)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L247-L303)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Error Detection and Diagnostics System
 The error system provides comprehensive error handling with:
@@ -172,7 +169,7 @@ The Monaco Editor integration follows a layered architecture with clear separati
 sequenceDiagram
 participant App as Application
 participant Wrapper as MonacoWrapper
-participant Monaco as Monaco Editor 0.53.0
+participant Monaco as Monaco Editor 0.44.0
 participant Providers as Diagnostic Providers
 participant Parser as Error Parser
 participant Explanations as Explanations
@@ -198,7 +195,7 @@ Providers-->>Monaco : Hover content
 ```
 
 **Diagram sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L92-L151)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [index.js](file://js/error-diagnostics/index.js#L13-L44)
 
 The architecture ensures:
@@ -224,7 +221,7 @@ The wrapper implements a robust lifecycle with multiple initialization phases:
 flowchart TD
 Start([Initialize Wrapper]) --> ConfigAMD["Configure AMD Loader<br/>paths: vs: cdn/min/vs"]
 ConfigAMD --> LoadMonaco["Load Monaco Modules<br/>require(['vs/editor/editor.main'])"]
-LoadMonaco --> RegisterLangs["Register Custom Languages<br/>PlantUML + Mermaid"]
+LoadMonaco --> RegisterLangs["Register Custom Languages<br/>PlantUML + Mermaid + LikeC4"]
 RegisterLangs --> RegisterProviders["Register Error Providers<br/>Code Actions + Hover"]
 RegisterProviders --> CreateEditor["Create Editor Instance<br/>with options"]
 CreateEditor --> SetupEvents["Setup Event Handlers<br/>Content + Cursor Changes"]
@@ -235,7 +232,7 @@ Ready --> Cleanup["Cleanup<br/>dispose()"]
 ```
 
 **Diagram sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L92-L151)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 #### Imperative Methods for Parent Components
 The wrapper exposes a comprehensive set of imperative methods:
@@ -244,6 +241,8 @@ The wrapper exposes a comprehensive set of imperative methods:
 - **setValue(newValue)** and **applyEdits(newValue)**: Replace the editor content as one undo step, changing only the span that differs, so Ctrl+Z (Cmd+Z on Mac) restores the earlier text
 - **focus()**: Moves the keyboard focus to the editor
 - **insertAtCursor(text)**: Inserts text at the current cursor position
+- **insertAtLocation(text, mode)**: Inserts text by replacing the selection, or before or after it, or at the cursor
+- **findAndSelect(text)**: Selects the first match of the text and reveals it
 - **setMarkers(markers)**: Applies error markers with squiggly underlines
 - **clearMarkers()**: Removes all error markers
 - **getModel()**: Returns the underlying Monaco model
@@ -252,7 +251,7 @@ The wrapper exposes a comprehensive set of imperative methods:
 These methods enable parent components to programmatically control the editor state and integrate with the error detection system.
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L21-L84)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Language Configuration Details
 
@@ -282,7 +281,7 @@ The PlantUML language configuration provides comprehensive syntax highlighting:
 - Double quotes for strings
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L182-L242)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 #### Mermaid Language Configuration
 The Mermaid language configuration supports multiple diagram types:
@@ -302,7 +301,7 @@ The Mermaid language configuration supports multiple diagram types:
 - **Direction Keywords**: TB, TD, BT, RL, LR
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L255-L303)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Error Detection and Quick Fix System
 
@@ -351,13 +350,13 @@ The system provides intelligent automated fixes:
 #### Code Action Provider
 The code action provider enables quick fixes through Monaco's diagnostic system:
 
-**Provider Registration**: Registered for mermaid, plantuml, and xml languages
+**Provider Registration**: Registered for mermaid, plantuml, xml (used for BPMN) and structurizr languages
 **Context Awareness**: Analyzes markers in the current range
 **Smart Fix Selection**: Filters fixes based on error type and position
 **Monaco-Compatible Edits**: Generates proper Monaco edit objects
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L318-L391)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 #### Hover Provider
 The hover provider delivers contextual help:
@@ -368,17 +367,17 @@ The hover provider delivers contextual help:
 **Documentation Links**: Direct links to official documentation
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L394-L422)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Enhanced Dependency Management
 
-**New Section** The Universal Diagram Generator now features a comprehensive dependency management system that tracks and updates all external libraries, including enhanced support for the upgraded Monaco Editor and React Flow integration.
+**New Section** The Universal Diagram Generator now features a comprehensive dependency management system that tracks and updates all external libraries, including Monaco Editor and React Flow.
 
 ### Centralized Library Registry
 The system maintains a centralized registry of all CDN dependencies with version tracking and compatibility validation:
 
-- **Monaco Editor**: Upgraded to version 0.53.0 with enhanced AMD loader configuration
-- **React Flow**: Integrated with version 12.10.0 for improved node-based diagram editing
+- **Monaco Editor**: Version 0.44.0, loaded through the cdnjs AMD loader
+- **React Flow**: Registered as `@xyflow/react` at version 12.10.0 for node-based diagram editing
 - **React/ReactDOM**: Maintained at version 18 for compatibility
 - **Other Libraries**: Comprehensive coverage of all external dependencies
 
@@ -424,13 +423,13 @@ The Monaco Editor integration implements several performance optimizations:
 
 ### Lazy Loading and Initialization
 - **AMD Loader Configuration**: Monaco modules loaded on-demand
-- **Conditional Language Registration**: Languages only registered when needed
+- **Guarded Language Registration**: Each language is registered only if its id is not already registered
 - **Deferred Provider Registration**: Error providers initialized once
 - **Undoable Value Synchronization**: When the value changes outside the editor (the Fix button, templates, auto-layout or a visual editor), the wrapper writes only the changed span through the model's edit stack. The change is one undo step, so the user's undo history survives. `setValue()`, which would clear that history, is no longer used.
 
 ### Memory Management
 - **Proper Cleanup**: Editor disposal on component unmount
-- **Resource Cleanup**: Preview URL revocation and event listener removal
+- **Resource Cleanup**: Editor disposal when the wrapper unmounts
 - **Reference Management**: Proper useRef usage for editor instances
 - **Event Handler Cleanup**: Removal of Monaco event listeners
 
@@ -438,9 +437,7 @@ The Monaco Editor integration implements several performance optimizations:
 - **Minimap Scaling**: Configurable minimap scale (0.75) for performance
 - **Automatic Layout**: Monaco's built-in layout management
 - **Selective Updates**: Only language/model changes trigger reconfiguration
-- **Debounced Operations**: Efficient handling of rapid content changes
-
-**Updated** Enhanced performance considerations for the upgraded Monaco Editor 0.53.0, including improved AMD loader configuration and better memory management.
+- **Change Handling**: Content changes call `onChange` directly; any debouncing happens in the parent hooks
 
 ## Troubleshooting Guide
 
@@ -478,10 +475,8 @@ The Monaco Editor integration implements several performance optimizations:
 - Handle special end-of-file marker (99999) cases
 - Ensure proper Monaco Range creation
 
-**Updated** Enhanced troubleshooting guidance for the upgraded Monaco Editor 0.53.0, including improved error handling and provider registration.
-
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L338-L349)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [index.js](file://js/error-diagnostics/index.js#L428-L449)
 
 ### Debugging Techniques
@@ -519,7 +514,7 @@ The Monaco Editor integration provides a robust foundation for advanced diagram 
 
 **Updated** The integration successfully balances functionality with performance, providing a smooth editing experience while maintaining clean code organization and maintainable architecture. The comprehensive error detection system significantly improves user productivity by providing immediate feedback and automated solutions for common syntax errors. The enhanced dependency management system ensures all external libraries remain current and compatible.
 
-The upgrade to Monaco Editor 0.53.0 and improved React Flow integration with version 12.10.0 brings enhanced stability, performance improvements, and better compatibility with modern web standards. The centralized library registry and automated update system provide peace of mind for long-term maintenance and reliability.
+The centralized library registry and update system track the CDN-loaded libraries, including Monaco Editor 0.44.0.
 
 Future enhancements could include:
 - Additional diagram language support

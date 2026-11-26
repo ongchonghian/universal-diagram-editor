@@ -9,11 +9,10 @@
 - [js/react-helpers.js](file://js/react-helpers.js)
 - [js/components/ui.js](file://js/components/ui.js)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
@@ -82,7 +81,7 @@ The documentation system follows a structured organization:
 - `meta/`: Metadata for the wiki system
 
 **Section sources**
-- [RULES.md](file://RULES.md#L1-L24)
+- [RULES.md](file://RULES.md)
 
 ### Compliance Workflow
 Contributors must follow this workflow for all development activities:
@@ -93,7 +92,7 @@ Contributors must follow this workflow for all development activities:
 4. **Review Phase**: Ensure documentation reflects all code changes
 
 **Section sources**
-- [RULES.md](file://RULES.md#L6-L24)
+- [RULES.md](file://RULES.md)
 
 ## Project Structure
 The project is a browser-based diagramming application that integrates multiple diagramming engines and editors. It is organized into modular JavaScript packages under js/ with HTML and CSS assets at the repository root. Key areas include:
@@ -112,34 +111,32 @@ A --> C["js/utils.js<br/>Encoding, detection, loading, debouncing"]
 A --> D["js/react-helpers.js<br/>JSX-like bindings"]
 A --> E["js/components/ui.js<br/>Shared UI components"]
 A --> F["js/components/PlantUmlComponents.js<br/>PlantUML toolbar and templates"]
-A --> G["js/editors/bpmn/BpmnVisualEditor.js<br/>BPMN visual editor"]
-A --> H["js/editors/mermaid/index.js<br/>Mermaid router and preview"]
-H --> I["js/editors/mermaid/MermaidSyncController.js<br/>AST sync controller"]
-H --> J["js/editors/mermaid/MermaidGenericEditor.js<br/>Generic editor"]
-H --> K["js/editors/mermaid/MermaidFlowchartEditor.js<br/>Flowchart editor"]
+A --> G["js/components/editors/BpmnVisualEditor.jsx<br/>BPMN visual editor"]
+A --> H["js/components/editors/mermaid/MermaidVisualEditor.jsx<br/>Mermaid router and Universal Mode fallback"]
+H --> I["js/components/editors/mermaid/utils.js<br/>AST sync controller"]
+H --> K["js/components/editors/mermaid/MermaidEditors.jsx<br/>Pie editor and placeholder editors"]
 A --> M["js/error-diagnostics/index.js<br/>Error parsing and markers"]
 M --> N["js/error-diagnostics/explanations.js<br/>Human-readable explanations"]
 M --> O["js/error-diagnostics/fixes.js<br/>Quick fixes and suggestions"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L60-L520)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L116)
 - [js/utils.js](file://js/utils.js#L1-L177)
 - [js/react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [js/components/ui.js](file://js/components/ui.js#L1-L175)
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
+- [js/components/ui.js](file://js/components/ui.js)
+- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 
 **Section sources**
-- [index.html](file://index.html#L1-L120)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L116)
 
 ## Core Components
@@ -157,7 +154,7 @@ This section outlines the foundational building blocks used across the applicati
   - Debounce utility for performance-sensitive operations
 
 - React helpers
-  - Lightweight bindings to enable JSX-like syntax via a third-party transformer without a build step
+  - Lightweight `htm` bindings that give the older `.js` components (`ui.js`, `PlantUmlComponents.js`) JSX-like syntax; the newer editors are `.jsx` files compiled by Vite
 
 - Shared UI components
   - Buttons, status badges, loaders, empty states, section headers, editable text fields, and other reusable elements
@@ -170,9 +167,9 @@ This section outlines the foundational building blocks used across the applicati
 - [js/config.js](file://js/config.js#L1-L116)
 - [js/utils.js](file://js/utils.js#L1-L177)
 - [js/react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [js/components/ui.js](file://js/components/ui.js#L1-L175)
+- [js/components/ui.js](file://js/components/ui.js)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 
 ## Architecture Overview
@@ -196,12 +193,10 @@ UI_COMP["js/components/ui.js"]
 PU_COMP["js/components/PlantUmlComponents.js"]
 end
 subgraph "Editors"
-BPMN["js/editors/bpmn/BpmnVisualEditor.js"]
-MERMAID_IDX["js/editors/mermaid/index.js"]
-SYNC["js/editors/mermaid/MermaidSyncController.js"]
-MERMAID_GEN["js/editors/mermaid/MermaidGenericEditor.js"]
-MERMAID_FC["js/editors/mermaid/MermaidFlowchartEditor.js"]
-MERMAID_SEQ["js/editors/mermaid/MermaidSequenceEditor.js"]
+BPMN["js/components/editors/BpmnVisualEditor.jsx"]
+MERMAID_IDX["js/components/editors/mermaid/MermaidVisualEditor.jsx"]
+SYNC["js/components/editors/mermaid/utils.js"]
+MERMAID_ED["js/components/editors/mermaid/MermaidEditors.jsx"]
 end
 subgraph "Diagnostics"
 DIAG_IDX["js/error-diagnostics/index.js"]
@@ -216,29 +211,25 @@ HTML --> PU_COMP
 HTML --> BPMN
 HTML --> MERMAID_IDX
 MERMAID_IDX --> SYNC
-MERMAID_IDX --> MERMAID_GEN
-MERMAID_IDX --> MERMAID_FC
-MERMAID_IDX --> MERMAID_SEQ
+MERMAID_IDX --> MERMAID_ED
 HTML --> DIAG_IDX
 DIAG_IDX --> DIAG_EXP
 DIAG_IDX --> DIAG_FIX
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1-L120)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L116)
 - [js/utils.js](file://js/utils.js#L1-L177)
 - [js/react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [js/components/ui.js](file://js/components/ui.js#L1-L175)
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
+- [js/components/ui.js](file://js/components/ui.js)
+- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 
 ## Detailed Component Analysis
@@ -248,14 +239,13 @@ DIAG_IDX --> DIAG_FIX
   - Modern web browser with ES module support
   - Basic understanding of HTML, CSS, and JavaScript
 - Running locally
-  - Open index.html in a browser to launch the application
-  - Libraries are loaded dynamically via CDN for convenience
+  - Run `npm run dev` to start the Vite development server
+  - Monaco, Dagre, pako, SheetJS and the Mermaid AST library load from CDNs in `index.html`; the other libraries, such as bpmn-js, come from npm
 - Build and bundling
-  - No traditional build step is required; the app uses ES modules and a third-party JSX transformer
-  - For production, consider bundling and minification using a modern bundler if desired
+  - Run `npm run build` to bundle the app with Vite, and `npm run preview` to serve the built output
 
 **Section sources**
-- [index.html](file://index.html#L1-L120)
+- [index.html](file://index.html)
 - [js/react-helpers.js](file://js/react-helpers.js#L1-L39)
 
 ### Extension Development: Adding a New Diagram Type
@@ -265,8 +255,8 @@ Follow these steps to add support for a new diagram format:
 2. Integrate Monaco language support
    - Register a new language provider and monarch tokenizer if the format requires syntax highlighting
 3. Implement editor integration
-   - Create a new editor component under js/editors/ with a route in the Mermaid router or a dedicated router for the new format
-   - Implement preview generation via Kroki or the target engine's API
+   - Create a new editor component under `js/components/editors/`, with a route in `App.jsx` (or, for a Mermaid diagram type, in the `MermaidVisualEditor` router)
+   - Preview generation already runs through `js/hooks/useRemoteRenderer.js` and the renderer adapter, so register the new type with Kroki or the target engine there
 4. Add error diagnostics
    - Extend error parsing and explanations to recognize and explain common errors for the new format
 5. Update configuration and templates
@@ -274,14 +264,14 @@ Follow these steps to add support for a new diagram format:
 
 Practical example paths:
 - Diagram type registration: [js/config.js](file://js/config.js#L6-L116)
-- Monaco language registration: [index.html](file://index.html#L654-L681)
-- Mermaid router: [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L121)
+- Monaco language registration: [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- Mermaid router: [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 - Error parsing and explanations: [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44), [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L12-L229)
 
 **Section sources**
 - [js/config.js](file://js/config.js#L6-L116)
-- [index.html](file://index.html#L654-L681)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L121)
+- [index.html](file://index.html)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L12-L229)
 
@@ -295,32 +285,32 @@ Practical example paths:
 
 Practical example paths:
 - Diagram type configuration: [js/config.js](file://js/config.js#L6-L116)
-- Monaco code actions and hover providers: [index.html](file://index.html#L474-L509)
+- Monaco code actions and hover providers: [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - Error marker conversion: [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L276)
 
 **Section sources**
 - [js/config.js](file://js/config.js#L6-L116)
-- [index.html](file://index.html#L474-L509)
+- [index.html](file://index.html)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L276)
 
 ### Custom Editor Integration Examples
 - BPMN visual editor
-  - Dynamically loads the BPMN-JS library and synchronizes XML changes back to the code editor
+  - Uses the bundled `bpmn-js` modeler and synchronizes XML changes back to the code editor
   - Handles initialization, error reporting, and external updates
 
 - Mermaid visual editor
-  - Routes to diagram-specific editors based on AST type
-  - Provides live preview via Kroki and a property panel for AST exploration
+  - Routes to a sub-editor based on the detected diagram model (flowchart, sequence, pie, Gantt, timeline, journey or mindmap)
+  - Shows a "Universal Mode" message for other diagram types, and sends edits back as code
 
 Practical example paths:
-- BPMN visual editor: [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L103)
-- Mermaid router and preview: [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L121)
-- Mermaid sync controller: [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- BPMN visual editor: [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- Mermaid router: [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- Mermaid sync controller: [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 **Section sources**
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L103)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### Error Handling and Diagnostics
 - Error parsing
@@ -384,18 +374,17 @@ Hover --> End
 - **Utility Documentation**: New helper functions, shared libraries, or tooling enhancements
 
 **Section sources**
-- [RULES.md](file://RULES.md#L12-L24)
+- [RULES.md](file://RULES.md)
 
 ## Dependency Analysis
-The application relies on external libraries loaded via CDN and internal modules that collaborate through configuration and shared utilities.
+The application relies on external libraries (some loaded via CDN, others bundled from npm) and internal modules that collaborate through configuration and shared utilities.
 
 ```mermaid
 graph TB
 CDN_MERMAID["Mermaid AST (ESM)"] --> APP["Application"]
 CDN_MONACO["Monaco Editor"] --> APP
-CDN_BPMNJS["BPMN-JS"] --> APP
+NPM_BPMNJS["bpmn-js (npm)"] --> APP
 CDN_DAGRE["Dagre"] --> APP
-CDN_TAILWIND["Tailwind CSS"] --> APP
 CDN_FONTAWESOME["Font Awesome"] --> APP
 CDN_KROKI["Kroki API"] --> APP
 CFG["js/config.js"] --> APP
@@ -403,33 +392,33 @@ UTL["js/utils.js"] --> APP
 RH["js/react-helpers.js"] --> APP
 UI["js/components/ui.js"] --> APP
 PU["js/components/PlantUmlComponents.js"] --> APP
-BPMN["js/editors/bpmn/BpmnVisualEditor.js"] --> APP
-MERMAID["js/editors/mermaid/index.js"] --> APP
-SYNC["js/editors/mermaid/MermaidSyncController.js"] --> APP
+BPMN["js/components/editors/BpmnVisualEditor.jsx"] --> APP
+MERMAID["js/components/editors/mermaid/MermaidVisualEditor.jsx"] --> APP
+SYNC["js/components/editors/mermaid/utils.js"] --> APP
 DIAG["js/error-diagnostics/index.js"] --> APP
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L18-L60)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L116)
 - [js/utils.js](file://js/utils.js#L1-L177)
 - [js/react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [js/components/ui.js](file://js/components/ui.js#L1-L175)
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
+- [js/components/ui.js](file://js/components/ui.js)
+- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
 
 **Section sources**
-- [index.html](file://index.html#L18-L60)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L116)
 
 ## Performance Considerations
 - Debouncing
   - Use debounced parsing and preview generation to avoid excessive re-renders during rapid edits
 - Lazy loading
-  - Dynamically load heavy libraries only when needed (e.g., BPMN-JS, Mermaid AST)
+  - Load heavy libraries only when needed (for example, the Mermaid AST library)
 - Efficient error parsing
   - Limit expensive operations to necessary scopes and cache results where possible
 - Preview generation
@@ -437,8 +426,8 @@ DIAG["js/error-diagnostics/index.js"] --> APP
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L166-L176)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L56-L60)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L25-L37)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ## Troubleshooting Guide
 - Monaco editor issues
@@ -452,16 +441,16 @@ DIAG["js/error-diagnostics/index.js"] --> APP
   - Confirm that error markers are attached to the correct model and that hover providers display explanations
 
 Practical example paths:
-- Monaco language registration and providers: [index.html](file://index.html#L654-L727), [index.html](file://index.html#L474-L509)
-- Preview generation and cleanup: [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L32-L60)
-- Sync controller loop prevention: [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L22-L57)
+- Monaco language registration and providers: [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- Preview generation: [js/hooks/useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js)
+- Sync controller loop prevention: [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 - Error marker creation: [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L276)
 
 **Section sources**
-- [index.html](file://index.html#L654-L727)
-- [index.html](file://index.html#L474-L509)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L32-L60)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L22-L57)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L276)
 
 ## Conclusion
@@ -474,13 +463,13 @@ This guide outlined how to set up a development environment, extend the applicat
 ### Development Tasks and Contribution Scenarios
 - Add a new diagram type
   - Update configuration, register Monaco language, implement editor, and add diagnostics
-  - Reference: [js/config.js](file://js/config.js#L6-L116), [index.html](file://index.html#L654-L681), [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L121), [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
+  - Reference: [js/config.js](file://js/config.js#L6-L116), [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx), [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx), [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - Improve existing functionality
   - Enhance error explanations and quick fixes, refine editor UX, or optimize performance
   - Reference: [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L12-L229), [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L332-L366), [js/utils.js](file://js/utils.js#L166-L176)
 - Debugging common issues
   - Use Monaco markers, hover explanations, and quick fixes to diagnose and resolve errors
-  - Reference: [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L276), [index.html](file://index.html#L474-L509)
+  - Reference: [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L276), [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Repowiki Maintenance Checklist
 **Updated** Essential steps for maintaining documentation quality:
@@ -492,4 +481,4 @@ This guide outlined how to set up a development environment, extend the applicat
 - **Structure Compliance**: Ensure proper organization within Repowiki structure
 
 **Section sources**
-- [RULES.md](file://RULES.md#L12-L24)
+- [RULES.md](file://RULES.md)
