@@ -13,7 +13,7 @@
     "@excalidraw/excalidraw": "^0.18.1",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/react-fontawesome": "^3.1.1",
-    "@kanaries/graphic-walker": "^0.4.75",
+    "@kanaries/graphic-walker": "0.4.75",
     "@likec4/core": "^1.47.0",
     "@likec4/diagram": "^1.47.0",
     "@synergycodes/axiom": "^1.0.0-beta.21",
@@ -48,6 +48,34 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
     "vite": "^7.3.2",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "katex": "^0.18.2",
+    "chevrotain": {
+      "lodash-es": "^4.18.1"
+    },
+    "@chevrotain/gast": {
+      "lodash-es": "^4.18.1"
+    },
+    "@chevrotain/cst-dts-gen": {
+      "lodash-es": "^4.18.1"
+    },
+    "@excalidraw/excalidraw": {
+      "nanoid": "^3.3.20"
+    },
+    "@excalidraw/mermaid-to-excalidraw": {
+      "nanoid": "^5.1.16"
+    },
+    "@kanaries/graphic-walker": {
+      "nanoid": "^5.1.16",
+      "i18next": "^26.3.4",
+      "vega": "$vega",
+      "vega-lite": "$vega-lite",
+      "vega-embed": "$vega-embed",
+      "postcss": {
+        "nanoid": "^3.3.20"
+      }
+    }
   }
 }
