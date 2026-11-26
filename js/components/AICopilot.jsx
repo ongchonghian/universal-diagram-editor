@@ -5,19 +5,20 @@ import { conversationStore } from '../services/smith/conversation-store.js';
 import { aiService } from '../services/ai-service.js';
 import { AISettingsModal } from './dialogs/AISettingsModal.jsx';
 import { imageFileToPart, ACCEPTED_IMAGE_TYPES } from '../services/diagram-tools/rasterise.js';
+import { IconButton, Button } from './common.jsx';
 
 // Pictures attached to one message, at most
 const MAX_PICTURES = 4;
 const DEFAULT_PICTURE_REQUEST = 'Turn this picture into a diagram.';
 const imageSrc = (image) => `data:${image.mimeType};base64,${image.data}`;
 
-const typeName = (type) => DIAGRAM_TYPES[type]?.name || type;
+const typeName = (type) => DIAGRAM_TYPES[type]?.label || DIAGRAM_TYPES[type]?.name || type;
 
 /** One entry of the validation trail, in words. */
 function describeStep(step) {
     if (step.action === 'look') {
         return step.status === 'rendered'
-            ? { icon: 'fa-eye', tone: 'text-indigo-600', text: 'Looked at the render' }
+            ? { icon: 'fa-eye', tone: 'text-slate-500', text: 'Looked at the render' }
             : { icon: 'fa-eye-slash', tone: 'text-slate-500', text: 'Could not render the draft to look at' };
     }
     if (step.action === 'layout') {
@@ -42,15 +43,15 @@ const MessagePictures = ({ msg }) => {
         return (
             <div className="mb-2 flex flex-wrap gap-1.5 justify-end">
                 {msg.images.map((image, i) => (
-                    <img key={i} src={imageSrc(image)} alt={image.name || 'Attached picture'} className="h-16 max-w-[8rem] object-cover rounded border border-indigo-300 bg-white" />
+                    <img key={i} src={imageSrc(image)} alt={image.name || 'Attached picture'} className="h-16 max-w-[8rem] object-cover rounded-md ring-1 ring-slate-900/10 bg-white" />
                 ))}
             </div>
         );
     }
     if (msg.pictures?.length) {
         return (
-            <p className="mb-1 text-[11px] text-indigo-100">
-                <i className="fas fa-image mr-1"></i>
+            <p className="mb-1 text-xs text-slate-500">
+                <i className="fas fa-image mr-1" aria-hidden="true"></i>
                 {msg.pictures.length === 1 ? '1 picture attached' : `${msg.pictures.length} pictures attached`} (pictures are kept only until the page reloads)
             </p>
         );
@@ -59,12 +60,12 @@ const MessagePictures = ({ msg }) => {
 };
 
 const ValidationTrail = ({ trail }) => (
-    <ul className="mt-2 space-y-0.5 text-[11px]" aria-label="What Smith checked">
+    <ul className="mt-2.5 pt-2 border-t border-slate-100 space-y-1 text-xs" aria-label="What Smith checked">
         {trail.map((step, i) => {
             const d = describeStep(step);
             return (
-                <li key={i} className={`flex items-center gap-1.5 ${d.tone}`}>
-                    <i className={`fas ${d.icon} w-3 text-center`}></i>
+                <li key={i} className={`flex items-center gap-2 ${d.tone}`}>
+                    <i className={`fas ${d.icon} w-3 text-center text-[10px]`} aria-hidden="true"></i>
                     <span>{d.text}</span>
                 </li>
             );
@@ -76,51 +77,55 @@ const ValidationTrail = ({ trail }) => (
 const ProposalCard = ({ proposal, editorCode, editorType, onReview }) => {
     const stale = proposal.baseCode !== editorCode || proposal.baseType !== editorType;
     const status = proposal.verified
-        ? { tone: 'bg-emerald-50 text-emerald-700', icon: 'fa-check-circle', text: 'Checked: the diagram is valid' }
+        ? { tone: 'bg-emerald-50/70 text-emerald-800 border-emerald-100', icon: 'fa-check-circle', text: 'Checked: the diagram is valid' }
         : proposal.status === 'unverified'
-            ? { tone: 'bg-amber-50 text-amber-700', icon: 'fa-question-circle', text: 'Not checked: the diagram server could not be reached' }
-            : { tone: 'bg-red-50 text-red-700', icon: 'fa-exclamation-circle', text: 'Not verified: the diagram still has an error' };
+            ? { tone: 'bg-amber-50 text-amber-800 border-amber-100', icon: 'fa-question-circle', text: 'Not checked: the diagram server could not be reached' }
+            : { tone: 'bg-red-50 text-red-700 border-red-100', icon: 'fa-exclamation-circle', text: 'Not verified: the diagram still has an error' };
     return (
-        <div className="mt-2 w-full max-w-[90%] rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                    <i className="fas fa-code-branch text-indigo-500"></i>
-                    Proposed change · {typeName(proposal.type)}
-                    {proposal.type !== proposal.baseType && proposal.baseCode && (
-                        <span className="font-normal text-slate-500">(from {typeName(proposal.baseType)})</span>
-                    )}
-                </span>
-                <button
-                    onClick={onReview}
-                    className="text-xs flex items-center gap-1 text-white font-medium px-2.5 py-1 bg-indigo-600 rounded hover:bg-indigo-700 transition-colors shrink-0"
-                >
-                    <i className="fas fa-eye"></i>
+        <div className="mt-2.5 w-full rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-3 py-2.5 flex items-center justify-between gap-3">
+                <div className="min-w-0 flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs shrink-0" aria-hidden="true">
+                        <i className="fas fa-code-branch"></i>
+                    </span>
+                    <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-slate-900 leading-tight">Proposed change</p>
+                        <p className="text-xs text-slate-500 leading-tight mt-0.5 truncate">
+                            {typeName(proposal.type)}
+                            {proposal.type !== proposal.baseType && proposal.baseCode && ` (from ${typeName(proposal.baseType)})`}
+                        </p>
+                    </div>
+                </div>
+                <Button variant="primary" size="sm" icon="fas fa-eye" onClick={onReview} className="shrink-0">
                     Review and apply
-                </button>
+                </Button>
             </div>
-            <div className={`px-3 py-1.5 text-xs ${status.tone} flex items-start gap-1.5`}>
-                <i className={`fas ${status.icon} mt-0.5`}></i>
-                <span>
+            <div className={`px-3 py-2 text-xs ${status.tone} flex items-start gap-2 border-t`}>
+                <i className={`fas ${status.icon} mt-0.5`} aria-hidden="true"></i>
+                <span className="min-w-0">
                     {status.text}
-                    {!proposal.verified && proposal.error && <span className="block font-mono text-[11px] mt-0.5 whitespace-pre-wrap">{proposal.error}</span>}
+                    {!proposal.verified && proposal.error && <span className="block font-mono text-[11px] mt-1 whitespace-pre-wrap break-words opacity-90">{proposal.error}</span>}
                 </span>
             </div>
             {proposal.layout === 'regenerated' && (
-                <div className="px-3 py-1.5 text-[11px] text-amber-800 bg-amber-50 border-t border-amber-100">
-                    <i className="fas fa-project-diagram mr-1"></i>
-                    The change adds, removes or reconnects elements, so the app laid out the diagram again. Shapes you arranged by hand move.
+                <div className="px-3 py-2 text-xs leading-relaxed text-amber-800 bg-amber-50 border-t border-amber-100 flex items-start gap-2">
+                    <i className="fas fa-project-diagram mt-0.5" aria-hidden="true"></i>
+                    <span>The change adds, removes or reconnects elements, so the app laid out the diagram again. Shapes you arranged by hand move.</span>
                 </div>
             )}
             {proposal.lint?.length > 0 && (
-                <details className="px-3 py-1.5 text-[11px] text-slate-600 bg-slate-50 border-t border-slate-100">
-                    <summary className="cursor-pointer">{proposal.lint.length === 1 ? '1 modelling finding' : `${proposal.lint.length} modelling findings`}</summary>
-                    <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                <details className="group px-3 py-2 text-xs text-slate-600 border-t border-slate-100">
+                    <summary className="cursor-pointer list-none flex items-center gap-2 select-none hover:text-slate-900">
+                        <i className="fas fa-chevron-right text-[9px] text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true"></i>
+                        {proposal.lint.length === 1 ? '1 modelling finding' : `${proposal.lint.length} modelling findings`}
+                    </summary>
+                    <ul className="mt-1.5 ml-5 list-disc space-y-1 leading-relaxed">
                         {proposal.lint.map((finding, i) => <li key={i}>{finding}</li>)}
                     </ul>
                 </details>
             )}
             {stale && (
-                <div className="px-3 py-1.5 text-[11px] text-slate-500 bg-slate-50 border-t border-slate-100">
+                <div className="px-3 py-2 text-xs leading-relaxed text-slate-500 bg-slate-50 border-t border-slate-100">
                     The editor has changed since Smith made this proposal. The review compares the proposal with the current code.
                 </div>
             )}
@@ -153,6 +158,8 @@ export const AICopilot = ({
     const [attachError, setAttachError] = useState('');
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
+    // The message whose text was just copied, for a moment of feedback
+    const [copiedIndex, setCopiedIndex] = useState(null);
 
     const messagesEndRef = useRef(null);
     const messageRefs = useRef({});
@@ -383,119 +390,125 @@ export const AICopilot = ({
     const lastAssistantIndex = messages.map(m => m.role).lastIndexOf('assistant');
 
     const ChatTimeline = () => (
-        <div className="absolute right-1 top-4 bottom-4 w-4 bg-transparent z-50 flex flex-col gap-1 items-center overflow-y-auto no-scrollbar pointer-events-auto pb-4">
+        <nav className="absolute right-1.5 top-4 bottom-4 w-3 z-10 flex flex-col gap-1.5 items-center overflow-y-auto no-scrollbar pb-4" aria-label="Messages">
             {messages.map((msg, idx) => (
-                <div key={idx} className="group relative pointer-events-auto">
+                <div key={idx} className="group relative">
                     <button
                         onClick={() => scrollToMessage(idx)}
-                        className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                        className={`block w-1.5 h-1.5 rounded-full transition-transform duration-150 hover:scale-150 ${
                             msg.role === 'user'
-                                ? 'bg-indigo-400 hover:bg-indigo-600 hover:scale-125'
+                                ? 'bg-indigo-400'
                                 : msg.isError
-                                    ? 'bg-red-400 hover:bg-red-600'
-                                    : 'bg-slate-300 hover:bg-slate-500 hover:scale-125'
+                                    ? 'bg-red-400'
+                                    : 'bg-slate-300'
                         }`}
                         aria-label={`Jump to message ${idx + 1}`}
                     />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap max-w-[150px] truncate shadow-lg pointer-events-none z-20">
-                        {msg.role === 'user' ? 'User: ' : 'AI: '}
-                        {msg.content.slice(0, 30)}...
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[11px] px-2 py-1 rounded-md whitespace-nowrap max-w-[180px] truncate shadow-lg pointer-events-none z-20">
+                        {msg.role === 'user' ? 'You: ' : 'Smith: '}
+                        {msg.content}
                     </div>
                 </div>
             ))}
-        </div>
+        </nav>
     );
+
+    const sortedConversations = Object.values(conversations).sort((a, b) => b.lastModified - a.lastModified);
+    const dayLabel = (time) => {
+        if (!time) return '';
+        const day = new Date(time); day.setHours(0, 0, 0, 0);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const days = Math.round((today - day) / 86400000);
+        if (days === 0) return 'Today';
+        if (days === 1) return 'Yesterday';
+        return new Date(time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    };
+
+    const copyMessage = (idx, text) => {
+        navigator.clipboard.writeText(text);
+        setCopiedIndex(idx);
+        setTimeout(() => setCopiedIndex(current => (current === idx ? null : current)), 1500);
+    };
 
     return (
         <div
             className={
                 isSidebar
                 ? "w-full h-full flex flex-col bg-white overflow-hidden relative"
-                : "fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-40 flex flex-col border-l border-slate-200 transform transition-transform duration-300 ease-in-out"
+                : "fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-40 flex flex-col border-l border-slate-200"
             }
             onDragOver={handleDragOver}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setIsDragging(false); }}
             onDrop={handleDrop}
         >
             {isDragging && (
-                <div className="absolute inset-0 z-50 m-2 rounded-xl border-2 border-dashed border-indigo-400 bg-indigo-50/90 flex items-center justify-center pointer-events-none">
-                    <p className="text-sm font-medium text-indigo-700"><i className="fas fa-image mr-2"></i>Drop a picture to attach the picture to your message</p>
+                <div className="absolute inset-0 z-50 m-2 rounded-xl border-2 border-dashed border-indigo-400 bg-indigo-50/95 flex items-center justify-center pointer-events-none">
+                    <p className="text-[13px] font-medium text-indigo-700"><i className="fas fa-image mr-2" aria-hidden="true"></i>Drop the picture to attach it to your message</p>
                 </div>
             )}
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200 shrink-0 z-10">
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowHistory(!showHistory)}
-                        className={`p-2 rounded-full transition-colors ${showHistory ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-200'}`}
+            <div className="flex items-center justify-between h-10 pl-1.5 pr-1.5 border-b border-slate-200 shrink-0 z-10 bg-white">
+                <div className="flex items-center gap-1.5 min-w-0">
+                    <IconButton
+                        icon="fas fa-history"
+                        label="Conversation history"
                         title="Conversation History"
-                    >
-                        <i className="fas fa-history"></i>
-                    </button>
-                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                        pressed={showHistory}
+                        onClick={() => setShowHistory(!showHistory)}
+                    />
+                    <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2 truncate">
+                        <i className="fas fa-magic text-xs text-indigo-600" aria-hidden="true"></i>
                         Syntext Smith
                     </h3>
                 </div>
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={createNewConversation}
-                        disabled={isTyping}
-                        className="p-2 text-slate-500 hover:text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors disabled:opacity-40"
-                        title="New Chat"
-                    >
-                        <i className="fas fa-plus"></i>
-                    </button>
-                    <button
-                        onClick={() => setShowSettings(true)}
-                        className="p-2 text-slate-400 hover:text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors"
-                        title="Settings"
-                    >
-                        <i className="fas fa-cog"></i>
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-slate-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
-                        title="Close"
-                    >
-                        <i className="fas fa-times"></i>
-                    </button>
+                <div className="flex items-center gap-0.5">
+                    <IconButton icon="fas fa-plus" label="New chat" title="New Chat" onClick={createNewConversation} disabled={isTyping} />
+                    <IconButton icon="fas fa-cog" label="Smith settings" title="Settings" onClick={() => setShowSettings(true)} />
+                    <IconButton icon="fas fa-times" label="Close Syntext Smith" title="Close" onClick={onClose} />
                 </div>
             </div>
 
             {/* History */}
             {showHistory && (
-                <div className="absolute top-[60px] left-0 right-0 bottom-0 bg-white z-20 overflow-y-auto border-t border-slate-200 animate-fade-in">
-                    <div className="p-2 space-y-1">
-                        <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                            Recent Chats
+                <div className="absolute top-10 left-0 right-0 bottom-0 bg-white z-20 overflow-y-auto ui-scroll animate-fade-in">
+                    <div className="p-2">
+                        <div className="px-2 pt-2 pb-1.5 text-xs font-medium text-slate-500">
+                            Recent chats
                         </div>
-                        {Object.values(conversations)
-                            .sort((a, b) => b.lastModified - a.lastModified)
-                            .map(convo => (
-                            <div
-                                key={convo.id}
-                                onClick={() => !isTyping && selectConversation(convo.id)}
-                                className={`group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-sm ${
-                                    convo.id === currentConversationId ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
-                                }`}
-                            >
-                                <span className="truncate flex-1 pr-2">
-                                    <i className="far fa-comment-alt mr-2 opacity-50"></i>
-                                    {convo.title || 'New Conversation'}
-                                </span>
-                                <button
-                                    onClick={(e) => handleDeleteConversation(e, convo.id)}
-                                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"
-                                    aria-label="Delete conversation"
-                                >
-                                    <i className="fas fa-trash-alt text-xs"></i>
-                                </button>
-                            </div>
-                        ))}
-                        {Object.keys(conversations).length === 0 && (
-                            <div className="text-center py-8 text-slate-400 text-sm">
-                                No history yet.
+                        <ul className="space-y-0.5">
+                            {sortedConversations.map(convo => {
+                                const active = convo.id === currentConversationId;
+                                return (
+                                    <li
+                                        key={convo.id}
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-current={active ? 'true' : undefined}
+                                        onClick={() => !isTyping && selectConversation(convo.id)}
+                                        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); if (!isTyping) selectConversation(convo.id); } }}
+                                        className={`group flex items-center gap-2 pl-2.5 pr-1 h-9 rounded-md cursor-pointer text-[13px] transition-colors ${
+                                            active ? 'bg-indigo-50 text-indigo-900' : 'text-slate-700 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <i className={`far fa-comment-alt text-xs ${active ? 'text-indigo-500' : 'text-slate-400'}`} aria-hidden="true"></i>
+                                        <span className={`truncate flex-1 ${active ? 'font-medium' : ''}`}>{convo.title || 'New Conversation'}</span>
+                                        <span className="text-[11px] text-slate-400 tabular-nums shrink-0 group-hover:hidden group-focus-within:hidden">{dayLabel(convo.lastModified)}</span>
+                                        <button
+                                            onClick={(e) => handleDeleteConversation(e, convo.id)}
+                                            className="hidden group-hover:inline-flex group-focus-within:inline-flex w-7 h-7 items-center justify-center rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                            aria-label="Delete conversation"
+                                            title="Delete conversation"
+                                        >
+                                            <i className="fas fa-trash-alt text-xs" aria-hidden="true"></i>
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                        {sortedConversations.length === 0 && (
+                            <div className="text-center py-10 text-slate-400 text-[13px]">
+                                Your past conversations appear here.
                             </div>
                         )}
                     </div>
@@ -503,32 +516,32 @@ export const AICopilot = ({
             )}
 
             {/* Messages */}
-            <div className="flex-1 relative min-h-0 bg-slate-50/50">
-                <ChatTimeline />
+            <div className="flex-1 relative min-h-0 bg-white">
+                {messages.length > 1 && <ChatTimeline />}
 
-                <div className="absolute inset-0 overflow-y-auto p-4 space-y-4">
+                <div className="absolute inset-0 overflow-y-auto ui-scroll pl-4 pr-7 py-4 space-y-5">
                     {messages.map((msg, idx) => (
                         <div
                             key={idx}
                             ref={el => messageRefs.current[idx] = el}
-                            className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                            className={`flex flex-col scroll-mt-4 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                         >
                             <div
-                                className={`max-w-[90%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap shadow-sm ${
+                                className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${
                                     msg.role === 'user'
-                                    ? 'bg-indigo-600 text-white rounded-br-none'
+                                    ? 'max-w-[88%] rounded-lg rounded-br-sm bg-slate-100 text-slate-900 px-3.5 py-2.5'
                                     : msg.isError
-                                        ? 'bg-red-50 text-red-700 border border-red-100'
+                                        ? 'w-full rounded-lg bg-red-50 text-red-700 border border-red-100 px-3.5 py-2.5'
                                         : msg.isStopped
-                                            ? 'bg-slate-50 text-slate-500 border border-dashed border-slate-300 rounded-bl-none'
-                                            : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
+                                            ? 'w-full rounded-lg text-slate-500 border border-dashed border-slate-300 px-3.5 py-2.5'
+                                            : 'w-full text-slate-800'
                                 }`}
                             >
                                 {msg.role === 'user' && <MessagePictures msg={msg} />}
                                 {msg.content}
                                 {msg.trail?.length > 0 && <ValidationTrail trail={msg.trail} />}
                                 {msg.limitReached && (
-                                    <p className="mt-2 text-[11px] text-amber-700">Smith stopped after the most steps allowed for one request.</p>
+                                    <p className="mt-2 text-xs text-amber-700">Smith stopped after the most steps allowed for one request.</p>
                                 )}
                             </div>
 
@@ -542,13 +555,13 @@ export const AICopilot = ({
                             )}
 
                             {msg.suggestions?.length > 0 && idx === lastAssistantIndex && (
-                                <div className="mt-2 flex flex-wrap gap-2 max-w-[90%]">
+                                <div className="mt-2.5 flex flex-wrap gap-1.5" aria-label="Suggested next requests">
                                     {msg.suggestions.map((suggestion, sIdx) => (
                                         <button
                                             key={sIdx}
                                             onClick={() => handleSend(suggestion)}
                                             disabled={isTyping}
-                                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full border border-indigo-200 transition-colors shadow-sm disabled:opacity-50"
+                                            className="px-2.5 py-1 bg-white text-slate-700 text-xs rounded-full border border-slate-200 hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50/50 transition-colors disabled:opacity-40"
                                         >
                                             {suggestion}
                                         </button>
@@ -557,23 +570,23 @@ export const AICopilot = ({
                             )}
 
                             {msg.role === 'assistant' && !msg.isError && (
-                                <div className="mt-1 flex gap-2">
+                                <div className="mt-1.5 -ml-2 flex gap-0.5">
                                     {idx === lastAssistantIndex && (
                                         <button
                                             onClick={handleRegenerate}
                                             disabled={isTyping}
-                                            className="text-xs flex items-center gap-1 text-slate-500 hover:text-indigo-600 px-2 py-1 rounded hover:bg-slate-100 transition-colors disabled:opacity-50"
+                                            className="h-6 text-xs inline-flex items-center gap-1.5 text-slate-400 hover:text-slate-700 px-2 rounded-md hover:bg-slate-100 transition-colors disabled:opacity-40"
                                         >
-                                            <i className="fas fa-sync-alt"></i>
+                                            <i className="fas fa-sync-alt text-[10px]" aria-hidden="true"></i>
                                             Regenerate
                                         </button>
                                     )}
                                     <button
-                                        onClick={() => navigator.clipboard.writeText(msg.content)}
-                                        className="text-xs flex items-center gap-1 text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors"
+                                        onClick={() => copyMessage(idx, msg.content)}
+                                        className="h-6 text-xs inline-flex items-center gap-1.5 text-slate-400 hover:text-slate-700 px-2 rounded-md hover:bg-slate-100 transition-colors"
                                     >
-                                        <i className="fas fa-copy"></i>
-                                        Copy
+                                        <i className={`fas ${copiedIndex === idx ? 'fa-check text-emerald-600' : 'fa-copy'} text-[10px]`} aria-hidden="true"></i>
+                                        {copiedIndex === idx ? 'Copied' : 'Copy'}
                                     </button>
                                 </div>
                             )}
@@ -581,20 +594,28 @@ export const AICopilot = ({
                     ))}
 
                     {messages.length === 0 && !isTyping && (
-                        <div className="text-center py-10 text-slate-400">
-                            <i className="fas fa-robot text-4xl mb-3 opacity-20"></i>
-                            <p className="text-sm">Start a new conversation</p>
+                        <div className="pt-10 px-2 text-center">
+                            <span className="mx-auto mb-4 w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center" aria-hidden="true">
+                                <i className="fas fa-magic"></i>
+                            </span>
+                            <h4 className="text-[15px] font-semibold text-slate-900">Ask Smith about this diagram</h4>
+                            <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">
+                                Describe a new diagram, or ask for a change to the current one. Smith checks each change, and you review the change before it reaches your code.
+                            </p>
+                            <p className="mt-3 text-xs text-slate-400">
+                                <i className="fas fa-paperclip mr-1.5" aria-hidden="true"></i>To turn a sketch into a diagram, attach or paste a picture.
+                            </p>
                         </div>
                     )}
 
                     {isTyping && (
                         <div className="flex flex-col items-start" aria-live="polite">
-                            <div className="max-w-[90%] bg-white px-4 py-3 rounded-lg rounded-bl-none border border-slate-200 shadow-sm text-sm text-slate-700 whitespace-pre-wrap">
+                            <div className="w-full text-sm leading-relaxed text-slate-800 whitespace-pre-wrap break-words">
                                 {streamingText || (
-                                    <div className="flex gap-1" aria-label="Smith is working">
-                                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
-                                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
-                                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
+                                    <div className="flex items-center gap-1 h-5" aria-label="Smith is working">
+                                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
+                                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
+                                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
                                     </div>
                                 )}
                                 {liveTrail.length > 0 && <ValidationTrail trail={liveTrail} />}
@@ -606,86 +627,91 @@ export const AICopilot = ({
             </div>
 
             {/* Input */}
-            <div className="p-4 bg-white border-t border-slate-200 shrink-0">
+            <div className="px-3 pt-3 pb-2 bg-white border-t border-slate-200 shrink-0">
                 {attachments.length > 0 && (
                     <ul className="mb-2 flex flex-wrap gap-2" aria-label="Attached pictures">
                         {attachments.map((image, i) => (
                             <li key={i} className="relative">
-                                <img src={imageSrc(image)} alt={image.name} title={image.name} className="h-14 w-14 object-cover rounded border border-slate-300" />
+                                <img src={imageSrc(image)} alt={image.name} title={image.name} className="h-14 w-14 object-cover rounded-md ring-1 ring-slate-900/10" />
                                 <button
                                     onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}
-                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] flex items-center justify-center hover:bg-red-600"
+                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-800 text-white text-[9px] flex items-center justify-center ring-2 ring-white hover:bg-red-600 transition-colors"
                                     aria-label={`Remove ${image.name}`}
                                     title="Remove"
                                 >
-                                    <i className="fas fa-times"></i>
+                                    <i className="fas fa-times" aria-hidden="true"></i>
                                 </button>
                             </li>
                         ))}
                     </ul>
                 )}
-                {attachError && <p className="mb-2 pr-20 text-xs text-red-600" role="alert">{attachError}</p>}
-                <div className="relative">
-                    <button
-                        onClick={() => setIsInputExpanded(!isInputExpanded)}
-                        className="absolute right-2 top-[-30px] p-1 text-slate-400 hover:text-indigo-600 bg-white border border-slate-200 rounded shadow-sm text-xs flex items-center gap-1"
-                        title={isInputExpanded ? "Collapse Input" : "Expand Input"}
-                    >
-                        <i className={`fas ${isInputExpanded ? 'fa-compress-alt' : 'fa-expand-alt'}`}></i>
-                        {isInputExpanded ? 'Collapse' : 'Expand'}
-                    </button>
+                {attachError && <p className="mb-2 text-xs text-red-600" role="alert">{attachError}</p>}
+                <div className="relative rounded-lg border border-slate-200 bg-white shadow-sm transition-colors focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20">
                     <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         onPaste={handlePaste}
-                        placeholder={attachments.length ? 'Say what to do with the picture' : 'Describe a diagram or ask for help...'}
-                        className={`w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm ${isInputExpanded ? 'h-64 resize-y' : 'resize-none max-h-32 min-h-[50px]'}`}
+                        placeholder={attachments.length ? 'Say what to do with the picture' : 'Describe a diagram, or ask for a change'}
+                        aria-label="Message to Smith"
+                        className={`block w-full px-3 pt-2.5 pb-1 bg-transparent border-0 rounded-lg text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 ${isInputExpanded ? 'h-64 resize-y' : 'resize-none max-h-32 min-h-[44px]'}`}
                         rows={isInputExpanded ? 10 : 1}
                         style={{ height: isInputExpanded ? undefined : 'auto' }}
                     />
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isTyping || attachments.length >= MAX_PICTURES}
-                        title="Attach a picture (or paste or drop one)"
-                        aria-label="Attach a picture"
-                        className="absolute left-2 bottom-2 w-7 h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 disabled:opacity-40"
-                    >
-                        <i className="fas fa-paperclip"></i>
-                    </button>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept={ACCEPTED_IMAGE_TYPES.join(',')}
-                        multiple
-                        className="hidden"
-                        onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
-                    />
-                    {isTyping ? (
-                        <button
-                            onClick={handleStop}
-                            title="Stop"
-                            aria-label="Stop"
-                            className="absolute right-2 bottom-2 p-2 bg-slate-700 text-white rounded-lg hover:bg-slate-900 transition-all shadow-sm w-8 h-8 flex items-center justify-center"
-                        >
-                            <i className="fas fa-stop text-xs"></i>
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => handleSend()}
-                            disabled={!input.trim() && !attachments.length}
-                            title="Send"
-                            aria-label="Send"
-                            className="absolute right-2 bottom-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-all shadow-sm w-8 h-8 flex items-center justify-center"
-                        >
-                            <i className="fas fa-paper-plane text-xs"></i>
-                        </button>
-                    )}
+                    <div className="flex items-center justify-between px-1.5 pb-1.5">
+                        <div className="flex items-center gap-0.5">
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isTyping || attachments.length >= MAX_PICTURES}
+                                title="Attach a picture (or paste or drop one)"
+                                aria-label="Attach a picture"
+                                className="w-8 h-8 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-40"
+                            >
+                                <i className="fas fa-paperclip text-[13px]" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                onClick={() => setIsInputExpanded(!isInputExpanded)}
+                                className="w-8 h-8 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                title={isInputExpanded ? "Collapse Input" : "Expand Input"}
+                                aria-label={isInputExpanded ? 'Collapse the message box' : 'Expand the message box'}
+                                aria-pressed={isInputExpanded}
+                            >
+                                <i className={`fas ${isInputExpanded ? 'fa-compress-alt' : 'fa-expand-alt'} text-xs`} aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                            multiple
+                            className="hidden"
+                            onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
+                        />
+                        {isTyping ? (
+                            <button
+                                onClick={handleStop}
+                                title="Stop"
+                                aria-label="Stop"
+                                className="w-8 h-8 inline-flex items-center justify-center rounded-md bg-slate-800 text-white hover:bg-slate-900 transition-colors shadow-sm"
+                            >
+                                <i className="fas fa-stop text-[10px]" aria-hidden="true"></i>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => handleSend()}
+                                disabled={!input.trim() && !attachments.length}
+                                title="Send"
+                                aria-label="Send"
+                                className="w-8 h-8 inline-flex items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                            >
+                                <i className="fas fa-arrow-up text-xs" aria-hidden="true"></i>
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <div className="mt-2 flex justify-center text-[10px] text-slate-400 gap-4">
-                    <span><i className="fas fa-keyboard mr-1"></i>Enter to send</span>
-                    <span><i className="fas fa-level-up-alt mr-1"></i>Shift+Enter for new line</span>
-                </div>
+                <p className="mt-1.5 text-center text-[11px] text-slate-400">
+                    <kbd className="font-sans">Enter</kbd> to send · <kbd className="font-sans">Shift+Enter</kbd> for a new line
+                </p>
             </div>
 
             <AISettingsModal

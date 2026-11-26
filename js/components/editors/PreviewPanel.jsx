@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LogoLoader } from '../common.jsx';
+import { Button, Spinner } from '../common.jsx';
 import { getPlantUmlSnippets } from '../../utils/plantUmlUtils.js';
 import { MERMAID_SNIPPETS } from '../../config.js';
 
@@ -155,89 +155,83 @@ export const PreviewPanel = ({
                         backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', 
                         backgroundSize: '20px 20px'
                      }}>
-                    <img src={previewImage} alt="Diagram Preview" className="max-w-full h-auto bg-white shadow-lg rounded" />
+                    <img src={previewImage} alt="Diagram preview" className="max-w-full h-auto bg-white shadow-sm ring-1 ring-slate-900/5 rounded-lg" />
                 </div>
             );
         }
 
         if (error) {
             return (
-                <div className="flex-1 flex items-center justify-center p-4">
-                    <div className="text-center max-w-md">
-                        {bpmnMissingDI ? (
-                            <>
-                                <i className="fas fa-diagram-project text-4xl text-amber-500 mb-3"></i>
-                                <p className="text-sm text-amber-700 font-medium mb-2">Missing Diagram Layout</p>
-                                <p className="text-xs text-slate-600 mb-3">This BPMN content doesn't contain visual layout information (DI). Without it, the diagram cannot be rendered.</p>
-                                <button 
-                                    onClick={onInlineAutoLayout}
-                                    disabled={autoLayoutProcessing}
-                                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 mx-auto"
-                                >
-                                    {autoLayoutProcessing ? (
-                                        <><i className="fas fa-spinner fa-spin"></i> Processing...</>
-                                    ) : (
-                                        <><i className="fas fa-magic"></i> Auto-Generate Layout</>
-                                    )}
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <i className="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                <p className="text-sm text-red-600 font-medium mb-2">Rendering Error</p>
-                                <pre className="text-xs text-slate-600 bg-white p-3 rounded border overflow-auto max-h-48 text-left">{error}</pre>
-                                    <div className="flex gap-2 justify-center mt-3">
-                                        <button onClick={() => onScrollToLine && onScrollToLine(errorLine)}
-                                            className="px-3 py-1.5 text-xs text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded transition-colors flex items-center gap-1">
-                                            <i className="fas fa-arrow-right"></i> Go to line {errorLine}
-                                        </button>
-                                        {onRetry && (
-                                            <button onClick={onRetry}
-                                                disabled={isFixing}
-                                                className={`px-3 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors flex items-center gap-1 ${isFixing ? 'opacity-70 cursor-wait' : ''}`}>
-                                                {isFixing ? (
-                                                    <><i className="fas fa-spinner fa-spin"></i> Fixing...</>
-                                                ) : (
-                                                    <><i className="fas fa-magic"></i> Auto-Fix (AI)</>
-                                                )}
-                                            </button>
-                                        )}
-                                    </div>
-                                {fixMessage && (
-                                    <p role="status" className={`mt-3 text-xs text-left px-3 py-2 rounded border ${fixMessage.tone === 'warning' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                                        {fixMessage.text}
+                <div className="flex-1 flex items-center justify-center p-6">
+                    {bpmnMissingDI ? (
+                        <div className="w-full max-w-sm text-center">
+                            <span className="mx-auto mb-4 w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center" aria-hidden="true">
+                                <i className="fas fa-diagram-project"></i>
+                            </span>
+                            <h3 className="text-[15px] font-semibold text-slate-900">This BPMN file has no layout</h3>
+                            <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+                                The file describes the process, but not where each shape sits on the page. The app can lay out the diagram for you.
+                            </p>
+                            <Button
+                                variant="primary"
+                                size="lg"
+                                className="mt-5"
+                                icon={autoLayoutProcessing ? undefined : 'fas fa-magic'}
+                                onClick={onInlineAutoLayout}
+                                disabled={autoLayoutProcessing}
+                            >
+                                {autoLayoutProcessing ? <><span className="ui-spinner !border-indigo-300 !border-t-white mr-1.5 align-[-2px]"></span>Laying out the diagram…</> : 'Generate the layout'}
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="w-full max-w-lg bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                            <div className="flex items-start gap-3 px-4 pt-4">
+                                <span className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0" aria-hidden="true">
+                                    <i className="fas fa-exclamation-triangle text-sm"></i>
+                                </span>
+                                <div className="min-w-0">
+                                    <h3 className="text-[13px] font-semibold text-slate-900">The diagram could not be drawn</h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {errorLine ? `The code has an error on line ${errorLine}.` : 'The code has an error.'}
                                     </p>
+                                </div>
+                            </div>
+                            <pre className="mx-4 mt-3 text-xs leading-relaxed text-slate-700 bg-slate-50 border border-slate-100 p-3 rounded-md overflow-auto ui-scroll max-h-48 text-left whitespace-pre font-mono">{error}</pre>
+                            {fixMessage && (
+                                <p role="status" className={`mx-4 mt-3 text-xs leading-relaxed text-left px-3 py-2 rounded-md border ${fixMessage.tone === 'warning' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                    {fixMessage.text}
+                                </p>
+                            )}
+                            <div className="flex items-center justify-end gap-2 px-4 py-3 mt-3 border-t border-slate-100 bg-slate-50/70">
+                                {errorLine && (
+                                    <Button variant="secondary" size="sm" icon="fas fa-arrow-right" onClick={() => onScrollToLine && onScrollToLine(errorLine)}>
+                                        Go to line {errorLine}
+                                    </Button>
                                 )}
-                                {!errorLine && onRetry && (
-                                    <div className="flex justify-center mt-3">
-                                         <button onClick={onRetry}
-                                            disabled={isFixing}
-                                            className={`px-3 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors flex items-center gap-1 ${isFixing ? 'opacity-70 cursor-wait' : ''}`}>
-                                            {isFixing ? (
-                                                <><i className="fas fa-spinner fa-spin"></i> Fixing...</>
-                                            ) : (
-                                                <><i className="fas fa-magic"></i> Auto-Fix (AI)</>
-                                            )}
-                                        </button>
-                                    </div>
+                                {onRetry && (
+                                    <Button variant="primary" size="sm" icon={isFixing ? undefined : 'fas fa-magic'} onClick={onRetry} disabled={isFixing} aria-busy={isFixing}>
+                                        {isFixing ? <><span className="ui-spinner !border-indigo-300 !border-t-white mr-1.5 align-[-2px]"></span>Smith is fixing the code…</> : 'Fix with Smith'}
+                                    </Button>
                                 )}
-                            </>
-                        )}
-                    </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
 
         return (
-            <div className="flex-1 flex items-center justify-center p-4"
+            <div className="flex-1 flex items-center justify-center p-6"
                  style={{
                     backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', 
                     backgroundSize: '20px 20px'
                  }}>
-                <div className="text-center text-slate-400">
-                    <i className="fas fa-image text-4xl mb-3 opacity-30"></i>
-                    <p className="text-sm">Enter diagram code to see preview</p>
-                    <p className="text-xs mt-1">or drag & drop a file</p>
+                <div className="text-center max-w-xs">
+                    <span className="mx-auto mb-3 w-11 h-11 rounded-xl bg-white border border-slate-200 shadow-sm text-slate-400 flex items-center justify-center" aria-hidden="true">
+                        <i className="fas fa-image"></i>
+                    </span>
+                    <p className="text-[13px] font-medium text-slate-600">The preview appears here</p>
+                    <p className="text-xs text-slate-400 mt-1">Type diagram code in the editor, or drop a file on this page.</p>
                 </div>
             </div>
         );
@@ -273,57 +267,57 @@ export const PreviewPanel = ({
         
         return (
             <div 
-                className="fixed z-50 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+                className="fixed z-50 bg-white rounded-lg shadow-xl ring-1 ring-slate-900/5 border border-slate-200 py-1 min-w-[180px] animate-fade-in"
                 style={{ top: contextMenu.y, left: contextMenu.x }}
                 onClick={(e) => e.stopPropagation()} 
             >
                 {contextMenu.targetText && (
                     <>
-                        <div className="px-3 py-1.5 text-xs font-semibold text-slate-800 bg-indigo-50 border-b border-indigo-100 mb-1 truncate max-w-[200px]">
-                            Selected: {contextMenu.targetText}
+                        <div className="px-3 py-1.5 text-xs text-slate-500 border-b border-slate-100 mb-1 truncate max-w-[220px]">
+                            Selected: <span className="font-medium text-slate-800">{contextMenu.targetText}</span>
                         </div>
                         <button
-                            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors border-b border-slate-100"
+                            className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors"
                             onClick={() => {
                                 onRenameRequest && onRenameRequest(contextMenu.targetText);
                                 setContextMenu(null);
                             }}
                         >
-                            <i className="fas fa-pen w-4 text-center opacity-70"></i>
+                            <i className="fas fa-pen w-4 text-center text-[11px] text-slate-400" aria-hidden="true"></i>
                             Rename
                         </button>
                     </>
                 )}
 
-                <div className="px-3 py-1.5 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">
-                    Insert Snippet
+                <div className="px-3 pt-2 pb-1 text-xs font-medium text-slate-500">
+                    Insert a snippet
                 </div>
                 
                 {snippets.length > 0 ? (
-                    <div className="max-h-[300px] overflow-y-auto py-1">
+                    <div className="max-h-[300px] overflow-y-auto ui-scroll pb-1">
                         {snippets.map((snippet, idx) => (
                             <button
                                 key={idx}
-                                className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors"
+                                className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100 hover:text-slate-900 flex items-center gap-2 transition-colors"
                                 onClick={() => {
                                     onSnippetSelect && onSnippetSelect(snippet);
                                     setContextMenu(null);
                                 }}
                             >
-                                <i className={`fas ${snippet.icon} w-4 text-center opacity-70`}></i>
+                                <i className={`fas ${snippet.icon} w-4 text-center text-[11px] text-slate-400`} aria-hidden="true"></i>
                                 {snippet.label}
                             </button>
                         ))}
                     </div>
                 ) : (
-                    <div className="px-3 py-2 text-xs text-slate-400 italic">No snippets available for this context</div>
+                    <div className="px-3 py-2 text-xs text-slate-400">This part of the diagram has no snippets.</div>
                 )}
             </div>
         );
     };
 
     return (
-        <div className="w-1/2 flex flex-col bg-slate-100 relative">
+        <div className="h-1/2 md:h-auto md:w-1/2 min-w-0 flex flex-col bg-slate-50 relative">
             <style>{`
                 .highlighted-element {
                     outline: 2px solid #6366f1;
@@ -344,14 +338,14 @@ export const PreviewPanel = ({
                 }
             `}</style>
             
-            <div className="flex-none px-3 py-2 bg-white border-b border-slate-200 flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-600">
-                    <i className="fas fa-image mr-1.5"></i> Preview
+            <div className="flex-none h-10 px-3 bg-white border-b border-slate-200 flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                    <i className="fas fa-image text-[11px] text-slate-400" aria-hidden="true"></i> Preview
                 </span>
-                {loading && <LogoLoader size="sm" text="Rendering..." />}
+                {loading && <Spinner text="Drawing…" />}
             </div>
             
-            <div className="flex-1 overflow-auto flex flex-col">
+            <div className="flex-1 overflow-auto ui-scroll flex flex-col">
                 {renderContent()}
             </div>
             

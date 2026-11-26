@@ -10,7 +10,7 @@ import { useAutoLayout } from './hooks/useAutoLayout.js';
 import { useCopilot } from './hooks/useCopilot.js';
 
 // Components
-import { Button, StatusBadge } from './components/common.jsx';
+import { Button, IconButton, StatusBadge, ToolbarDivider } from './components/common.jsx';
 import { CodeEditorView } from './components/editors/CodeEditorView.jsx';
 import { TemplateGalleryModal } from './components/dialogs/TemplateGalleryModal.jsx';
 import { BpmnAutoLayoutDialog } from './components/dialogs/BpmnAutoLayoutDialog.jsx';
@@ -140,100 +140,114 @@ const App = () => {
     }, []);
 
     return (
-        <div className="h-full flex flex-col bg-slate-50"
+        <div className="h-full flex flex-col bg-slate-50 overflow-hidden"
              onDrop={handleFileDrop}
              onDragOver={(e) => e.preventDefault()}>
             
-            {/* Header */}
-            <header className="flex-none bg-white border-b border-slate-200 px-4 py-3">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-lg font-bold text-slate-800 flex items-center">
-                            <img src="Universal Diagram Editor.png" alt="Logo" className="w-10 h-10 mr-2" />
-                            Universal Diagram Editor
-                        </h1>
-                        <select
-                            value={diagramType}
-                            onChange={(e) => { setDiagramType(e.target.value); setViewMode('code'); }}
-                            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                            {Object.entries(DIAGRAM_TYPES).map(([key, config]) => (
-                                <option key={key} value={key}>{config.label}</option>
+            {/* Header: one row. Labels fold into icons on narrower screens; the icons keep their names. */}
+            <header className="flex-none h-12 bg-white border-b border-slate-200 px-3 flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 shrink-0">
+                    <h1 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-slate-900 shrink-0">
+                        <img src="Universal Diagram Editor.png" alt="" className="w-7 h-7 rounded-md" />
+                        <span className="hidden min-[1360px]:inline">Universal Diagram Editor</span>
+                        <span className="sr-only min-[1360px]:hidden">Universal Diagram Editor</span>
+                    </h1>
+                    <ToolbarDivider className="hidden min-[1360px]:block" />
+                    <select
+                        value={diagramType}
+                        onChange={(e) => { setDiagramType(e.target.value); setViewMode('code'); }}
+                        aria-label="Diagram notation"
+                        className="h-8 pl-2.5 pr-8 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md shadow-sm hover:border-slate-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+                    >
+                        {Object.entries(DIAGRAM_TYPES).map(([key, config]) => (
+                            <option key={key} value={key}>{config.label}</option>
+                        ))}
+                    </select>
+                    {detectedModel && <StatusBadge type="info" text={detectedModel} className="hidden lg:inline-flex max-w-[11rem] truncate" />}
+                </div>
+
+                <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar">
+                    {isVisualSupported && (
+                        <div className="flex items-center bg-slate-100 rounded-md p-0.5 ml-2 shrink-0" role="group" aria-label="Editor view">
+                            {[
+                                { mode: 'code', icon: 'fas fa-code', label: 'Code' },
+                                { mode: 'visual', icon: 'fas fa-paint-brush', label: 'Design' }
+                            ].map(({ mode, icon, label }) => (
+                                <button
+                                    key={mode}
+                                    type="button"
+                                    onClick={() => setViewMode(mode)}
+                                    aria-pressed={viewMode === mode}
+                                    className={`h-7 px-2.5 inline-flex items-center gap-1.5 text-xs font-medium rounded transition-colors ${viewMode === mode ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800'}`}
+                                >
+                                    <i className={`${icon} text-[11px] ${viewMode === mode ? 'text-indigo-600' : ''}`} aria-hidden="true"></i> {label}
+                                </button>
                             ))}
-                        </select>
-                        {detectedModel && <StatusBadge type="info" text={detectedModel} />}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {/* File buttons */}
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileOpen}
-                            accept=".bpmn,.xml,.mmd,.mermaid,.puml,.plantuml,.wsd,.dot,.gv,.json,.yaml,.yml"
-                            className="hidden"
-                        />
-                        <Button variant="secondary" size="sm" icon="fas fa-folder-open" onClick={() => fileInputRef.current?.click()}>Open</Button>
-                        <Button variant="secondary" size="sm" icon="fas fa-save" onClick={handleDownloadSource} disabled={!textInput.trim()}>Save</Button>
-                        <Button variant="secondary" size="sm" icon="fas fa-download" onClick={handleDownloadSvg} disabled={!svgContent}>SVG</Button>
-                        <Button variant="secondary" size="sm" icon="fas fa-image" onClick={handleDownloadPng} disabled={!svgContent}>PNG</Button>
-                        <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                        <Button 
-                            variant="secondary" 
-                            size="sm" 
-                            icon={readOnly ? "fas fa-lock" : "fas fa-lock-open"} 
-                            onClick={() => setReadOnly(!readOnly)}
-                            className={readOnly ? "text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100" : ""}
-                        >
-                            {readOnly ? "Locked" : "Unlocked"}
+                        </div>
+                    )}
+
+                    <span className="flex-1 min-w-2" aria-hidden="true"></span>
+
+                    {/* File actions */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileOpen}
+                        accept=".bpmn,.xml,.mmd,.mermaid,.puml,.plantuml,.wsd,.dot,.gv,.json,.yaml,.yml"
+                        className="hidden"
+                    />
+                    <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-folder-open" onClick={() => fileInputRef.current?.click()}>Open</Button>
+                    <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-save" onClick={handleDownloadSource} disabled={!textInput.trim()}>Save</Button>
+                    <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-download" onClick={handleDownloadSvg} disabled={!svgContent} title="Download as SVG">SVG</Button>
+                    <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-image" onClick={handleDownloadPng} disabled={!svgContent} title="Download as PNG">PNG</Button>
+                    <ToolbarDivider />
+
+                    {/* Tools */}
+                    <Button
+                        variant={readOnly ? "warning" : "ghost"}
+                        size="sm"
+                        collapse="xl"
+                        icon={readOnly ? "fas fa-lock" : "fas fa-lock-open"}
+                        onClick={() => setReadOnly(!readOnly)}
+                        aria-pressed={readOnly}
+                        title={readOnly ? "Locked: select to allow edits to the code" : "Unlocked: select to stop edits to the code"}
+                    >
+                        {readOnly ? "Locked" : "Unlocked"}
+                    </Button>
+                    {['mermaid', 'plantuml', 'bpmn', 'excalidraw', 'vega', 'vegalite', 'c4', 'graphviz'].includes(diagramType) && (
+                        <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-th-large" onClick={() => setShowTemplates(true)}>
+                            Templates
                         </Button>
-                        <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                        {isVisualSupported && (
-                            <div className="flex bg-slate-100 rounded-lg p-1">
-                                <button
-                                    onClick={() => setViewMode('code')}
-                                    className={`px-3 py-1 text-xs font-medium rounded transition-colors ${viewMode === 'code' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
-                                >
-                                    <i className="fas fa-code mr-1"></i> Code
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('visual')}
-                                    className={`px-3 py-1 text-xs font-medium rounded transition-colors ${viewMode === 'visual' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
-                                >
-                                    <i className="fas fa-paint-brush mr-1"></i> Design
-                                </button>
-                            </div>
-                        )}
-                        {['mermaid', 'plantuml', 'bpmn', 'excalidraw', 'vega', 'vegalite', 'c4', 'graphviz'].includes(diagramType) && (
-                            <Button variant="secondary" size="sm" icon="fas fa-th-large" onClick={() => setShowTemplates(true)}>
-                                Templates
-                            </Button>
-                        )}
-                        {DIAGRAM_TYPES[diagramType]?.docs && (
-                            <a href={DIAGRAM_TYPES[diagramType].docs} target="_blank" rel="noopener noreferrer"
-                               className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Documentation">
-                                <i className="fas fa-book"></i>
-                            </a>
-                        )}
-                        <button 
-                            onClick={() => setShowUpdatePanel(true)}
-                            className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" 
-                            title="Check for library updates"
-                        >
-                            <i className="fas fa-sync-alt"></i>
-                        </button>
-                        <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                        <button 
-                            onClick={() => setShowCopilot(!showCopilot)}
-                            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                                showCopilot 
-                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
-                                : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-50'
-                            }`}
-                        >
-                            <i className="fas fa-magic"></i>
-                            <span className="hidden md:inline">Syntext Smith</span>
-                        </button>
-                    </div>
+                    )}
+                    {DIAGRAM_TYPES[diagramType]?.docs && (
+                        <a href={DIAGRAM_TYPES[diagramType].docs} target="_blank" rel="noopener noreferrer"
+                           className="hidden sm:inline-flex w-7 h-7 shrink-0 items-center justify-center rounded-md text-xs text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                           title="Documentation" aria-label={`${DIAGRAM_TYPES[diagramType].label} documentation`}>
+                            <i className="fas fa-book" aria-hidden="true"></i>
+                        </a>
+                    )}
+                    <IconButton
+                        icon="fas fa-sync-alt"
+                        size="sm"
+                        label="Check for library updates"
+                        onClick={() => setShowUpdatePanel(true)}
+                        className="hidden sm:inline-flex shrink-0"
+                    />
+                    <ToolbarDivider />
+                    <button
+                        type="button"
+                        onClick={() => setShowCopilot(!showCopilot)}
+                        aria-pressed={showCopilot}
+                        aria-label="Syntext Smith"
+                        className={`h-8 px-3 shrink-0 inline-flex items-center gap-2 text-[13px] font-medium rounded-md transition-colors ${
+                            showCopilot
+                            ? 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700'
+                            : 'bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 hover:border-slate-300'
+                        }`}
+                    >
+                        <i className={`fas fa-magic text-xs ${showCopilot ? '' : 'text-indigo-600'}`} aria-hidden="true"></i>
+                        <span className="hidden lg:inline whitespace-nowrap">Syntext Smith</span>
+                    </button>
                 </div>
             </header>
 
@@ -323,7 +337,7 @@ const App = () => {
 
                 {/* AI Copilot Sidebar */}
                 {showCopilot && (
-                    <aside className="w-96 border-l border-slate-200 bg-white transition-all duration-300 ease-in-out flex flex-col z-20 shadow-xl">
+                    <aside className="absolute inset-y-0 right-0 w-full sm:w-96 lg:static lg:w-96 shrink-0 border-l border-slate-200 bg-white flex flex-col z-30 shadow-xl lg:shadow-none animate-fade-in" aria-label="Syntext Smith">
                         <AICopilot 
                             isOpen={showCopilot} 
                             onClose={() => setShowCopilot(false)} 
