@@ -1,0 +1,2217 @@
+{
+  "schema": 1,
+  "startedAt": "2026-11-25T09:08:52.057Z",
+  "finishedAt": "2026-11-25T09:31:33.767Z",
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "temperature": 0.7,
+  "path": "loop",
+  "promptVersion": "429267d9",
+  "krokiServer": "public kroki.io",
+  "summary": {
+    "total": 60,
+    "pass": 57,
+    "fail": 2,
+    "unverified": 0,
+    "error": 1,
+    "passRate": 96.6,
+    "firstAttemptParseRate": 93.9,
+    "inputTokens": 393135,
+    "outputTokens": 103066,
+    "seconds": 1273
+  },
+  "byGroup": {
+    "mermaid": {
+      "total": 14,
+      "pass": 13,
+      "fail": 1,
+      "unverified": 0,
+      "error": 0,
+      "passRate": 92.9,
+      "firstAttemptParseRate": 100,
+      "inputTokens": 37395,
+      "outputTokens": 9416,
+      "seconds": 125
+    },
+    "plantuml": {
+      "total": 8,
+      "pass": 8,
+      "fail": 0,
+      "unverified": 0,
+      "error": 0,
+      "passRate": 100,
+      "firstAttemptParseRate": 83.3,
+      "inputTokens": 28434,
+      "outputTokens": 8129,
+      "seconds": 116
+    },
+    "c4": {
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "unverified": 0,
+      "error": 0,
+      "passRate": 100,
+      "firstAttemptParseRate": 100,
+      "inputTokens": 9968,
+      "outputTokens": 2151,
+      "seconds": 32
+    },
+    "bpmn": {
+      "total": 12,
+      "pass": 10,
+      "fail": 1,
+      "unverified": 0,
+      "error": 1,
+      "passRate": 90.9,
+      "firstAttemptParseRate": 87.5,
+      "inputTokens": 224788,
+      "outputTokens": 50163,
+      "seconds": 627
+    },
+    "vega": {
+      "total": 6,
+      "pass": 6,
+      "fail": 0,
+      "unverified": 0,
+      "error": 0,
+      "passRate": 100,
+      "firstAttemptParseRate": 100,
+      "inputTokens": 16588,
+      "outputTokens": 3968,
+      "seconds": 56
+    },
+    "graphviz": {
+      "total": 4,
+      "pass": 4,
+      "fail": 0,
+      "unverified": 0,
+      "error": 0,
+      "passRate": 100,
+      "firstAttemptParseRate": 100,
+      "inputTokens": 16397,
+      "outputTokens": 9156,
+      "seconds": 93
+    },
+    "kroki": {
+      "total": 10,
+      "pass": 10,
+      "fail": 0,
+      "unverified": 0,
+      "error": 0,
+      "passRate": 100,
+      "firstAttemptParseRate": 90,
+      "inputTokens": 54512,
+      "outputTokens": 18516,
+      "seconds": 202
+    },
+    "type-choice": {
+      "total": 2,
+      "pass": 2,
+      "fail": 0,
+      "unverified": 0,
+      "error": 0,
+      "passRate": 100,
+      "firstAttemptParseRate": 100,
+      "inputTokens": 5053,
+      "outputTokens": 1567,
+      "seconds": 22
+    }
+  },
+  "cases": [
+    {
+      "id": "bpmn-linear-create",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "create",
+      "outputType": "bpmn",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-no-warnings",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\"\n                  xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\"\n                  xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\"\n                  id=\"Definitions_1\"\n                  targetNamespace=\"http://bpmn.io/schema/bpmn\">\n  <bpmn:collaboration id=\"Collaboration_BookReturn\">\n    <bpmn:participant id=\"Participant_Library\" name=\"Library Book Return\" processRef=\"Process_BookReturn\" />\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_BookReturn\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_1\">\n      <bpmn:lane id=\"Lane_Member\" name=\"Member\">\n        <bpmn:flowNodeRef>StartEvent_BookReturned</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_ReturnBook</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Staff\" name=\"Library Staff\">\n        <bpmn:flowNodeRef>Task_CheckDamage</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_UpdateRecord</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>EndEvent_ReturnCompleted</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n\n    <bpmn:startEvent id=\"StartEvent_BookReturned\" name=\"Book Return Initiated\">\n      <bpmn:outgoing>Flow_1</bpmn:outgoing>\n    </bpmn:startEvent>\n\n    <bpmn:userTask id=\"Task_ReturnBook\" name=\"Return Book\">\n      <bpmn:incoming>Flow_1</bpmn:incoming>\n      <bpmn:outgoing>Flow_2</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_CheckDamage\" name=\"Check Book for Damage\">\n      <bpmn:incoming>Flow_2</bpmn:incoming>\n      <bpmn:outgoing>Flow_3</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:userTask id=\"Task_UpdateRecord\" name=\"Update Book Record\">\n      <bpmn:incoming>Flow_3</bpmn:incoming>\n      <bpmn:outgoing>Flow_4</bpmn:outgoing>\n    </bpmn:userTask>\n\n    <bpmn:endEvent id=\"EndEvent_ReturnCompleted\" name=\"Return Process Completed\">\n      <bpmn:incoming>Flow_4</bpmn:incoming>\n    </bpmn:endEvent>\n\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"StartEvent_BookReturned\" targetRef=\"Task_ReturnBook\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_ReturnBook\" targetRef=\"Task_CheckDamage\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_CheckDamage\" targetRef=\"Task_UpdateRecord\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateRecord\" targetRef=\"EndEvent_ReturnCompleted\" />\n  </bpmn:process>\n\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_1\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_1\" bpmnElement=\"Collaboration_BookReturn\">\n      <bpmndi:BPMNShape id=\"Participant_Library_di\" bpmnElement=\"Participant_Library\" isHorizontal=\"true\">\n        <dc:Bounds x=\"140\" y=\"80\" width=\"760\" height=\"290\" />\n      </bpmndi:BPMNShape>\n\n      <bpmndi:BPMNShape id=\"Lane_Member_di\" bpmnElement=\"Lane_Member\" isHorizontal=\"true\">\n        <dc:Bounds x=\"170\" y=\"80\" width=\"730\" height=\"135\" />\n      </bpmndi:BPMNShape>\n\n      <bpmndi:BPMNShape id=\"Lane_Staff_di\" bpmnElement=\"Lane_Staff\" isHorizontal=\"true\">\n        <dc:Bounds x=\"170\" y=\"215\" width=\"730\" height=\"155\" />\n      </bpmndi:BPMNShape>\n\n      <bpmndi:BPMNShape id=\"StartEvent_BookReturned_di\" bpmnElement=\"StartEvent_BookReturned\">\n        <dc:Bounds x=\"212\" y=\"127\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"199\" y=\"170\" width=\"63\" height=\"27\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n\n      <bpmndi:BPMNShape id=\"Task_ReturnBook_di\" bpmnElement=\"Task_ReturnBook\">\n        <dc:Bounds x=\"300\" y=\"105\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n\n      <bpmndi:BPMNShape id=\"Task_CheckDamage_di\" bpmnElement=\"Task_CheckDamage\">\n        <dc:Bounds x=\"460\" y=\"250\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n\n      <bpmndi:BPMNShape id=\"Task_UpdateRecord_di\" bpmnElement=\"Task_UpdateRecord\">\n        <dc:Bounds x=\"610\" y=\"250\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n\n      <bpmndi:BPMNShape id=\"EndEvent_ReturnCompleted_di\" bpmnElement=\"EndEvent_ReturnCompleted\">\n        <dc:Bounds x=\"772\" y=\"272\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"751\" y=\"315\" width=\"78\" height=\"27\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n\n      <bpmndi:BPMNEdge id=\"Flow_1_di\" bpmnElement=\"Flow_1\">\n        <di:waypoint x=\"248\" y=\"145\" />\n        <di:waypoint x=\"300\" y=\"145\" />\n      </bpmndi:BPMNEdge>\n\n      <bpmndi:BPMNEdge id=\"Flow_2_di\" bpmnElement=\"Flow_2\">\n        <di:waypoint x=\"400\" y=\"145\" />\n        <di:waypoint x=\"430\" y=\"145\" />\n        <di:waypoint x=\"430\" y=\"290\" />\n        <di:waypoint x=\"460\" y=\"290\" />\n      </bpmndi:BPMNEdge>\n\n      <bpmndi:BPMNEdge id=\"Flow_3_di\" bpmnElement=\"Flow_3\">\n        <di:waypoint x=\"560\" y=\"290\" />\n        <di:waypoint x=\"610\" y=\"290\" />\n      </bpmndi:BPMNEdge>\n\n      <bpmndi:BPMNEdge id=\"Flow_4_di\" bpmnElement=\"Flow_4\">\n        <di:waypoint x=\"710\" y=\"290\" />\n        <di:waypoint x=\"772\" y=\"290\" />\n      </bpmndi:BPMNEdge>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 27.9,
+      "inputTokens": 5687,
+      "outputTokens": 3724,
+      "modelCalls": 2
+    },
+    {
+      "id": "bpmn-gateway-create",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "create",
+      "outputType": "bpmn",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-no-warnings",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\"\n                  xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\"\n                  xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\"\n                  id=\"Definitions_LoanProcess\"\n                  targetNamespace=\"http://bpmn.io/schema/bpmn\">\n  <bpmn:process id=\"Process_LoanApplication\" name=\"Loan Application\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_1\" name=\"Loan Application Received\">\n      <bpmn:outgoing>Flow_1</bpmn:outgoing>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Task_CheckCredit\" name=\"Check Credit Score\">\n      <bpmn:incoming>Flow_1</bpmn:incoming>\n      <bpmn:outgoing>Flow_2</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:exclusiveGateway id=\"Gateway_CreditCheck\" name=\"Credit Check Passed?\">\n      <bpmn:incoming>Flow_2</bpmn:incoming>\n      <bpmn:outgoing>Flow_Approved</bpmn:outgoing>\n      <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:task id=\"Task_ApproveLoan\" name=\"Approve Loan\">\n      <bpmn:incoming>Flow_Approved</bpmn:incoming>\n      <bpmn:outgoing>Flow_3</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:task id=\"Task_RejectLoan\" name=\"Send Rejection Letter\">\n      <bpmn:incoming>Flow_Rejected</bpmn:incoming>\n      <bpmn:outgoing>Flow_4</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:endEvent id=\"EndEvent_Approved\" name=\"Loan Approved\">\n      <bpmn:incoming>Flow_3</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:endEvent id=\"EndEvent_Rejected\" name=\"Loan Rejected\">\n      <bpmn:incoming>Flow_4</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"StartEvent_1\" targetRef=\"Task_CheckCredit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_CheckCredit\" targetRef=\"Gateway_CreditCheck\" />\n    <bpmn:sequenceFlow id=\"Flow_Approved\" name=\"Yes\" sourceRef=\"Gateway_CreditCheck\" targetRef=\"Task_ApproveLoan\" />\n    <bpmn:sequenceFlow id=\"Flow_Rejected\" name=\"No\" sourceRef=\"Gateway_CreditCheck\" targetRef=\"Task_RejectLoan\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_ApproveLoan\" targetRef=\"EndEvent_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_RejectLoan\" targetRef=\"EndEvent_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_1\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_1\" bpmnElement=\"Process_LoanApplication\">\n      <bpmndi:BPMNShape id=\"StartEvent_1_di\" bpmnElement=\"StartEvent_1\">\n        <dc:Bounds x=\"160\" y=\"160\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"137\" y=\"203\" width=\"83\" height=\"27\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_CheckCredit_di\" bpmnElement=\"Task_CheckCredit\">\n        <dc:Bounds x=\"250\" y=\"138\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_CreditCheck_di\" bpmnElement=\"Gateway_CreditCheck\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"405\" y=\"153\" width=\"50\" height=\"50\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"396\" y=\"123\" width=\"68\" height=\"27\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_ApproveLoan_di\" bpmnElement=\"Task_ApproveLoan\">\n        <dc:Bounds x=\"510\" y=\"80\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"EndEvent_Approved_di\" bpmnElement=\"EndEvent_Approved\">\n        <dc:Bounds x=\"670\" y=\"102\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"651\" y=\"145\" width=\"75\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_RejectLoan_di\" bpmnElement=\"Task_RejectLoan\">\n        <dc:Bounds x=\"510\" y=\"230\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"EndEvent_Rejected_di\" bpmnElement=\"EndEvent_Rejected\">\n        <dc:Bounds x=\"670\" y=\"252\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"653\" y=\"295\" width=\"71\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNEdge id=\"Flow_1_di\" bpmnElement=\"Flow_1\">\n        <di:waypoint x=\"196\" y=\"178\" />\n        <di:waypoint x=\"250\" y=\"178\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_2_di\" bpmnElement=\"Flow_2\">\n        <di:waypoint x=\"350\" y=\"178\" />\n        <di:waypoint x=\"405\" y=\"178\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_Approved_di\" bpmnElement=\"Flow_Approved\">\n        <di:waypoint x=\"430\" y=\"153\" />\n        <di:waypoint x=\"430\" y=\"120\" />\n        <di:waypoint x=\"510\" y=\"120\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"436\" y=\"102\" width=\"18\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_Rejected_di\" bpmnElement=\"Flow_Rejected\">\n        <di:waypoint x=\"430\" y=\"203\" />\n        <di:waypoint x=\"430\" y=\"270\" />\n        <di:waypoint x=\"510\" y=\"270\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"438\" y=\"278\" width=\"15\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_3_di\" bpmnElement=\"Flow_3\">\n        <di:waypoint x=\"610\" y=\"120\" />\n        <di:waypoint x=\"670\" y=\"120\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_4_di\" bpmnElement=\"Flow_4\">\n        <di:waypoint x=\"610\" y=\"270\" />\n        <di:waypoint x=\"670\" y=\"270\" />\n      </bpmndi:BPMNEdge>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 29.2,
+      "inputTokens": 6194,
+      "outputTokens": 4236,
+      "modelCalls": 2
+    },
+    {
+      "id": "bpmn-lanes-create",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "create",
+      "outcome": "error",
+      "error": "The AI reply was cut off because the reply reached the length limit. Ask for the change in smaller steps.",
+      "seconds": 240.7,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "modelCalls": 0
+    },
+    {
+      "id": "bpmn-pools-create",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "create",
+      "outputType": "bpmn",
+      "firstStatus": "invalid",
+      "repairAttempts": 4,
+      "note": "8 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-no-warnings",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\"\n                  xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\"\n                  xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\"\n                  xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\"\n                  id=\"Definitions_1\"\n                  targetNamespace=\"http://bpmn.io/schema/bpmn\">\n  <bpmn:collaboration id=\"Collaboration_1\">\n    <bpmn:participant id=\"Participant_Customer\" name=\"Customer\" processRef=\"Process_Customer\" />\n    <bpmn:participant id=\"Participant_Supplier\" name=\"Supplier\" processRef=\"Process_Supplier\" />\n    <bpmn:messageFlow id=\"MessageFlow_PO\" name=\"Purchase Order\" sourceRef=\"Activity_Customer_SendPO\" targetRef=\"Activity_Supplier_ReceivePO\" />\n    <bpmn:messageFlow id=\"MessageFlow_Invoice\" name=\"Invoice\" sourceRef=\"Activity_Supplier_SendInvoice\" targetRef=\"Activity_Customer_ReceiveInvoice\" />\n  </bpmn:collaboration>\n\n  <bpmn:process id=\"Process_Customer\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Customer\" name=\"Order Needed\">\n      <bpmn:outgoing>Flow_C1</bpmn:outgoing>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Activity_Customer_SendPO\" name=\"Create &amp; Send Purchase Order\">\n      <bpmn:incoming>Flow_C1</bpmn:incoming>\n      <bpmn:outgoing>Flow_C2</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:task id=\"Activity_Customer_ReceiveInvoice\" name=\"Receive &amp; Review Invoice\">\n      <bpmn:incoming>Flow_C2</bpmn:incoming>\n      <bpmn:outgoing>Flow_C3</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:endEvent id=\"EndEvent_Customer\" name=\"Order Completed\">\n      <bpmn:incoming>Flow_C3</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:sequenceFlow id=\"Flow_C1\" sourceRef=\"StartEvent_Customer\" targetRef=\"Activity_Customer_SendPO\" />\n    <bpmn:sequenceFlow id=\"Flow_C2\" sourceRef=\"Activity_Customer_SendPO\" targetRef=\"Activity_Customer_ReceiveInvoice\" />\n    <bpmn:sequenceFlow id=\"Flow_C3\" sourceRef=\"Activity_Customer_ReceiveInvoice\" targetRef=\"EndEvent_Customer\" />\n  </bpmn:process>\n\n  <bpmn:process id=\"Process_Supplier\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"StartEvent_Supplier\" name=\"Order Requested\">\n      <bpmn:outgoing>Flow_S1</bpmn:outgoing>\n    </bpmn:startEvent>\n    <bpmn:task id=\"Activity_Supplier_ReceivePO\" name=\"Process Purchase Order\">\n      <bpmn:incoming>Flow_S1</bpmn:incoming>\n      <bpmn:outgoing>Flow_S2</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:task id=\"Activity_Supplier_Fulfill\" name=\"Fulfill Order\">\n      <bpmn:incoming>Flow_S2</bpmn:incoming>\n      <bpmn:outgoing>Flow_S3</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:task id=\"Activity_Supplier_SendInvoice\" name=\"Issue &amp; Send Invoice\">\n      <bpmn:incoming>Flow_S3</bpmn:incoming>\n      <bpmn:outgoing>Flow_S4</bpmn:outgoing>\n    </bpmn:task>\n    <bpmn:endEvent id=\"EndEvent_Supplier\" name=\"Order Fulfilled\">\n      <bpmn:incoming>Flow_S4</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:sequenceFlow id=\"Flow_S1\" sourceRef=\"StartEvent_Supplier\" targetRef=\"Activity_Supplier_ReceivePO\" />\n    <bpmn:sequenceFlow id=\"Flow_S2\" sourceRef=\"Activity_Supplier_ReceivePO\" targetRef=\"Activity_Supplier_Fulfill\" />\n    <bpmn:sequenceFlow id=\"Flow_S3\" sourceRef=\"Activity_Supplier_Fulfill\" targetRef=\"Activity_Supplier_SendInvoice\" />\n    <bpmn:sequenceFlow id=\"Flow_S4\" sourceRef=\"Activity_Supplier_SendInvoice\" targetRef=\"EndEvent_Supplier\" />\n  </bpmn:process>\n\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_1\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_1\" bpmnElement=\"Collaboration_1\">\n      <bpmndi:BPMNShape id=\"Participant_Customer_di\" bpmnElement=\"Participant_Customer\" isHorizontal=\"true\">\n        <dc:Bounds x=\"150\" y=\"80\" width=\"680\" height=\"190\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"StartEvent_Customer_di\" bpmnElement=\"StartEvent_Customer\">\n        <dc:Bounds x=\"212\" y=\"157\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"195\" y=\"200\" width=\"70\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_Customer_SendPO_di\" bpmnElement=\"Activity_Customer_SendPO\">\n        <dc:Bounds x=\"300\" y=\"135\" width=\"130\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_Customer_ReceiveInvoice_di\" bpmnElement=\"Activity_Customer_ReceiveInvoice\">\n        <dc:Bounds x=\"580\" y=\"135\" width=\"130\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"EndEvent_Customer_di\" bpmnElement=\"EndEvent_Customer\">\n        <dc:Bounds x=\"762\" y=\"157\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"739\" y=\"200\" width=\"84\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNEdge id=\"Flow_C1_di\" bpmnElement=\"Flow_C1\">\n        <di:waypoint x=\"248\" y=\"175\" />\n        <di:waypoint x=\"300\" y=\"175\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_C2_di\" bpmnElement=\"Flow_C2\">\n        <di:waypoint x=\"430\" y=\"175\" />\n        <di:waypoint x=\"580\" y=\"175\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_C3_di\" bpmnElement=\"Flow_C3\">\n        <di:waypoint x=\"710\" y=\"175\" />\n        <di:waypoint x=\"762\" y=\"175\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNShape id=\"Participant_Supplier_di\" bpmnElement=\"Participant_Supplier\" isHorizontal=\"true\">\n        <dc:Bounds x=\"150\" y=\"330\" width=\"680\" height=\"190\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"StartEvent_Supplier_di\" bpmnElement=\"StartEvent_Supplier\">\n        <dc:Bounds x=\"212\" y=\"407\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"188\" y=\"450\" width=\"85\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_Supplier_ReceivePO_di\" bpmnElement=\"Activity_Supplier_ReceivePO\">\n        <dc:Bounds x=\"300\" y=\"385\" width=\"130\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_Supplier_Fulfill_di\" bpmnElement=\"Activity_Supplier_Fulfill\">\n        <dc:Bounds x=\"450\" y=\"385\" width=\"105\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_Supplier_SendInvoice_di\" bpmnElement=\"Activity_Supplier_SendInvoice\">\n        <dc:Bounds x=\"580\" y=\"385\" width=\"130\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"EndEvent_Supplier_di\" bpmnElement=\"EndEvent_Supplier\">\n        <dc:Bounds x=\"762\" y=\"407\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"745\" y=\"450\" width=\"71\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNEdge id=\"Flow_S1_di\" bpmnElement=\"Flow_S1\">\n        <di:waypoint x=\"248\" y=\"425\" />\n        <di:waypoint x=\"300\" y=\"425\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_S2_di\" bpmnElement=\"Flow_S2\">\n        <di:waypoint x=\"430\" y=\"425\" />\n        <di:waypoint x=\"450\" y=\"425\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_S3_di\" bpmnElement=\"Flow_S3\">\n        <di:waypoint x=\"555\" y=\"425\" />\n        <di:waypoint x=\"580\" y=\"425\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_S4_di\" bpmnElement=\"Flow_S4\">\n        <di:waypoint x=\"710\" y=\"425\" />\n        <di:waypoint x=\"762\" y=\"425\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"MessageFlow_PO_di\" bpmnElement=\"MessageFlow_PO\">\n        <di:waypoint x=\"365\" y=\"215\" />\n        <di:waypoint x=\"365\" y=\"385\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"373\" y=\"285\" width=\"80\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"MessageFlow_Invoice_di\" bpmnElement=\"MessageFlow_Invoice\">\n        <di:waypoint x=\"645\" y=\"385\" />\n        <di:waypoint x=\"645\" y=\"215\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"653\" y=\"285\" width=\"37\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNEdge>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 193,
+      "inputTokens": 167294,
+      "outputTokens": 27484,
+      "modelCalls": 8
+    },
+    {
+      "id": "bpmn-rename-review",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "edit",
+      "outputType": "bpmn",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bounds-unchanged",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "no-removals",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_Review\" name=\"Line manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify\" name=\"Notify employee\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Leave\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Leave\" bpmnElement=\"Process_Leave\">\n      <bpmndi:BPMNShape id=\"Start_Request_di\" bpmnElement=\"Start_Request\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Submit_di\" bpmnElement=\"Task_Submit\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Review_di\" bpmnElement=\"Task_Review\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"50\" y=\"465\" width=\"50\" height=\"50\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_UpdateBalance_di\" bpmnElement=\"Task_UpdateBalance\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Notify_di\" bpmnElement=\"Task_Notify\">\n        <dc:Bounds x=\"25\" y=\"730\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Approved_di\" bpmnElement=\"End_Approved\">\n        <dc:Bounds x=\"57\" y=\"892\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Rejected_di\" bpmnElement=\"End_Rejected\">\n        <dc:Bounds x=\"57\" y=\"1032\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 5.7,
+      "inputTokens": 4497,
+      "outputTokens": 285,
+      "modelCalls": 2
+    },
+    {
+      "id": "bpmn-rename-match",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "edit",
+      "outputType": "bpmn",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bounds-unchanged",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "no-removals",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Invoice\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Invoice\" name=\"Invoice processing\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Invoice\" name=\"Invoice received\" />\n    <bpmn:task id=\"Task_Scan\" name=\"Scan invoice\" />\n    <bpmn:task id=\"Task_Match\" name=\"Three-way match\" />\n    <bpmn:task id=\"Task_Approve\" name=\"Approve payment\" />\n    <bpmn:task id=\"Task_Pay\" name=\"Pay supplier\" />\n    <bpmn:endEvent id=\"End_Paid\" name=\"Invoice paid\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Invoice\" targetRef=\"Task_Scan\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Scan\" targetRef=\"Task_Match\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Match\" targetRef=\"Task_Approve\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Approve\" targetRef=\"Task_Pay\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Pay\" targetRef=\"End_Paid\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Invoice\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Invoice\" bpmnElement=\"Process_Invoice\">\n      <bpmndi:BPMNShape id=\"Start_Invoice_di\" bpmnElement=\"Start_Invoice\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Scan_di\" bpmnElement=\"Task_Scan\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Match_di\" bpmnElement=\"Task_Match\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Approve_di\" bpmnElement=\"Task_Approve\">\n        <dc:Bounds x=\"25\" y=\"450\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Pay_di\" bpmnElement=\"Task_Pay\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Paid_di\" bpmnElement=\"End_Paid\">\n        <dc:Bounds x=\"57\" y=\"752\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 4.8,
+      "inputTokens": 3971,
+      "outputTokens": 222,
+      "modelCalls": 2
+    },
+    {
+      "id": "bpmn-add-step",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "edit",
+      "outputType": "bpmn",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-no-warnings",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "no-removals",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_CheckCalendar\" name=\"Check team calendar\" />\n    <bpmn:task id=\"Task_Review\" name=\"Manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify\" name=\"Notify employee\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_CheckCalendar\" />\n    <bpmn:sequenceFlow id=\"Flow_ToReview\" sourceRef=\"Task_CheckCalendar\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Leave\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Leave\" bpmnElement=\"Process_Leave\">\n      <bpmndi:BPMNShape id=\"Start_Request_di\" bpmnElement=\"Start_Request\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Submit_di\" bpmnElement=\"Task_Submit\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_CheckCalendar_di\" bpmnElement=\"Task_CheckCalendar\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Review_di\" bpmnElement=\"Task_Review\">\n        <dc:Bounds x=\"25\" y=\"450\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"50\" y=\"605\" width=\"50\" height=\"50\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_UpdateBalance_di\" bpmnElement=\"Task_UpdateBalance\">\n        <dc:Bounds x=\"25\" y=\"730\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Notify_di\" bpmnElement=\"Task_Notify\">\n        <dc:Bounds x=\"25\" y=\"870\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Approved_di\" bpmnElement=\"End_Approved\">\n        <dc:Bounds x=\"57\" y=\"1032\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Rejected_di\" bpmnElement=\"End_Rejected\">\n        <dc:Bounds x=\"57\" y=\"1172\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 20.3,
+      "inputTokens": 6493,
+      "outputTokens": 2270,
+      "modelCalls": 2
+    },
+    {
+      "id": "bpmn-extend-branch",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "edit",
+      "outputType": "bpmn",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-no-warnings",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "no-removals",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_Review\" name=\"Manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify\" name=\"Notify employee\" />\n    <bpmn:task id=\"Task_OfferAlternatives\" name=\"Offer alternative dates\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"Task_OfferAlternatives\" />\n    <bpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Task_OfferAlternatives\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Leave\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Leave\" bpmnElement=\"Process_Leave\">\n      <bpmndi:BPMNShape id=\"Start_Request_di\" bpmnElement=\"Start_Request\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Submit_di\" bpmnElement=\"Task_Submit\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Review_di\" bpmnElement=\"Task_Review\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"50\" y=\"465\" width=\"50\" height=\"50\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_UpdateBalance_di\" bpmnElement=\"Task_UpdateBalance\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Notify_di\" bpmnElement=\"Task_Notify\">\n        <dc:Bounds x=\"25\" y=\"730\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_OfferAlternatives_di\" bpmnElement=\"Task_OfferAlternatives\">\n        <dc:Bounds x=\"25\" y=\"1010\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Approved_di\" bpmnElement=\"End_Approved\">\n        <dc:Bounds x=\"57\" y=\"892\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Rejected_di\" bpmnElement=\"End_Rejected\">\n        <dc:Bounds x=\"57\" y=\"1172\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 32.1,
+      "inputTokens": 8019,
+      "outputTokens": 3790,
+      "modelCalls": 2
+    },
+    {
+      "id": "bpmn-add-gateway",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "edit",
+      "outputType": "bpmn",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-no-warnings",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "no-removals",
+          "status": "fail",
+          "detail": "Removed: Flow_3"
+        }
+      ],
+      "outcome": "fail",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Invoice\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Invoice\" name=\"Invoice processing\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Invoice\" name=\"Invoice received\" />\n    <bpmn:task id=\"Task_Scan\" name=\"Scan invoice\" />\n    <bpmn:task id=\"Task_Match\" name=\"Match purchase order\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Match\" name=\"Match PO?\" />\n    <bpmn:task id=\"Task_Query\" name=\"Query supplier\" />\n    <bpmn:endEvent id=\"End_Query\" name=\"Discrepancy reported\" />\n    <bpmn:task id=\"Task_Approve\" name=\"Approve payment\" />\n    <bpmn:task id=\"Task_Pay\" name=\"Pay supplier\" />\n    <bpmn:endEvent id=\"End_Paid\" name=\"Invoice paid\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Invoice\" targetRef=\"Task_Scan\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Scan\" targetRef=\"Task_Match\" />\n    <bpmn:sequenceFlow id=\"Flow_Match_Gateway\" sourceRef=\"Task_Match\" targetRef=\"Gateway_Match\" />\n    <bpmn:sequenceFlow id=\"Flow_Match_Yes\" name=\"Match\" sourceRef=\"Gateway_Match\" targetRef=\"Task_Approve\" />\n    <bpmn:sequenceFlow id=\"Flow_Match_No\" name=\"Match fails\" sourceRef=\"Gateway_Match\" targetRef=\"Task_Query\" />\n    <bpmn:sequenceFlow id=\"Flow_Query_End\" sourceRef=\"Task_Query\" targetRef=\"End_Query\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Approve\" targetRef=\"Task_Pay\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Pay\" targetRef=\"End_Paid\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Invoice\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Invoice\" bpmnElement=\"Process_Invoice\">\n      <bpmndi:BPMNShape id=\"Start_Invoice_di\" bpmnElement=\"Start_Invoice\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Scan_di\" bpmnElement=\"Task_Scan\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Match_di\" bpmnElement=\"Task_Match\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Match_di\" bpmnElement=\"Gateway_Match\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"50\" y=\"430\" width=\"50\" height=\"50\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Approve_di\" bpmnElement=\"Task_Approve\">\n        <dc:Bounds x=\"25\" y=\"530\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Pay_di\" bpmnElement=\"Task_Pay\">\n        <dc:Bounds x=\"25\" y=\"660\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Paid_di\" bpmnElement=\"End_Paid\">\n        <dc:Bounds x=\"57\" y=\"790\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Query_di\" bpmnElement=\"Task_Query\">\n        <dc:Bounds x=\"180\" y=\"415\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Query_di\" bpmnElement=\"End_Query\">\n        <dc:Bounds x=\"212\" y=\"540\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 34.1,
+      "inputTokens": 7829,
+      "outputTokens": 4251,
+      "modelCalls": 2
+    },
+    {
+      "id": "bpmn-fix-mismatched-tag",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "fix",
+      "outputType": "bpmn",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Invoice\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Invoice\" name=\"Invoice processing\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Invoice\" name=\"Invoice received\" />\n    <bpmn:task id=\"Task_Scan\" name=\"Scan invoice\" />\n    <bpmn:task id=\"Task_Match\" name=\"Match purchase order\" />\n    <bpmn:task id=\"Task_Approve\" name=\"Approve payment\" />\n    <bpmn:task id=\"Task_Pay\" name=\"Pay supplier\" />\n    <bpmn:endEvent id=\"End_Paid\" name=\"Invoice paid\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Invoice\" targetRef=\"Task_Scan\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Scan\" targetRef=\"Task_Match\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Match\" targetRef=\"Task_Approve\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Approve\" targetRef=\"Task_Pay\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Pay\" targetRef=\"End_Paid\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Invoice\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Invoice\" bpmnElement=\"Process_Invoice\">\n      <bpmndi:BPMNShape id=\"Start_Invoice_di\" bpmnElement=\"Start_Invoice\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Scan_di\" bpmnElement=\"Task_Scan\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Match_di\" bpmnElement=\"Task_Match\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Approve_di\" bpmnElement=\"Task_Approve\">\n        <dc:Bounds x=\"25\" y=\"450\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Pay_di\" bpmnElement=\"Task_Pay\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Paid_di\" bpmnElement=\"End_Paid\">\n        <dc:Bounds x=\"57\" y=\"752\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 11.8,
+      "inputTokens": 4788,
+      "outputTokens": 1065,
+      "modelCalls": 2
+    },
+    {
+      "id": "bpmn-fix-missing-quote",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "fix",
+      "outputType": "bpmn",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_Review\" name=\"Manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify\" name=\"Notify employee\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Process_Leave\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Process_Leave\" bpmnElement=\"Process_Leave\">\n      <bpmndi:BPMNShape id=\"Start_Request_di\" bpmnElement=\"Start_Request\">\n        <dc:Bounds x=\"57\" y=\"52\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Submit_di\" bpmnElement=\"Task_Submit\">\n        <dc:Bounds x=\"25\" y=\"170\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Review_di\" bpmnElement=\"Task_Review\">\n        <dc:Bounds x=\"25\" y=\"310\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"50\" y=\"465\" width=\"50\" height=\"50\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_UpdateBalance_di\" bpmnElement=\"Task_UpdateBalance\">\n        <dc:Bounds x=\"25\" y=\"590\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Notify_di\" bpmnElement=\"Task_Notify\">\n        <dc:Bounds x=\"25\" y=\"730\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Approved_di\" bpmnElement=\"End_Approved\">\n        <dc:Bounds x=\"57\" y=\"892\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Rejected_di\" bpmnElement=\"End_Rejected\">\n        <dc:Bounds x=\"57\" y=\"1032\" width=\"36\" height=\"36\" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 7.1,
+      "inputTokens": 4599,
+      "outputTokens": 402,
+      "modelCalls": 2
+    },
+    {
+      "id": "bpmn-fix-missing-layout",
+      "group": "bpmn",
+      "type": "bpmn",
+      "task": "fix",
+      "outputType": "bpmn",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "bpmn-layout",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\" id=\"Definitions_Leave\" targetNamespace=\"http://example.com/bpmn\">\n  <bpmn:process id=\"Process_Leave\" name=\"Leave request\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Request\" name=\"Leave needed\" />\n    <bpmn:task id=\"Task_Submit\" name=\"Submit request\" />\n    <bpmn:task id=\"Task_Review\" name=\"Manager review\" />\n    <bpmn:exclusiveGateway id=\"Gateway_Approved\" name=\"Approved?\" />\n    <bpmn:task id=\"Task_UpdateBalance\" name=\"Update leave balance\" />\n    <bpmn:task id=\"Task_Notify\" name=\"Notify employee\" />\n    <bpmn:endEvent id=\"End_Approved\" name=\"Leave approved\" />\n    <bpmn:endEvent id=\"End_Rejected\" name=\"Leave rejected\" />\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Request\" targetRef=\"Task_Submit\" />\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Submit\" targetRef=\"Task_Review\" />\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Task_Review\" targetRef=\"Gateway_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_Yes\" name=\"Yes\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_UpdateBalance\" />\n    <bpmn:sequenceFlow id=\"Flow_No\" name=\"No\" sourceRef=\"Gateway_Approved\" targetRef=\"Task_Notify\" />\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_UpdateBalance\" targetRef=\"End_Approved\" />\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Notify\" targetRef=\"End_Rejected\" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_Leave\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_Leave\" bpmnElement=\"Process_Leave\">\n      <bpmndi:BPMNShape id=\"Start_Request_di\" bpmnElement=\"Start_Request\">\n        <dc:Bounds x=\"152\" y=\"182\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"137\" y=\"225\" width=\"67\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Submit_di\" bpmnElement=\"Task_Submit\">\n        <dc:Bounds x=\"240\" y=\"160\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Review_di\" bpmnElement=\"Task_Review\">\n        <dc:Bounds x=\"390\" y=\"160\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_Approved_di\" bpmnElement=\"Gateway_Approved\" isMarkerVisible=\"true\">\n        <dc:Bounds x=\"545\" y=\"175\" width=\"50\" height=\"50\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"543\" y=\"151\" width=\"54\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_UpdateBalance_di\" bpmnElement=\"Task_UpdateBalance\">\n        <dc:Bounds x=\"650\" y=\"100\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Task_Notify_di\" bpmnElement=\"Task_Notify\">\n        <dc:Bounds x=\"650\" y=\"220\" width=\"100\" height=\"80\" />\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Approved_di\" bpmnElement=\"End_Approved\">\n        <dc:Bounds x=\"812\" y=\"122\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"792\" y=\"165\" width=\"76\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"End_Rejected_di\" bpmnElement=\"End_Rejected\">\n        <dc:Bounds x=\"812\" y=\"242\" width=\"36\" height=\"36\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"795\" y=\"285\" width=\"71\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNShape>\n      <bpmndi:BPMNEdge id=\"Flow_1_di\" bpmnElement=\"Flow_1\">\n        <di:waypoint x=\"188\" y=\"200\" />\n        <di:waypoint x=\"240\" y=\"200\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_2_di\" bpmnElement=\"Flow_2\">\n        <di:waypoint x=\"340\" y=\"200\" />\n        <di:waypoint x=\"390\" y=\"200\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_3_di\" bpmnElement=\"Flow_3\">\n        <di:waypoint x=\"490\" y=\"200\" />\n        <di:waypoint x=\"545\" y=\"200\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_Yes_di\" bpmnElement=\"Flow_Yes\">\n        <di:waypoint x=\"570\" y=\"175\" />\n        <di:waypoint x=\"570\" y=\"140\" />\n        <di:waypoint x=\"650\" y=\"140\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"576\" y=\"155\" width=\"18\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_No_di\" bpmnElement=\"Flow_No\">\n        <di:waypoint x=\"570\" y=\"225\" />\n        <di:waypoint x=\"570\" y=\"260\" />\n        <di:waypoint x=\"650\" y=\"260\" />\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"578\" y=\"240\" width=\"15\" height=\"14\" />\n        </bpmndi:BPMNLabel>\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_4_di\" bpmnElement=\"Flow_4\">\n        <di:waypoint x=\"750\" y=\"140\" />\n        <di:waypoint x=\"812\" y=\"140\" />\n      </bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_5_di\" bpmnElement=\"Flow_5\">\n        <di:waypoint x=\"750\" y=\"260\" />\n        <di:waypoint x=\"812\" y=\"260\" />\n      </bpmndi:BPMNEdge>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>",
+      "seconds": 20,
+      "inputTokens": 5417,
+      "outputTokens": 2434,
+      "modelCalls": 2
+    },
+    {
+      "id": "c4-context-create",
+      "group": "c4",
+      "type": "c4",
+      "task": "create",
+      "outputType": "c4",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\n!include <C4/C4_Context>\n\ntitle System Context Diagram for Hospital Appointment Booking System\n\nPerson(patient, \"Patient\", \"A patient who wants to view, book, or manage medical appointments.\")\n\nSystem(booking_system, \"Appointment Booking System\", \"Allows patients to search schedules, book appointments, and receive confirmations.\")\n\nSystem_Ext(sms_gateway, \"SMS Gateway\", \"Third-party messaging service that sends SMS confirmations and reminders.\")\nSystem_Ext(records_system, \"Hospital Records System\", \"Central Electronic Health Record (EHR) system managing patient profiles, clinic schedules, and medical histories.\")\n\nRel(patient, booking_system, \"Books and manages appointments using\", \"HTTPS\")\nRel(booking_system, sms_gateway, \"Sends appointment confirmations and reminders via\", \"HTTPS / REST\")\nRel(sms_gateway, patient, \"Delivers SMS notifications to\", \"SMS\")\nRel(booking_system, records_system, \"Syncs patient data and schedule availability with\", \"HL7 / FHIR\")\n\n@enduml",
+      "seconds": 9.1,
+      "inputTokens": 2579,
+      "outputTokens": 654,
+      "modelCalls": 2
+    },
+    {
+      "id": "c4-container-create",
+      "group": "c4",
+      "type": "c4",
+      "task": "create",
+      "outputType": "c4",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\n!include <C4/C4_Container>\n\ntitle Container Diagram for Food Delivery Service\n\nPerson(customer, \"Customer\", \"A customer ordering food\")\n\nSystem_Boundary(delivery_system, \"Food Delivery System\") {\n    Container(mobile_app, \"Mobile App\", \"Flutter / React Native\", \"Allows customers to browse menus, place orders, and track deliveries\")\n    Container(api_gateway, \"Backend API\", \"Node.js / Go\", \"Handles authentication, menu queries, and order orchestration\")\n    ContainerDb(order_db, \"Order Database\", \"PostgreSQL\", \"Stores customer profiles, restaurant menus, order details, and history\")\n}\n\nSystem_Ext(payment_gateway, \"Payment Provider\", \"External payment service (e.g., Stripe) for authorizing and processing payments\")\n\nRel(customer, mobile_app, \"Browses menus and submits orders using\")\nRel(mobile_app, api_gateway, \"Sends API requests to\", \"JSON/HTTPS\")\nRel(api_gateway, order_db, \"Reads and writes order data\", \"TCP/SQL\")\nRel(api_gateway, payment_gateway, \"Initiates and verifies payments with\", \"JSON/HTTPS\")\n\n@enduml",
+      "seconds": 9.5,
+      "inputTokens": 2667,
+      "outputTokens": 761,
+      "modelCalls": 2
+    },
+    {
+      "id": "c4-context-edit",
+      "group": "c4",
+      "type": "c4",
+      "task": "edit",
+      "outputType": "c4",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\n!include <C4/C4_Context>\nPerson(customer, \"Customer\", \"Buys products online\")\nSystem(shop, \"Online Shop\", \"Lets customers browse and buy\")\nSystem_Ext(payments, \"Payment Provider\", \"Processes card payments\")\nSystem_Ext(email, \"Email System\", \"The external email system\")\nRel(customer, shop, \"Browses and orders\")\nRel(shop, payments, \"Takes payment through\")\nRel(shop, email, \"Sends order confirmations using\")\nRel(email, customer, \"Sends order confirmations to\")\n@enduml",
+      "seconds": 8.2,
+      "inputTokens": 2604,
+      "outputTokens": 552,
+      "modelCalls": 2
+    },
+    {
+      "id": "c4-context-fix",
+      "group": "c4",
+      "type": "c4",
+      "task": "fix",
+      "outputType": "c4",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\n!include <C4/C4_Context>\nPerson(customer, \"Customer\", \"Buys products online\")\nSystem(shop, \"Online Shop\", \"Lets customers browse and buy\")\nRel(customer, shop, \"Browses and orders\")\n@enduml",
+      "seconds": 4.9,
+      "inputTokens": 2118,
+      "outputTokens": 184,
+      "modelCalls": 2
+    },
+    {
+      "id": "graphviz-dependency-create",
+      "group": "graphviz",
+      "type": "graphviz",
+      "task": "create",
+      "outputType": "graphviz",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "digraph ModuleDependencies {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", fontsize=12, fillcolor=\"#F4F6F8\", color=\"#B0BEC5\", penwidth=1.5];\n    edge [color=\"#607D8B\", penwidth=1.2, arrowsize=0.8];\n\n    // Nodes\n    ui         [label=\"ui\", fillcolor=\"#E3F2FD\", color=\"#90CAF9\"];\n    api_client [label=\"api-client\"];\n    state      [label=\"state\"];\n    http       [label=\"http\", fillcolor=\"#ECEFF1\", color=\"#CFD8DC\"];\n    storage    [label=\"storage\", fillcolor=\"#ECEFF1\", color=\"#CFD8DC\"];\n\n    // Dependencies\n    ui -> api_client;\n    ui -> state;\n    api_client -> http;\n    state -> storage;\n}",
+      "seconds": 9.5,
+      "inputTokens": 2352,
+      "outputTokens": 522,
+      "modelCalls": 2
+    },
+    {
+      "id": "graphviz-cluster-create",
+      "group": "graphviz",
+      "type": "graphviz",
+      "task": "create",
+      "outputType": "graphviz",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "digraph Architecture {\n    rankdir=TB;\n    fontname=\"sans-serif\";\n\n    node [fontname=\"sans-serif\", fontsize=10, shape=box, style=\"filled,rounded\", fillcolor=\"#ffffff\", color=\"#94a3b8\"];\n    edge [fontname=\"sans-serif\", fontsize=9, color=\"#64748b\"];\n\n    subgraph cluster_frontend {\n        label = \"Frontend\";\n        style = \"filled,rounded\";\n        color = \"#cbd5e1\";\n        fillcolor = \"#f8fafc\";\n        fontname = \"sans-serif\";\n        fontsize = 12;\n\n        browser [label=\"Browser\", fillcolor=\"#e0f2fe\", color=\"#38bdf8\"];\n    }\n\n    subgraph cluster_backend {\n        label = \"Backend\";\n        style = \"filled,rounded\";\n        color = \"#cbd5e1\";\n        fillcolor = \"#f8fafc\";\n        fontname = \"sans-serif\";\n        fontsize = 12;\n\n        lb [label=\"Load Balancer\", fillcolor=\"#fef3c7\", color=\"#f59e0b\"];\n        api1 [label=\"API Server 1\", fillcolor=\"#ecfdf5\", color=\"#34d399\"];\n        api2 [label=\"API Server 2\", fillcolor=\"#ecfdf5\", color=\"#34d399\"];\n        db [label=\"Database\", shape=cylinder, fillcolor=\"#ede9fe\", color=\"#a78bfa\"];\n\n        lb -> api1;\n        lb -> api2;\n        api1 -> db;\n        api2 -> db;\n    }\n\n    browser -> lb [label=\"HTTP/HTTPS\"];\n}",
+      "seconds": 66.2,
+      "inputTokens": 9260,
+      "outputTokens": 7468,
+      "modelCalls": 2
+    },
+    {
+      "id": "graphviz-pipeline-edit",
+      "group": "graphviz",
+      "type": "graphviz",
+      "task": "edit",
+      "outputType": "graphviz",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "digraph pipeline {\n  rankdir=LR;\n  checkout -> build -> \"security scan\" -> test -> deploy;\n  test -> notify [label=\"on failure\"];\n}",
+      "seconds": 11.3,
+      "inputTokens": 2691,
+      "outputTokens": 858,
+      "modelCalls": 2
+    },
+    {
+      "id": "graphviz-syntax-fix",
+      "group": "graphviz",
+      "type": "graphviz",
+      "task": "fix",
+      "outputType": "graphviz",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "digraph pipeline {\n  rankdir=LR;\n  checkout -> build;\n  build -> deploy;\n}",
+      "seconds": 6.3,
+      "inputTokens": 2094,
+      "outputTokens": 308,
+      "modelCalls": 2
+    },
+    {
+      "id": "kroki-ditaa-create",
+      "group": "kroki",
+      "type": "ditaa",
+      "task": "create",
+      "outputType": "ditaa",
+      "firstStatus": "valid",
+      "repairAttempts": 3,
+      "note": "5 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "+--------+             +--------+             +--------+\n| Client |  HTTP Req   | Server |  SQL Query  |Database|\n|        +------------>+        +------------>+        |\n|        |<------------+        |<------------+        |\n|        |  HTTP Resp  |        |   Results   |  {s}   |\n|  cBLU  |             |  cGRE  |             |  cYEL  |\n+--------+             +--------+             +--------+",
+      "seconds": 66.8,
+      "inputTokens": 17701,
+      "outputTokens": 6970,
+      "modelCalls": 5
+    },
+    {
+      "id": "kroki-blockdiag-create",
+      "group": "kroki",
+      "type": "blockdiag",
+      "task": "create",
+      "outputType": "blockdiag",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "blockdiag {\n  // Define pipeline nodes\n  source  [label = \"Source\", shape = roundedbox, color = \"#E3F2FD\"];\n  compile [label = \"Compile\", shape = box, color = \"#FFF9C4\"];\n  test    [label = \"Test\", shape = box, color = \"#E8F5E9\"];\n  package [label = \"Package\", shape = box, color = \"#FFF3E0\"];\n  publish [label = \"Publish\", shape = roundedbox, color = \"#F3E5F5\"];\n\n  // Pipeline flow\n  source -> compile -> test -> package -> publish;\n}",
+      "seconds": 9.9,
+      "inputTokens": 2310,
+      "outputTokens": 580,
+      "modelCalls": 2
+    },
+    {
+      "id": "kroki-bytefield-create",
+      "group": "kroki",
+      "type": "bytefield",
+      "task": "create",
+      "outputType": "bytefield",
+      "firstStatus": "valid",
+      "repairAttempts": 2,
+      "note": "4 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "(defattrs :bg-version {:fill \"#e0f2fe\"})\n(defattrs :bg-flags   {:fill \"#fef3c7\"})\n(defattrs :bg-length  {:fill \"#dcfce7\"})\n\n(draw-column-headers)\n(draw-box \"Version (1 byte)\" [{:span 8} :bg-version])\n(draw-box \"Flags (1 byte)\" [{:span 8} :bg-flags])\n(draw-box \"Length (2 bytes)\" [{:span 16} :bg-length])\n",
+      "seconds": 21.5,
+      "inputTokens": 6478,
+      "outputTokens": 1604,
+      "modelCalls": 4
+    },
+    {
+      "id": "kroki-erd-create",
+      "group": "kroki",
+      "type": "erd",
+      "task": "create",
+      "outputType": "erd",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "[Author]\n  *id {label: \"int, not null\"}\n  name {label: \"varchar(100), not null\"}\n  email {label: \"varchar(255), not null\"}\n  bio {label: \"text, null\"}\n  created_at {label: \"datetime, not null\"}\n\n[Post]\n  *id {label: \"int, not null\"}\n  +author_id {label: \"int, not null\"}\n  title {label: \"varchar(255), not null\"}\n  content {label: \"text, not null\"}\n  published_at {label: \"datetime, null\"}\n  created_at {label: \"datetime, not null\"}\n\n[Comment]\n  *id {label: \"int, not null\"}\n  +post_id {label: \"int, not null\"}\n  +author_id {label: \"int, null\"}\n  content {label: \"text, not null\"}\n  created_at {label: \"datetime, not null\"}\n\nAuthor 1--* Post\nPost 1--* Comment\nAuthor ?--* Comment\n",
+      "seconds": 9.8,
+      "inputTokens": 2640,
+      "outputTokens": 867,
+      "modelCalls": 2
+    },
+    {
+      "id": "kroki-nomnoml-create",
+      "group": "kroki",
+      "type": "nomnoml",
+      "task": "create",
+      "outputType": "nomnoml",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "#direction: down\n#spacing: 50\n#padding: 16\n\n[Vehicle|\n  +make: string\n  +model: string\n  +year: int\n|\n  +start(): void\n  +stop(): void\n]\n\n[Car|\n  +numDoors: int\n  +hasSunroof: boolean\n|\n  +openTrunk(): void\n]\n\n[Truck|\n  +payloadCapacity: double\n  +numAxles: int\n|\n  +loadCargo(): void\n]\n\n[Vehicle] <:- [Car]\n[Vehicle] <:- [Truck]\n",
+      "seconds": 9.5,
+      "inputTokens": 2546,
+      "outputTokens": 773,
+      "modelCalls": 2
+    },
+    {
+      "id": "kroki-pikchr-create",
+      "group": "kroki",
+      "type": "pikchr",
+      "task": "create",
+      "outputType": "pikchr",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "box \"Input\"\narrow\nbox \"Process\"\narrow\nbox \"Output\"\n",
+      "seconds": 6.7,
+      "inputTokens": 2059,
+      "outputTokens": 284,
+      "modelCalls": 2
+    },
+    {
+      "id": "kroki-svgbob-create",
+      "group": "kroki",
+      "type": "svgbob",
+      "task": "create",
+      "outputType": "svgbob",
+      "firstStatus": "valid",
+      "repairAttempts": 1,
+      "note": "3 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "                   .-----------------.\n                   |    Internet     |\n                   '--------+--------'\n                            |\n                            | WAN\n                            v\n                    +---------------+\n                    |    Router     |\n                    |  192.168.1.1  |\n                    +-------+-------+\n                            |\n            +---------------+---------------+\n            | Ethernet                      | Wi-Fi\n            v                               v\n     +--------------+                +--------------+\n     |   Laptop 1   |                |   Laptop 2   |\n     | 192.168.1.10 |                | 192.168.1.20 |\n     | +----------+ |                | +----------+ |\n     | |          | |                | |          | |\n     | |  Screen  | |                | |  Screen  | |\n     | |          | |                | |          | |\n     | +----------+ |                | +----------+ |\n     |   Keyboard   |                |   Keyboard   |\n     +--------------+                +--------------+",
+      "seconds": 21.1,
+      "inputTokens": 5352,
+      "outputTokens": 1761,
+      "modelCalls": 3
+    },
+    {
+      "id": "kroki-wavedrom-create",
+      "group": "kroki",
+      "type": "wavedrom",
+      "task": "create",
+      "outputType": "wavedrom",
+      "firstStatus": "valid",
+      "repairAttempts": 1,
+      "note": "3 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "{\n  \"signal\": [\n    { \"name\": \"clk\",   \"wave\": \"p........\" },\n    { \"name\": \"ready\", \"wave\": \"0.1.....0\" },\n    { \"name\": \"data\",  \"wave\": \"x.=.=.=.x\", \"data\": [\"0xAA\", \"0x55\", \"0xFF\"] }\n  ],\n  \"head\": {\n    \"tick\": 0\n  }\n}\n",
+      "seconds": 25.4,
+      "inputTokens": 6533,
+      "outputTokens": 2270,
+      "modelCalls": 3
+    },
+    {
+      "id": "kroki-wireviz-create",
+      "group": "kroki",
+      "type": "wireviz",
+      "task": "create",
+      "outputType": "wireviz",
+      "firstStatus": "invalid",
+      "repairAttempts": 1,
+      "note": "3 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "connectors:\n  X1:\n    type: 4-pin connector\n    pins: [1, 2, 3, 4]\n  X2:\n    type: 4-pin connector\n    pins: [1, 2, 3, 4]\n\ncables:\n  W1:\n    gauge: 0.25 mm2\n    length: 0.5 m\n    wirecount: 4\n    colors: [RD, BK, GN, WH]\n\nconnections:\n  -\n    - X1: [1, 2, 3, 4]\n    - W1: [1, 2, 3, 4]\n    - X2: [1, 2, 3, 4]\n",
+      "seconds": 11.8,
+      "inputTokens": 4558,
+      "outputTokens": 867,
+      "modelCalls": 3
+    },
+    {
+      "id": "kroki-excalidraw-create",
+      "group": "kroki",
+      "type": "excalidraw",
+      "task": "create",
+      "outputType": "excalidraw",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "{\n  \"type\": \"excalidraw\",\n  \"version\": 2,\n  \"source\": \"https://excalidraw.com\",\n  \"elements\": [\n    {\n      \"id\": \"rect-idea\",\n      \"type\": \"rectangle\",\n      \"x\": 100,\n      \"y\": 150,\n      \"width\": 140,\n      \"height\": 70,\n      \"angle\": 0,\n      \"strokeColor\": \"#1e1e1e\",\n      \"backgroundColor\": \"#e3fafc\",\n      \"fillStyle\": \"solid\",\n      \"strokeWidth\": 2,\n      \"strokeStyle\": \"solid\",\n      \"roughness\": 1,\n      \"opacity\": 100,\n      \"groupIds\": [],\n      \"frameId\": null,\n      \"roundness\": { \"type\": 3 },\n      \"seed\": 1001,\n      \"version\": 1,\n      \"versionNonce\": 1,\n      \"isDeleted\": false,\n      \"boundElements\": [\n        { \"id\": \"text-idea\", \"type\": \"text\" },\n        { \"id\": \"arrow-1\", \"type\": \"arrow\" }\n      ],\n      \"updated\": 1,\n      \"link\": null,\n      \"locked\": false\n    },\n    {\n      \"id\": \"text-idea\",\n      \"type\": \"text\",\n      \"x\": 145,\n      \"y\": 172,\n      \"width\": 50,\n      \"height\": 25,\n      \"angle\": 0,\n      \"strokeColor\": \"#1e1e1e\",\n      \"backgroundColor\": \"transparent\",\n      \"fillStyle\": \"solid\",\n      \"strokeWidth\": 1,\n      \"strokeStyle\": \"solid\",\n      \"roughness\": 1,\n      \"opacity\": 100,\n      \"groupIds\": [],\n      \"frameId\": null,\n      \"roundness\": null,\n      \"seed\": 1002,\n      \"version\": 1,\n      \"versionNonce\": 1,\n      \"isDeleted\": false,\n      \"boundElements\": null,\n      \"updated\": 1,\n      \"link\": null,\n      \"locked\": false,\n      \"text\": \"Idea\",\n      \"fontSize\": 20,\n      \"fontFamily\": 1,\n      \"textAlign\": \"center\",\n      \"verticalAlign\": \"middle\",\n      \"baseline\": 18,\n      \"containerId\": \"rect-idea\",\n      \"originalText\": \"Idea\",\n      \"lineHeight\": 1.25\n    },\n    {\n      \"id\": \"rect-plan\",\n      \"type\": \"rectangle\",\n      \"x\": 380,\n      \"y\": 150,\n      \"width\": 140,\n      \"height\": 70,\n      \"angle\": 0,\n      \"strokeColor\": \"#1e1e1e\",\n      \"backgroundColor\": \"#e3fafc\",\n      \"fillStyle\": \"solid\",\n      \"strokeWidth\": 2,\n      \"strokeStyle\": \"solid\",\n      \"roughness\": 1,\n      \"opacity\": 100,\n      \"groupIds\": [],\n      \"frameId\": null,\n      \"roundness\": { \"type\": 3 },\n      \"seed\": 2001,\n      \"version\": 1,\n      \"versionNonce\": 1,\n      \"isDeleted\": false,\n      \"boundElements\": [\n        { \"id\": \"text-plan\", \"type\": \"text\" },\n        { \"id\": \"arrow-1\", \"type\": \"arrow\" }\n      ],\n      \"updated\": 1,\n      \"link\": null,\n      \"locked\": false\n    },\n    {\n      \"id\": \"text-plan\",\n      \"type\": \"text\",\n      \"x\": 427,\n      \"y\": 172,\n      \"width\": 46,\n      \"height\": 25,\n      \"angle\": 0,\n      \"strokeColor\": \"#1e1e1e\",\n      \"backgroundColor\": \"transparent\",\n      \"fillStyle\": \"solid\",\n      \"strokeWidth\": 1,\n      \"strokeStyle\": \"solid\",\n      \"roughness\": 1,\n      \"opacity\": 100,\n      \"groupIds\": [],\n      \"frameId\": null,\n      \"roundness\": null,\n      \"seed\": 2002,\n      \"version\": 1,\n      \"versionNonce\": 1,\n      \"isDeleted\": false,\n      \"boundElements\": null,\n      \"updated\": 1,\n      \"link\": null,\n      \"locked\": false,\n      \"text\": \"Plan\",\n      \"fontSize\": 20,\n      \"fontFamily\": 1,\n      \"textAlign\": \"center\",\n      \"verticalAlign\": \"middle\",\n      \"baseline\": 18,\n      \"containerId\": \"rect-plan\",\n      \"originalText\": \"Plan\",\n      \"lineHeight\": 1.25\n    },\n    {\n      \"id\": \"arrow-1\",\n      \"type\": \"arrow\",\n      \"x\": 240,\n      \"y\": 185,\n      \"width\": 140,\n      \"height\": 0,\n      \"angle\": 0,\n      \"strokeColor\": \"#1e1e1e\",\n      \"backgroundColor\": \"transparent\",\n      \"fillStyle\": \"solid\",\n      \"strokeWidth\": 2,\n      \"strokeStyle\": \"solid\",\n      \"roughness\": 1,\n      \"opacity\": 100,\n      \"groupIds\": [],\n      \"frameId\": null,\n      \"roundness\": { \"type\": 2 },\n      \"seed\": 3001,\n      \"version\": 1,\n      \"versionNonce\": 1,\n      \"isDeleted\": false,\n      \"boundElements\": null,\n      \"updated\": 1,\n      \"link\": null,\n      \"locked\": false,\n      \"points\": [\n        [0, 0],\n        [140, 0]\n      ],\n      \"lastCommittedPoint\": null,\n      \"startBinding\": {\n        \"elementId\": \"rect-idea\",\n        \"focus\": 0,\n        \"gap\": 1\n      },\n      \"endBinding\": {\n        \"elementId\": \"rect-plan\",\n        \"focus\": 0,\n        \"gap\": 1\n      },\n      \"startArrowhead\": null,\n      \"endArrowhead\": \"arrow\"\n    }\n  ],\n  \"appState\": {\n    \"viewBackgroundColor\": \"#ffffff\",\n    \"gridSize\": null\n  },\n  \"files\": {}\n}",
+      "seconds": 19.6,
+      "inputTokens": 4335,
+      "outputTokens": 2540,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-flowchart-create",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "flowchart TD\n    Start([Start]) --> Request[User requests password reset]\n    Request --> SendEmail[System generates token and emails reset link]\n    SendEmail --> ClickLink[User clicks link in email]\n    ClickLink --> CheckExpiry{Has the link<br/>expired?}\n\n    CheckExpiry -- Yes --> ExpiredError[Show expired link error]\n    ExpiredError --> Request\n\n    CheckExpiry -- No --> EnterPass[User enters new password]\n    EnterPass --> ValidatePass{Meets password<br/>requirements?}\n\n    ValidatePass -- No --> RetryPass[Show validation errors]\n    RetryPass --> EnterPass\n\n    ValidatePass -- Yes --> UpdatePass[Update password in database]\n    UpdatePass --> Confirm[Show success confirmation]\n    Confirm --> End([End / Login])",
+      "seconds": 7.5,
+      "inputTokens": 2466,
+      "outputTokens": 511,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-sequence-create",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "sequenceDiagram\n    autonumber\n    actor Shopper\n    participant Shop as Merchant Shop\n    participant Gateway as Payment Gateway\n    participant Bank as Issuing Bank\n\n    Shopper->>Shop: Select items & proceed to checkout\n    Shop->>Gateway: Create payment session (order details, amount)\n    Gateway-->>Shop: Session token & hosted form URL\n    Shop-->>Shopper: Render payment form\n\n    Shopper->>Gateway: Submit card details (card number, CVV, expiry)\n    Gateway->>Bank: Request payment authorization\n\n    alt Authorization Approved\n        Bank-->>Gateway: 200 OK (Auth Code, Approved)\n        Gateway->>Shop: Webhook: Payment succeeded\n        Shop->>Shop: Mark order as paid & fulfill\n        Gateway-->>Shopper: Payment successful\n        Shop-->>Shopper: Display order confirmation & receipt\n    else Authorization Declined\n        Bank-->>Gateway: 402 Declined (e.g. Insufficient funds)\n        Gateway-->>Shopper: Display error & prompt retry\n        Gateway->>Shop: Webhook: Payment failed\n    end",
+      "seconds": 8.9,
+      "inputTokens": 2706,
+      "outputTokens": 808,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-class-create",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "classDiagram\n    class Member {\n        -String memberId\n        -String name\n        -String email\n        -Date membershipDate\n        +borrow(Book book) Loan\n        +return(Loan loan) void\n        +getActiveLoans() List~Loan~\n    }\n\n    class Book {\n        -String isbn\n        -String title\n        -String author\n        -int publicationYear\n        -boolean isAvailable\n        +markLoaned() void\n        +markReturned() void\n    }\n\n    class Loan {\n        -String loanId\n        -Date issueDate\n        -Date dueDate\n        -Date returnDate\n        -String status\n        +markReturned() void\n        +isOverdue() boolean\n    }\n\n    Member \"1\" --> \"0..*\" Loan : has\n    Loan \"*\" --> \"1\" Book : references",
+      "seconds": 8.5,
+      "inputTokens": 2658,
+      "outputTokens": 717,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-state-create",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "stateDiagram-v2\n    [*] --> New : Ticket created\n\n    New --> Assigned : Agent assigned\n    Assigned --> WaitingForCustomer : Request more info\n    WaitingForCustomer --> Assigned : Customer replies\n    Assigned --> Resolved : Issue resolved\n    Resolved --> Assigned : Ticket reopened\n    Resolved --> Closed : Confirmed / Inactivity\n    Closed --> [*]\n\n    state \"Waiting for Customer\" as WaitingForCustomer",
+      "seconds": 8.4,
+      "inputTokens": 2616,
+      "outputTokens": 653,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-er-create",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "erDiagram\n    TEACHER ||--o{ COURSE : \"teaches\"\n    STUDENT ||--o{ ENROLMENT : \"has\"\n    COURSE ||--o{ ENROLMENT : \"records\"\n\n    TEACHER {\n        int teacher_id PK\n        string first_name\n        string last_name\n        string email\n        string department\n    }\n\n    COURSE {\n        int course_id PK\n        int teacher_id FK\n        string course_code\n        string title\n        int credits\n    }\n\n    STUDENT {\n        int student_id PK\n        string first_name\n        string last_name\n        string email\n        date date_of_birth\n    }\n\n    ENROLMENT {\n        int enrolment_id PK\n        int student_id FK\n        int course_id FK\n        date enrolment_date\n        string grade\n    }",
+      "seconds": 11.1,
+      "inputTokens": 2652,
+      "outputTokens": 715,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-gantt-create",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "gantt\n    title Website Launch Project Schedule\n    dateFormat YYYY-MM-DD\n    axisFormat %b %d\n    tickInterval 1week\n\n    section Design Phase\n    User Research & Wireframing       :done, des1, 2027-01-04, 7d\n    UI/UX Design & Prototyping        :active, des2, after des1, 7d\n\n    section Build Phase\n    Frontend Development              :crit, bld1, after des2, 10d\n    Backend & API Integration         :bld2, after des2, 10d\n    CMS & Content Population          :bld3, after bld1, 4d\n\n    section Test Phase\n    Quality Assurance & Bug Fixes     :crit, tst1, after bld3, 5d\n    User Acceptance Testing (UAT)     :tst2, after tst1, 4d\n    Cross-Browser & Performance Audit :tst3, after tst1, 3d\n\n    section Launch Phase\n    Staging Deployment & Final Review :crit, lnc1, after tst2, 2d\n    Official Go-Live                  :milestone, lnc2, after lnc1, 0d\n    Post-Launch Monitoring & Support  :lnc3, after lnc2, 3d",
+      "seconds": 10.8,
+      "inputTokens": 3059,
+      "outputTokens": 1067,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-timeline-create",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "timeline\n    title Company History\n    2019 : Company Founded\n    2021 : First Product Release\n    2023 : Series A Funding\n    2025 : International Launch",
+      "seconds": 6.5,
+      "inputTokens": 2309,
+      "outputTokens": 309,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-mindmap-create",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "mindmap\n  root((Team Offsite Planning))\n    Venue\n      Location\n        Retreat Center vs Hotel\n        Proximity to Airport\n      Facilities\n        Main Conference Room\n        Breakout Spaces\n        Reliable Wi-Fi & AV\n      Catering & Dining\n        Dietary Requirements\n        Group Dinners\n        Snacks & Coffee\n    Agenda\n      Strategy & Vision\n        Keynote & Goals\n        Hackathon / Workshops\n        Retro & Feedback\n      Team Building\n        Icebreakers\n        Outdoor Challenges\n        Evening Socials\n      Downtime\n        Wellness & Sports\n        Free Exploration\n    Travel & Logistics\n      Transportation\n        Flights & Trains\n        Airport Shuttles\n        Carpool Coordination\n      Accommodation\n        Room Assignments\n        Check-in / Check-out\n      Communication\n        Offsite Handbook\n        Packing Checklist\n        Emergency Contacts\n    Budget\n      Cost Categories\n        Venue & Lodging\n        Food & Beverage\n        Transport & Transfers\n        Activities & Materials\n      Contingency Buffer (10-15%)\n      Expense Tracking & Approvals",
+      "seconds": 12.9,
+      "inputTokens": 2613,
+      "outputTokens": 668,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-flowchart-edit",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "edit",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "no-removals",
+          "status": "fail",
+          "detail": "Removed: Start"
+        }
+      ],
+      "outcome": "fail",
+      "code": "flowchart TD\n    Start([Order received]) --> Payment{Payment successful?}\n    Payment -->|Yes| Check{In stock?}\n    Payment -->|No| Cancel[Cancel order]\n    Check -->|Yes| Pack[Pack items]\n    Check -->|No| Backorder[Create backorder]\n    Pack --> Ship[Ship order]\n    Backorder --> Notify[Notify customer]",
+      "seconds": 6.4,
+      "inputTokens": 2446,
+      "outputTokens": 368,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-sequence-edit",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "edit",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "sequenceDiagram\n    participant User\n    participant Gateway\n    participant Auth\n    User->>Gateway: GET /orders\n    Gateway->>Auth: Validate token\n    Auth-->>Gateway: 401 Unauthorized\n    Gateway->>Auth: Refresh token\n    Auth-->>Gateway: 200 OK (New token)\n    Gateway->>Auth: Validate token\n    Auth-->>Gateway: 200 OK (Valid)\n    Gateway-->>User: 200 OK",
+      "seconds": 10.6,
+      "inputTokens": 3185,
+      "outputTokens": 1170,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-class-edit",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "edit",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "classDiagram\n    class Order {\n        +String id\n        +Date created\n        +total() Decimal\n    }\n    class Customer {\n        +String name\n        +String email\n    }\n    class LineItem {\n        +int quantity\n        +Decimal price\n    }\n    Customer \"1\" --> \"*\" Order : places\n    Order \"1\" *-- \"*\" LineItem : contains",
+      "seconds": 8.9,
+      "inputTokens": 2731,
+      "outputTokens": 695,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-state-edit",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "edit",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "stateDiagram-v2\n    [*] --> Draft\n    Draft --> Review : submit\n    Review --> Draft : request changes\n    Review --> Published : approve\n    Published --> Archived : archive\n    Archived --> Draft : restore\n    Published --> [*]",
+      "seconds": 14.3,
+      "inputTokens": 3293,
+      "outputTokens": 1276,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-flowchart-fix",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "fix",
+      "outputType": "mermaid",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "flowchart TD\n    A[Start] --> B{Valid?}\n    B -->|Yes| C[Save]\n    B -->|No| D[Reject]",
+      "seconds": 4.4,
+      "inputTokens": 2279,
+      "outputTokens": 242,
+      "modelCalls": 2
+    },
+    {
+      "id": "mermaid-sequence-fix",
+      "group": "mermaid",
+      "type": "mermaid",
+      "task": "fix",
+      "outputType": "mermaid",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "sequenceDiagram\n    Client->>Server: Poll\n    loop Every minute\n        Server-->>Client: Status\n    end",
+      "seconds": 5.8,
+      "inputTokens": 2382,
+      "outputTokens": 217,
+      "modelCalls": 2
+    },
+    {
+      "id": "plantuml-sequence-create",
+      "group": "plantuml",
+      "type": "plantuml",
+      "task": "create",
+      "outputType": "plantuml",
+      "firstStatus": "invalid",
+      "repairAttempts": 2,
+      "note": "4 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\nautonumber\nskinparam responseMessageBelowArrow true\n\nactor \"User\" as user\nparticipant \"Web App\" as app\nparticipant \"Auth Service\" as auth\nparticipant \"SMS Provider\" as sms\n\nuser -> app: Enter phone number & submit\nactivate app\n\napp -> auth: Request OTP (phone number)\nactivate auth\n\nauth -> auth: Generate OTP & store hash (with TTL)\nauth -> sms: Send SMS (phone, OTP code)\nactivate sms\n\nsms --> auth: SMS accepted / queued\ndeactivate sms\n\nauth --> app: OTP sent successfully\ndeactivate auth\n\napp --> user: Prompt for verification code\ndeactivate app\n\nsms --> user: Deliver SMS with OTP code\n\nuser -> app: Enter 6-digit OTP code\nactivate app\n\napp -> auth: Verify OTP (phone number, code)\nactivate auth\n\nauth -> auth: Validate code & check expiry\n\nalt Verification Successful\n    auth -> auth: Issue auth tokens (JWT / session)\n    auth --> app: 200 OK (tokens & user profile)\n    app --> user: Redirect to dashboard (logged in)\nelse Invalid or Expired Code\n    auth --> app: 401 Unauthorized (error details)\n    app --> user: Show error message & prompt retry\nend\n\ndeactivate auth\ndeactivate app\n\n@enduml",
+      "seconds": 42.8,
+      "inputTokens": 8932,
+      "outputTokens": 2562,
+      "modelCalls": 4
+    },
+    {
+      "id": "plantuml-class-create",
+      "group": "plantuml",
+      "type": "plantuml",
+      "task": "create",
+      "outputType": "plantuml",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\nskinparam classAttributeIconSize 0\nskinparam monochrome false\nskinparam roundcorner 8\nskinparam shadowing false\nskinparam class {\n    BackgroundColor White\n    ArrowColor #2C3E50\n    BorderColor #2C3E50\n}\n\nenum RoomType {\n    SINGLE\n    DOUBLE\n    SUITE\n    DELUXE\n}\n\nenum BookingStatus {\n    PENDING\n    CONFIRMED\n    CHECKED_IN\n    CHECKED_OUT\n    CANCELLED\n}\n\nclass Hotel {\n    - hotelId : String\n    - name : String\n    - address : String\n    - phone : String\n    - rating : double\n    + getAvailableRooms(checkIn : LocalDate, checkOut : LocalDate) : List<Room>\n    + addRoom(room : Room) : void\n}\n\nclass Room {\n    - roomNumber : String\n    - type : RoomType\n    - pricePerNight : double\n    - isOccupied : boolean\n    + markOccupied() : void\n    + markAvailable() : void\n}\n\nclass Guest {\n    - guestId : String\n    - firstName : String\n    - lastName : String\n    - email : String\n    - phone : String\n    + getBookingHistory() : List<Booking>\n}\n\nclass Booking {\n    - bookingId : String\n    - checkInDate : LocalDate\n    - checkOutDate : LocalDate\n    - status : BookingStatus\n    - totalPrice : double\n    + calculateTotal() : double\n    + confirmBooking() : void\n    + cancelBooking() : void\n}\n\nclass Payment {\n    - paymentId : String\n    - amount : double\n    - paymentDate : LocalDateTime\n    - paymentMethod : String\n    + processPayment() : boolean\n}\n\nHotel \"1\" *-- \"1..*\" Room : contains >\nHotel \"1\" o-- \"0..*\" Booking : manages >\nGuest \"1\" --> \"0..*\" Booking : creates >\nBooking \"0..*\" o-- \"1..*\" Room : reserves >\nBooking \"1\" -- \"0..1\" Payment : paid via >\n\n@enduml",
+      "seconds": 13.2,
+      "inputTokens": 2963,
+      "outputTokens": 1013,
+      "modelCalls": 2
+    },
+    {
+      "id": "plantuml-activity-create",
+      "group": "plantuml",
+      "type": "plantuml",
+      "task": "create",
+      "outputType": "plantuml",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\ntitle Customer Return Process\n\nstart\n\n:Receive return request and item;\n:Verify proof of purchase;\n\nif (Receipt valid & within policy period?) then (yes)\n  :Inspect item condition;\n  if (Item in acceptable condition?) then (yes)\n    :Determine refund method\\n(original payment / store credit);\n    :Issue refund;\n    :Restock or route to inventory;\n    :Send confirmation to customer;\n  else (no)\n    :Mark return as rejected\\n(damaged or altered);\n    :Explain reason to customer;\n    :Return item to customer;\n  endif\nelse (no)\n  :Reject return\\n(invalid receipt or expired);\n  :Explain policy to customer;\nendif\n\nstop\n@enduml",
+      "seconds": 10.5,
+      "inputTokens": 2719,
+      "outputTokens": 763,
+      "modelCalls": 2
+    },
+    {
+      "id": "plantuml-gantt-create",
+      "group": "plantuml",
+      "type": "plantuml",
+      "task": "create",
+      "outputType": "plantuml",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startgantt\nproject starts 2027-03-01\n\n[Plan] as [T1] lasts 5 days\n[Pack] as [T2] lasts 3 days\n[Move] as [T3] lasts 2 days\n[Unpack] as [T4] lasts 4 days\n\n[T2] starts at [T1]'s end\n[T3] starts at [T2]'s end\n[T4] starts at [T3]'s end\n@endgantt",
+      "seconds": 9.3,
+      "inputTokens": 2589,
+      "outputTokens": 598,
+      "modelCalls": 2
+    },
+    {
+      "id": "plantuml-sequence-edit",
+      "group": "plantuml",
+      "type": "plantuml",
+      "task": "edit",
+      "outputType": "plantuml",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\nactor Customer\nparticipant \"Web App\" as Web\nparticipant \"Order Service\" as Orders\ndatabase \"Orders DB\" as DB\nparticipant \"Email Service\" as Email\nCustomer -> Web : Place order\nWeb -> Orders : createOrder()\nOrders -> DB : INSERT order\nDB --> Orders : ok\nOrders -> Email : sendConfirmationEmail()\nEmail --> Orders : ok\nOrders --> Web : order id\nWeb --> Customer : Confirmation page\n@enduml",
+      "seconds": 16,
+      "inputTokens": 3837,
+      "outputTokens": 1751,
+      "modelCalls": 2
+    },
+    {
+      "id": "plantuml-activity-edit",
+      "group": "plantuml",
+      "type": "plantuml",
+      "task": "edit",
+      "outputType": "plantuml",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\nstart\n:Receive expense claim;\nif (Receipt attached?) then (no)\n  :Return claim to claimant;\n  stop\nelse (yes)\nendif\nif (Amount over 500?) then (yes)\n  :Manager approval;\nelse (no)\nendif\n:Pay claimant;\nstop\n@enduml",
+      "seconds": 12.1,
+      "inputTokens": 2906,
+      "outputTokens": 898,
+      "modelCalls": 2
+    },
+    {
+      "id": "plantuml-class-fix",
+      "group": "plantuml",
+      "type": "plantuml",
+      "task": "fix",
+      "outputType": "plantuml",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\nclass User {\n  +name : String\n}\nclass Order {\n  +total : Decimal\n}\nUser \"1\" --> \"*\" Order : places\n@enduml",
+      "seconds": 6.3,
+      "inputTokens": 2265,
+      "outputTokens": 304,
+      "modelCalls": 2
+    },
+    {
+      "id": "plantuml-activity-fix",
+      "group": "plantuml",
+      "type": "plantuml",
+      "task": "fix",
+      "outputType": "plantuml",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "@startuml\nstart\n:Check stock;\nif (In stock?) then (yes)\n  :Ship;\nelse (no)\n  :Reorder;\nendif\nstop\n@enduml",
+      "seconds": 6.1,
+      "inputTokens": 2223,
+      "outputTokens": 240,
+      "modelCalls": 2
+    },
+    {
+      "id": "type-choice-sequence",
+      "group": "type-choice",
+      "type": null,
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "typeIn",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "sequenceDiagram\n    autonumber\n    actor User\n    participant App as Web / Mobile App\n    participant Auth as Auth Server\n    participant SMS as SMS / Authenticator App\n\n    User->>App: Enter username and password\n    App->>Auth: POST /login (credentials)\n    Auth->>Auth: Validate credentials\n    alt Invalid credentials\n        Auth-->>App: 401 Unauthorized\n        App-->>User: Display error message\n    else Valid credentials\n        Auth->>SMS: Generate and send 2FA challenge / OTP\n        SMS-->>User: Deliver OTP / push notification\n        Auth-->>App: 200 OK (Requires 2FA, session token)\n        App-->>User: Prompt for 2FA code\n        \n        User->>App: Enter 2FA code\n        App->>Auth: POST /verify-2fa (session token, code)\n        Auth->>Auth: Validate 2FA code\n        alt Invalid / expired code\n            Auth-->>App: 401 Invalid 2FA code\n            App-->>User: Show retry / invalid code prompt\n        else Valid code\n            Auth-->>App: 200 OK (Access & Refresh tokens)\n            App-->>User: Redirect to Dashboard / Logged in\n        end\n    end",
+      "seconds": 11.7,
+      "inputTokens": 2717,
+      "outputTokens": 984,
+      "modelCalls": 2
+    },
+    {
+      "id": "type-choice-flowchart",
+      "group": "type-choice",
+      "type": null,
+      "task": "create",
+      "outputType": "mermaid",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "typeIn",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "flowchart TD\n    Start([Customer Requests Refund]) --> CheckWindow{Within return\\nwindow?}\n\n    CheckWindow -- No --> RejectWindow[Reject Refund\\n'Outside return period']\n    CheckWindow -- Yes --> CheckReceipt{Valid proof of\\npurchase?}\n\n    CheckReceipt -- No --> RejectReceipt[Reject or Request Receipt]\n    CheckReceipt -- Yes --> CheckReason{Item defective\\nor damaged?}\n\n    CheckReason -- Yes --> ApproveFullDefect[Approve Full Refund\\nor Replacement]\n    CheckReason -- No --> CheckCondition{Item returned in\\noriginal condition?}\n\n    CheckCondition -- Yes --> ApproveFull[Approve Full Refund]\n    CheckCondition -- Minor wear --> ApprovePartial[Approve Partial Refund /\\nStore Credit]\n    CheckCondition -- Damaged / Used --> RejectCondition[Reject Refund &\\nReturn Item to Customer]\n\n    RejectWindow --> End([End])\n    RejectReceipt --> End\n    ApproveFullDefect --> End\n    ApproveFull --> End\n    ApprovePartial --> End\n    RejectCondition --> End",
+      "seconds": 10,
+      "inputTokens": 2336,
+      "outputTokens": 583,
+      "modelCalls": 2
+    },
+    {
+      "id": "vega-bar-create",
+      "group": "vega",
+      "type": "vegalite",
+      "task": "create",
+      "outputType": "vegalite",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"title\": \"Visitors per Weekday\",\n  \"description\": \"A bar chart showing visitor counts across weekdays.\",\n  \"data\": {\n    \"values\": [\n      {\"day\": \"Mon\", \"visitors\": 320},\n      {\"day\": \"Tue\", \"visitors\": 410},\n      {\"day\": \"Wed\", \"visitors\": 380},\n      {\"day\": \"Thu\", \"visitors\": 450},\n      {\"day\": \"Fri\", \"visitors\": 520}\n    ]\n  },\n  \"mark\": {\"type\": \"bar\", \"cornerRadiusEnd\": 4},\n  \"encoding\": {\n    \"x\": {\n      \"field\": \"day\",\n      \"type\": \"nominal\",\n      \"sort\": [\"Mon\", \"Tue\", \"Wed\", \"Thu\", \"Fri\"],\n      \"axis\": {\"title\": \"Weekday\", \"labelAngle\": 0}\n    },\n    \"y\": {\n      \"field\": \"visitors\",\n      \"type\": \"quantitative\",\n      \"axis\": {\"title\": \"Number of Visitors\"}\n    },\n    \"tooltip\": [\n      {\"field\": \"day\", \"type\": \"nominal\", \"title\": \"Day\"},\n      {\"field\": \"visitors\", \"type\": \"quantitative\", \"title\": \"Visitors\"}\n    ]\n  }\n}",
+      "seconds": 10.5,
+      "inputTokens": 2578,
+      "outputTokens": 660,
+      "modelCalls": 2
+    },
+    {
+      "id": "vega-line-create",
+      "group": "vega",
+      "type": "vegalite",
+      "task": "create",
+      "outputType": "vegalite",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"title\": \"Average Monthly Temperature in London\",\n  \"width\": 400,\n  \"height\": 250,\n  \"data\": {\n    \"values\": [\n      {\"month\": \"January\", \"temperature\": 5},\n      {\"month\": \"February\", \"temperature\": 6},\n      {\"month\": \"March\", \"temperature\": 8},\n      {\"month\": \"April\", \"temperature\": 11},\n      {\"month\": \"May\", \"temperature\": 14},\n      {\"month\": \"June\", \"temperature\": 17}\n    ]\n  },\n  \"mark\": {\n    \"type\": \"line\",\n    \"point\": true,\n    \"tooltip\": true\n  },\n  \"encoding\": {\n    \"x\": {\n      \"field\": \"month\",\n      \"type\": \"nominal\",\n      \"sort\": [\"January\", \"February\", \"March\", \"April\", \"May\", \"June\"],\n      \"title\": \"Month\"\n    },\n    \"y\": {\n      \"field\": \"temperature\",\n      \"type\": \"quantitative\",\n      \"title\": \"Temperature (°C)\",\n      \"scale\": {\"zero\": false}\n    }\n  }\n}",
+      "seconds": 12,
+      "inputTokens": 2707,
+      "outputTokens": 801,
+      "modelCalls": 2
+    },
+    {
+      "id": "vega-vega-bar-create",
+      "group": "vega",
+      "type": "vega",
+      "task": "create",
+      "outputType": "vega",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "{\n  \"$schema\": \"https://vega.github.io/schema/vega/v5.json\",\n  \"description\": \"A bar chart showing fruit sales.\",\n  \"width\": 400,\n  \"height\": 250,\n  \"padding\": 5,\n\n  \"data\": [\n    {\n      \"name\": \"table\",\n      \"values\": [\n        {\"category\": \"Apples\", \"amount\": 28},\n        {\"category\": \"Pears\", \"amount\": 55},\n        {\"category\": \"Plums\", \"amount\": 43}\n      ]\n    }\n  ],\n\n  \"scales\": [\n    {\n      \"name\": \"xscale\",\n      \"type\": \"band\",\n      \"domain\": {\"data\": \"table\", \"field\": \"category\"},\n      \"range\": \"width\",\n      \"padding\": 0.2\n    },\n    {\n      \"name\": \"yscale\",\n      \"type\": \"linear\",\n      \"domain\": {\"data\": \"table\", \"field\": \"amount\"},\n      \"range\": \"height\",\n      \"nice\": true,\n      \"zero\": true\n    }\n  ],\n\n  \"axes\": [\n    {\"orient\": \"bottom\", \"scale\": \"xscale\", \"title\": \"Fruit\"},\n    {\"orient\": \"left\", \"scale\": \"yscale\", \"title\": \"Sales\"}\n  ],\n\n  \"marks\": [\n    {\n      \"type\": \"rect\",\n      \"from\": {\"data\": \"table\"},\n      \"encode\": {\n        \"enter\": {\n          \"x\": {\"scale\": \"xscale\", \"field\": \"category\"},\n          \"width\": {\"scale\": \"xscale\", \"band\": 1},\n          \"y\": {\"scale\": \"yscale\", \"field\": \"amount\"},\n          \"y2\": {\"scale\": \"yscale\", \"value\": 0},\n          \"fill\": {\"value\": \"#4c78a8\"},\n          \"cornerRadiusTopLeft\": {\"value\": 4},\n          \"cornerRadiusTopRight\": {\"value\": 4}\n        },\n        \"update\": {\n          \"fillOpacity\": {\"value\": 1}\n        },\n        \"hover\": {\n          \"fillOpacity\": {\"value\": 0.75}\n        }\n      }\n    }\n  ]\n}",
+      "seconds": 11.6,
+      "inputTokens": 2941,
+      "outputTokens": 1106,
+      "modelCalls": 2
+    },
+    {
+      "id": "vega-horizontal-edit",
+      "group": "vega",
+      "type": "vegalite",
+      "task": "edit",
+      "outputType": "vegalite",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"description\": \"Monthly sales\",\n  \"data\": {\n    \"values\": [\n      {\n        \"month\": \"Jan\",\n        \"sales\": 120,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Feb\",\n        \"sales\": 95,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Mar\",\n        \"sales\": 140,\n        \"region\": \"South\"\n      },\n      {\n        \"month\": \"Apr\",\n        \"sales\": 80,\n        \"region\": \"South\"\n      }\n    ]\n  },\n  \"mark\": \"bar\",\n  \"encoding\": {\n    \"x\": {\n      \"field\": \"sales\",\n      \"type\": \"quantitative\"\n    },\n    \"y\": {\n      \"field\": \"month\",\n      \"type\": \"nominal\",\n      \"sort\": \"-x\"\n    }\n  }\n}",
+      "seconds": 7.8,
+      "inputTokens": 2904,
+      "outputTokens": 601,
+      "modelCalls": 2
+    },
+    {
+      "id": "vega-colour-edit",
+      "group": "vega",
+      "type": "vegalite",
+      "task": "edit",
+      "outputType": "vegalite",
+      "firstStatus": "valid",
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "contains",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"title\": \"Sales by month\",\n  \"description\": \"Monthly sales\",\n  \"data\": {\n    \"values\": [\n      {\n        \"month\": \"Jan\",\n        \"sales\": 120,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Feb\",\n        \"sales\": 95,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Mar\",\n        \"sales\": 140,\n        \"region\": \"South\"\n      },\n      {\n        \"month\": \"Apr\",\n        \"sales\": 80,\n        \"region\": \"South\"\n      }\n    ]\n  },\n  \"mark\": \"bar\",\n  \"encoding\": {\n    \"x\": {\n      \"field\": \"month\",\n      \"type\": \"nominal\"\n    },\n    \"y\": {\n      \"field\": \"sales\",\n      \"type\": \"quantitative\"\n    },\n    \"color\": {\n      \"field\": \"region\",\n      \"type\": \"nominal\"\n    }\n  }\n}",
+      "seconds": 6.6,
+      "inputTokens": 2819,
+      "outputTokens": 465,
+      "modelCalls": 2
+    },
+    {
+      "id": "vega-json-fix",
+      "group": "vega",
+      "type": "vegalite",
+      "task": "fix",
+      "outputType": "vegalite",
+      "firstStatus": null,
+      "repairAttempts": 0,
+      "note": "2 model steps.",
+      "checks": [
+        {
+          "name": "parses",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "renders",
+          "status": "pass",
+          "detail": ""
+        },
+        {
+          "name": "keeps",
+          "status": "pass",
+          "detail": ""
+        }
+      ],
+      "outcome": "pass",
+      "code": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"description\": \"Monthly sales\",\n  \"data\": {\n    \"values\": [\n      {\n        \"month\": \"Jan\",\n        \"sales\": 120,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Feb\",\n        \"sales\": 95,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Mar\",\n        \"sales\": 140,\n        \"region\": \"South\"\n      },\n      {\n        \"month\": \"Apr\",\n        \"sales\": 80,\n        \"region\": \"South\"\n      }\n    ]\n  },\n  \"mark\": \"bar\",\n  \"encoding\": {\n    \"x\": {\n      \"field\": \"month\",\n      \"type\": \"nominal\"\n    },\n    \"y\": {\n      \"field\": \"sales\",\n      \"type\": \"quantitative\"\n    }\n  }\n}",
+      "seconds": 7.6,
+      "inputTokens": 2639,
+      "outputTokens": 335,
+      "modelCalls": 2
+    }
+  ]
+}

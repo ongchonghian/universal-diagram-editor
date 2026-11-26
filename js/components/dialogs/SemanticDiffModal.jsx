@@ -217,8 +217,17 @@ export const SemanticDiffModal = ({
                 {/* Footer */}
                 <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-between">
                      <div className="text-xs text-slate-400">
-                        {semanticDiff.diffData?.added?.length > 0 && <span>{semanticDiff.diffData.added.length} additions </span>}
-                        {semanticDiff.diffData?.removed?.length > 0 && <span>• {semanticDiff.diffData.removed.length} removals</span>}
+                        {(() => {
+                            const d = semanticDiff.diffData;
+                            if (!d) return null;
+                            // bpmn-js-differ returns maps keyed by id (and has added() and removed() methods);
+                            // the Mermaid and PlantUML diffs return lists
+                            const count = (list, map) => (Array.isArray(list) ? list.length : Object.keys(map || {}).length);
+                            const added = count(d.added, d._added);
+                            const removed = count(d.removed, d._removed);
+                            const changed = count(null, d._changed) + count(null, d._layoutChanged);
+                            return [added && `${added} added`, changed && `${changed} changed`, removed && `${removed} removed`].filter(Boolean).join(' • ');
+                        })()}
                     </div>
                     <div className="flex gap-3">
                         <Button variant="secondary" onClick={onClose}>

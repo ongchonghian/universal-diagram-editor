@@ -230,7 +230,7 @@ RegisterProviders --> CreateEditor["Create Editor Instance<br/>with options"]
 CreateEditor --> SetupEvents["Setup Event Handlers<br/>Content + Cursor Changes"]
 SetupEvents --> Ready([Editor Ready])
 Ready --> UpdateLang["Language Change<br/>setModelLanguage()"]
-Ready --> SyncValue["Value Sync<br/>setValue()"]
+Ready --> SyncValue["Value Sync<br/>one undoable edit"]
 Ready --> Cleanup["Cleanup<br/>dispose()"]
 ```
 
@@ -241,7 +241,8 @@ Ready --> Cleanup["Cleanup<br/>dispose()"]
 The wrapper exposes a comprehensive set of imperative methods:
 
 - **scrollToLine(lineNumber)**: Centers the editor on a specific line and highlights it
-- **setValue(newValue)**: Updates editor content safely
+- **setValue(newValue)** and **applyEdits(newValue)**: Replace the editor content as one undo step, changing only the span that differs, so Ctrl+Z (Cmd+Z on Mac) restores the earlier text
+- **focus()**: Moves the keyboard focus to the editor
 - **insertAtCursor(text)**: Inserts text at the current cursor position
 - **setMarkers(markers)**: Applies error markers with squiggly underlines
 - **clearMarkers()**: Removes all error markers
@@ -425,7 +426,7 @@ The Monaco Editor integration implements several performance optimizations:
 - **AMD Loader Configuration**: Monaco modules loaded on-demand
 - **Conditional Language Registration**: Languages only registered when needed
 - **Deferred Provider Registration**: Error providers initialized once
-- **Efficient Value Synchronization**: Only updates when content differs
+- **Undoable Value Synchronization**: When the value changes outside the editor (the Fix button, templates, auto-layout or a visual editor), the wrapper writes only the changed span through the model's edit stack. The change is one undo step, so the user's undo history survives. `setValue()`, which would clear that history, is no longer used.
 
 ### Memory Management
 - **Proper Cleanup**: Editor disposal on component unmount

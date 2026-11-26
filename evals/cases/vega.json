@@ -1,0 +1,102 @@
+[
+  {
+    "group": "vega",
+    "id": "vega-bar-create",
+    "type": "vegalite",
+    "task": "create",
+    "prompt": "Create a Vega-Lite bar chart with inline data showing the number of visitors per weekday: Mon 320, Tue 410, Wed 380, Thu 450, Fri 520.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "Fri"
+      }
+    ]
+  },
+  {
+    "group": "vega",
+    "id": "vega-line-create",
+    "type": "vegalite",
+    "task": "create",
+    "prompt": "Create a Vega-Lite line chart with inline data of average monthly temperature in London for January to June: 5, 6, 8, 11, 14, 17 degrees.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "\"line\""
+      }
+    ]
+  },
+  {
+    "group": "vega",
+    "id": "vega-vega-bar-create",
+    "type": "vega",
+    "task": "create",
+    "prompt": "Create a Vega (not Vega-Lite) specification for a bar chart with inline data of fruit sales: apples 28, pears 55, plums 43.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "pears"
+      }
+    ]
+  },
+  {
+    "group": "vega",
+    "id": "vega-horizontal-edit",
+    "type": "vegalite",
+    "task": "edit",
+    "prompt": "Make the bars horizontal and sort them by sales, highest first.",
+    "startCode": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"description\": \"Monthly sales\",\n  \"data\": {\n    \"values\": [\n      {\n        \"month\": \"Jan\",\n        \"sales\": 120,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Feb\",\n        \"sales\": 95,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Mar\",\n        \"sales\": 140,\n        \"region\": \"South\"\n      },\n      {\n        \"month\": \"Apr\",\n        \"sales\": 80,\n        \"region\": \"South\"\n      }\n    ]\n  },\n  \"mark\": \"bar\",\n  \"encoding\": {\n    \"x\": {\n      \"field\": \"month\",\n      \"type\": \"nominal\"\n    },\n    \"y\": {\n      \"field\": \"sales\",\n      \"type\": \"quantitative\"\n    }\n  }\n}",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Jan",
+          "Apr",
+          "sales"
+        ]
+      }
+    ]
+  },
+  {
+    "group": "vega",
+    "id": "vega-colour-edit",
+    "type": "vegalite",
+    "task": "edit",
+    "prompt": "Colour the bars by region and add a title \"Sales by month\".",
+    "startCode": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"description\": \"Monthly sales\",\n  \"data\": {\n    \"values\": [\n      {\n        \"month\": \"Jan\",\n        \"sales\": 120,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Feb\",\n        \"sales\": 95,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Mar\",\n        \"sales\": 140,\n        \"region\": \"South\"\n      },\n      {\n        \"month\": \"Apr\",\n        \"sales\": 80,\n        \"region\": \"South\"\n      }\n    ]\n  },\n  \"mark\": \"bar\",\n  \"encoding\": {\n    \"x\": {\n      \"field\": \"month\",\n      \"type\": \"nominal\"\n    },\n    \"y\": {\n      \"field\": \"sales\",\n      \"type\": \"quantitative\"\n    }\n  }\n}",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Jan",
+          "sales"
+        ]
+      },
+      {
+        "contains": "Sales by month"
+      }
+    ]
+  },
+  {
+    "group": "vega",
+    "id": "vega-json-fix",
+    "type": "vegalite",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"description\": \"Monthly sales\",\n  \"data\": {\n    \"values\": [\n      {\n        \"month\": \"Jan\",\n        \"sales\": 120,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Feb\",\n        \"sales\": 95,\n        \"region\": \"North\"\n      },\n      {\n        \"month\": \"Mar\",\n        \"sales\": 140,\n        \"region\": \"South\"\n      },\n      {\n        \"month\": \"Apr\",\n        \"sales\": 80,\n        \"region\": \"South\"\n      }\n    ]\n  },\n  \"mark\": \"bar\",\n  \"encoding\": {\n    \"x\": {\n      \"field\": \"month\",\n      \"type\": \"nominal\"\n    },\n    \"y\": {\n      \"field\": \"sales\",\n      \"type\": \"quantitative\",\n    },\n  }\n}",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Jan",
+          "sales"
+        ]
+      }
+    ]
+  }
+]

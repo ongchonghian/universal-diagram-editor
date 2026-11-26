@@ -1,0 +1,112 @@
+[
+  {
+    "group": "kroki",
+    "id": "kroki-ditaa-create",
+    "type": "ditaa",
+    "task": "create",
+    "prompt": "Draw a ditaa diagram of a client box connected to a server box, which is connected to a database drawn as a cylinder.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  },
+  {
+    "group": "kroki",
+    "id": "kroki-blockdiag-create",
+    "type": "blockdiag",
+    "task": "create",
+    "prompt": "Draw a blockdiag diagram of a build pipeline: source, compile, test, package, publish.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  },
+  {
+    "group": "kroki",
+    "id": "kroki-bytefield-create",
+    "type": "bytefield",
+    "task": "create",
+    "prompt": "Draw a bytefield diagram of a 4-byte packet header: 1 byte version, 1 byte flags, 2 bytes length.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  },
+  {
+    "group": "kroki",
+    "id": "kroki-erd-create",
+    "type": "erd",
+    "task": "create",
+    "prompt": "Draw an erd diagram (the Kroki erd format) for a blog with Author, Post and Comment entities and their relationships.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  },
+  {
+    "group": "kroki",
+    "id": "kroki-nomnoml-create",
+    "type": "nomnoml",
+    "task": "create",
+    "prompt": "Draw a nomnoml diagram of a Vehicle class with Car and Truck subclasses.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  },
+  {
+    "group": "kroki",
+    "id": "kroki-pikchr-create",
+    "type": "pikchr",
+    "task": "create",
+    "prompt": "Draw a pikchr diagram of three boxes in a row labelled Input, Process and Output, joined by arrows.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  },
+  {
+    "group": "kroki",
+    "id": "kroki-svgbob-create",
+    "type": "svgbob",
+    "task": "create",
+    "prompt": "Draw an svgbob ASCII diagram of a router connected to two laptops.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  },
+  {
+    "group": "kroki",
+    "id": "kroki-wavedrom-create",
+    "type": "wavedrom",
+    "task": "create",
+    "prompt": "Draw a WaveDrom timing diagram with a clock signal, a data bus carrying three values, and a ready signal.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  },
+  {
+    "group": "kroki",
+    "id": "kroki-wireviz-create",
+    "type": "wireviz",
+    "task": "create",
+    "prompt": "Draw a WireViz harness: a 4-pin connector X1 joined by a 4-wire cable W1 to a 4-pin connector X2, pin to pin.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  },
+  {
+    "group": "kroki",
+    "id": "kroki-excalidraw-create",
+    "type": "excalidraw",
+    "task": "create",
+    "prompt": "Create an Excalidraw scene (JSON) with two labelled rectangles, Idea and Plan, joined by an arrow.",
+    "checks": [
+      "parses",
+      "renders"
+    ]
+  }
+]

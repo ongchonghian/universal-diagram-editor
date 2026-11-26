@@ -1,0 +1,70 @@
+[
+  {
+    "group": "c4",
+    "id": "c4-context-create",
+    "type": "c4",
+    "task": "create",
+    "prompt": "Draw a C4 context diagram in C4-PlantUML for a hospital appointment booking system, with a Patient, the Booking System, and two external systems: an SMS Gateway and the hospital records system.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "Patient"
+      }
+    ]
+  },
+  {
+    "group": "c4",
+    "id": "c4-container-create",
+    "type": "c4",
+    "task": "create",
+    "prompt": "Draw a C4 container diagram in C4-PlantUML for a food delivery service: a mobile app, an API, an order database and an external payment provider.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "API"
+      }
+    ]
+  },
+  {
+    "group": "c4",
+    "id": "c4-context-edit",
+    "type": "c4",
+    "task": "edit",
+    "prompt": "Add an external Email System that the Online Shop uses to send order confirmations to the Customer.",
+    "startCode": "@startuml\n!include <C4/C4_Context>\nPerson(customer, \"Customer\", \"Buys products online\")\nSystem(shop, \"Online Shop\", \"Lets customers browse and buy\")\nSystem_Ext(payments, \"Payment Provider\", \"Processes card payments\")\nRel(customer, shop, \"Browses and orders\")\nRel(shop, payments, \"Takes payment through\")\n@enduml",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "customer",
+          "shop",
+          "payments"
+        ]
+      },
+      {
+        "contains": "Email"
+      }
+    ]
+  },
+  {
+    "group": "c4",
+    "id": "c4-context-fix",
+    "type": "c4",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "@startuml\n!include <C4/C4_Context>\nPerson(customer, \"Customer\", \"Buys products online\")\nSystem(shop, \"Online Shop\", \"Lets customers browse and buy\")\nRel(customer, shop, \"Browses and orders\"\n@enduml",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "customer",
+          "shop"
+        ]
+      }
+    ]
+  }
+]

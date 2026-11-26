@@ -101,7 +101,7 @@ Q["js/cdn-version-checker.js<br/>Multi-Provider API Integration"] --> N
 - Error diagnostics: Parser for extracting line/column, categorization, and conversion to Monaco markers; fix suggestions and explanations.
 - Configuration: Central registry of diagram types, language mappings, snippets, and templates.
 - Specialized editors: BPMN visual editor (bpmn-js), Mermaid editors (flowchart, sequence, generic), and UI components.
-- **Syntext Smith**: Neuro-symbolic AI service with semantic parsing, deterministic compilation, and self-correction loops.
+- **Syntext Smith**: AI assistant that edits native diagram code through tools. The real parsers check every edit, and the model repairs the draft within the same turn, in up to eight model steps. See [Syntext Smith](file://Advanced Features/Syntext Smith (AI Copilot).md).
 - **Enhanced**: Library update management system: Comprehensive dependency tracking, CDN version checking, automated testing, and HTML rewriting with advanced validation.
 
 **Section sources**
@@ -435,25 +435,32 @@ Sync["MermaidSyncController"] --> AST
 - [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
 - [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
 
-### Syntext Smith (Neuro-Symbolic AI)
-Syntext Smith moves beyond simple LLM text generation by implementing a Neuro-Symbolic pipeline:
-1.  **Semantic Parsing**: The LLM outputs a strict JSON AST based on a defined schema, not raw code.
-2.  **Deterministic Compilation**: A rule-based compiler converts the AST into valid Diagram Code (Mermaid/BPMN).
-3.  **Self-Correction**: A feedback loop validates generated code against parsers (e.g., `mermaid.parse`) and automatically feeds errors back to the LLM for correction.
+### Syntext Smith (AI assistant)
+Syntext Smith lets a language model write native diagram code through tools, and checks every edit with the same parsers the editor uses:
+1.  **Request**: The chat sends a system instruction, the earlier turns, the diagram type and the current editor code to the chosen model provider (Google Gemini, Anthropic or an OpenAI-compatible endpoint). The reply streams back into the chat.
+2.  **Tool loop**: The model changes a draft with `edit_diagram` (exact text replacements) or `write_diagram` (a whole diagram with its type). The editor stays as it is. For BPMN, the model works on the XML without its layout section, and the BPMN pipeline keeps or regenerates the layout (`js/services/diagram-tools/bpmn-pipeline.js`). For other notations, `render_diagram` lets the model look at a picture of the draft.
+3.  **Validation**: Each tool call checks the draft with the shared validator (`js/services/diagram-tools/validate.js`) and returns the parser's verdict to the model. The validator uses `mermaid.parse` and a render for Mermaid, `bpmn-moddle` for BPMN, `vegaLite.compile` or `vega.parse` for charts, and the Kroki server for every other type.
+4.  **Repair**: When the verdict is "invalid", the model fixes the draft with another call. The loop allows eight model steps.
+5.  **Review**: The finished draft becomes a proposal. The user reviews the proposal in the code pane, accepts or rejects each change, and applies the result as one undo step (`js/components/editors/DiffReviewPane.jsx`).
 
 ```mermaid
 graph LR
-User -->|Prompt| LLM
-LLM -->|JSON AST| Compiler
-Compiler -->|Raw Code| Validator
-Validator -->|Success| Editor
-Validator -->|Error| FixLoop
-FixLoop -->|Error + Code| LLM
+User -->|Request and current code| LLM
+LLM -->|edit_diagram or write_diagram| Draft
+Draft --> Validator
+Validator -->|Verdict| LLM
+LLM -->|Done| Review[Review in the code pane]
+Review -->|Apply, one undo step| Editor
 ```
 
+The earlier design, in which the model returned a JSON syntax tree for a separate compiler, had no caller and was removed on 25 November 2026.
+
 **Section sources**
-- [js/services/ai-service.js](file://js/services/ai-service.js)
-- [js/services/diagram-compiler.js](file://js/services/diagram-compiler.js)
+- [js/services/smith/agent-loop.js](file://js/services/smith/agent-loop.js)
+- [js/services/smith/tools.js](file://js/services/smith/tools.js)
+- [js/services/diagram-tools/validate.js](file://js/services/diagram-tools/validate.js)
+- [js/services/diagram-tools/bpmn-pipeline.js](file://js/services/diagram-tools/bpmn-pipeline.js)
+- [js/components/editors/DiffReviewPane.jsx](file://js/components/editors/DiffReviewPane.jsx)
 
 ## Library Update Management System
 

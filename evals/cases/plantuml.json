@@ -1,0 +1,138 @@
+[
+  {
+    "group": "plantuml",
+    "id": "plantuml-sequence-create",
+    "type": "plantuml",
+    "task": "create",
+    "prompt": "Draw a PlantUML sequence diagram of a user signing in with a one-time code sent by SMS, between User, Web App, Auth Service and SMS Provider.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "SMS"
+      }
+    ]
+  },
+  {
+    "group": "plantuml",
+    "id": "plantuml-class-create",
+    "type": "plantuml",
+    "task": "create",
+    "prompt": "Draw a PlantUML class diagram for a hotel booking system with Hotel, Room, Guest and Booking, including key attributes.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "Booking"
+      }
+    ]
+  },
+  {
+    "group": "plantuml",
+    "id": "plantuml-activity-create",
+    "type": "plantuml",
+    "task": "create",
+    "prompt": "Draw a PlantUML activity diagram for handling a customer return: check the receipt, inspect the item, then refund or reject.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "refund"
+      }
+    ]
+  },
+  {
+    "group": "plantuml",
+    "id": "plantuml-gantt-create",
+    "type": "plantuml",
+    "task": "create",
+    "prompt": "Draw a PlantUML Gantt chart for a four-task office move starting on 2027-03-01: plan, pack, move, unpack, each task following the previous one.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "pack"
+      }
+    ]
+  },
+  {
+    "group": "plantuml",
+    "id": "plantuml-sequence-edit",
+    "type": "plantuml",
+    "task": "edit",
+    "prompt": "Add an Email Service that the Order Service calls after saving the order, to send a confirmation email.",
+    "startCode": "@startuml\nactor Customer\nparticipant \"Web App\" as Web\nparticipant \"Order Service\" as Orders\ndatabase \"Orders DB\" as DB\nCustomer -> Web : Place order\nWeb -> Orders : createOrder()\nOrders -> DB : INSERT order\nDB --> Orders : ok\nOrders --> Web : order id\nWeb --> Customer : Confirmation page\n@enduml",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Customer",
+          "Web",
+          "Orders",
+          "DB"
+        ]
+      },
+      {
+        "contains": "Email"
+      }
+    ]
+  },
+  {
+    "group": "plantuml",
+    "id": "plantuml-activity-edit",
+    "type": "plantuml",
+    "task": "edit",
+    "prompt": "Add a receipt check before the amount check. If the receipt is missing, return the claim to the claimant and stop.",
+    "startCode": "@startuml\nstart\n:Receive expense claim;\nif (Amount over 500?) then (yes)\n  :Manager approval;\nelse (no)\nendif\n:Pay claimant;\nstop\n@enduml",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Manager approval",
+          "Pay claimant"
+        ]
+      },
+      {
+        "contains": "receipt"
+      }
+    ]
+  },
+  {
+    "group": "plantuml",
+    "id": "plantuml-class-fix",
+    "type": "plantuml",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "@startuml\nclass User {\n  +name : String\n}\nclass Order {\n  +total : Decimal\n}\nUser \"1\" --> \"*\" Order : places\nOrder ::: User\n@enduml",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "User",
+          "Order"
+        ]
+      }
+    ]
+  },
+  {
+    "group": "plantuml",
+    "id": "plantuml-activity-fix",
+    "type": "plantuml",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "@startuml\nstart\n:Check stock;\nif (In stock?) then (yes)\n  :Ship;\nelse (no)\n  :Reorder;\nendif\nendif\nstop\n@enduml",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Check stock",
+          "Ship"
+        ]
+      }
+    ]
+  }
+]

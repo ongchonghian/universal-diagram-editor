@@ -8,9 +8,48 @@ import mermaid from 'mermaid';
  * Unified Renderer Adapter
  * Centralizes all rendering logic, Kroki API interactions, and diagram type handling.
  */
+const KROKI_URL_STORAGE_KEY = 'universal_diagram_kroki_url';
+
+/**
+ * Normalise a Kroki server address. Returns null for an address that is not http(s).
+ */
+export function normaliseKrokiUrl(url) {
+    const trimmed = (url || '').trim().replace(/\/+$/, '');
+    return /^https?:\/\/[^\s/]+/i.test(trimmed) ? trimmed : null;
+}
+
 class RendererAdapter {
     constructor() {
         this.baseUrl = KROKI_BASE_URL;
+        try {
+            const stored = normaliseKrokiUrl(localStorage.getItem(KROKI_URL_STORAGE_KEY));
+            if (stored) this.baseUrl = stored;
+        } catch (e) {
+            // Storage can be unavailable (private mode, tests); the public default stays in place
+        }
+    }
+
+    /** The Kroki server that renders every type except Mermaid. */
+    getBaseUrl() {
+        return this.baseUrl;
+    }
+
+    /**
+     * Change the Kroki server. An empty value restores the public default.
+     * @returns {string} the address now in use
+     * @throws {Error} when the address is not an http(s) address
+     */
+    setBaseUrl(url) {
+        if (!url || !url.trim()) {
+            this.baseUrl = KROKI_BASE_URL;
+            try { localStorage.removeItem(KROKI_URL_STORAGE_KEY); } catch (e) { /* storage unavailable */ }
+            return this.baseUrl;
+        }
+        const normalised = normaliseKrokiUrl(url);
+        if (!normalised) throw new Error('The diagram server address must start with http:// or https://');
+        this.baseUrl = normalised;
+        try { localStorage.setItem(KROKI_URL_STORAGE_KEY, normalised); } catch (e) { /* storage unavailable */ }
+        return this.baseUrl;
     }
 
     /**

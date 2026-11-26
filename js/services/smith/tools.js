@@ -1,0 +1,271 @@
+/**
+ * Smith's tools. Each tool works on a draft: a working copy of the diagram that the editor does not
+ * see until the user applies the proposal.
+ *
+ * edit_diagram and write_diagram validate on every call and return the parser's verdict, so the
+ * model sees the real error in the same step.
+ *
+ * The draft keeps two texts. `view` is what the model reads and edits. `code` is the full diagram
+ * that the user reviews. They are the same for every notation except BPMN: there the view leaves out
+ * the layout section, and the BPMN pipeline keeps or regenerates the layout after each change.
+ */
+import { DIAGRAM_TYPES } from '../../config.js';
+import { validateDiagram } from '../diagram-tools/validate.js';
+import { lookAtDiagram } from '../diagram-tools/look.js';
+import { stripLayout, completeBpmn } from '../diagram-tools/bpmn-pipeline.js';
+import { lintBpmn } from '../diagram-tools/bpmn-lint.js';
+
+export const DIAGRAM_TYPE_IDS = Object.keys(DIAGRAM_TYPES);
+
+/** The text of a diagram as the model sees it: BPMN without its layout section, every other notation unchanged. */
+export const modelView = (code, type) => (type === 'bpmn' ? stripLayout(code || '') : (code || ''));
+
+/** A new draft for the editor's current code and type. */
+export function createDraft(code, type) {
+    return {
+        code: code || '', view: modelView(code, type), type,
+        baseCode: code || '', baseType: type,
+        validation: null, layout: null, lint: [], suggestions: [], looks: 0,
+        // The pipeline's cache, such as the structure of the starting BPMN
+        pipeline: {}
+    };
+}
+
+// Renders allowed in one turn. Each look adds a model step and a picture, so the cap bounds the cost.
+export const MAX_LOOKS = 2;
+
+export const TOOL_DEFINITIONS = [
+    {
+        name: 'read_diagram',
+        description: 'Read the current draft of the diagram, with line numbers. Call this before an edit when you are not sure of the exact current text. For BPMN the draft leaves out the layout section, which the app manages.',
+        parameters: { type: 'object', properties: {} }
+    },
+    {
+        name: 'edit_diagram',
+        description: 'Change the draft with exact text replacements, applied in order. Each old_text must appear exactly once in the draft; include a few surrounding lines when a short text appears more than once. Copy old_text exactly, without line numbers. Returns the validation result.',
+        parameters: {
+            type: 'object',
+            properties: {
+                edits: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            old_text: { type: 'string', description: 'Text to replace, copied exactly from the draft' },
+                            new_text: { type: 'string', description: 'Replacement text' }
+                        },
+                        required: ['old_text', 'new_text']
+                    }
+                }
+            },
+            required: ['edits']
+        }
+    },
+    {
+        name: 'write_diagram',
+        description: 'Replace the whole draft. Use for a new diagram, a change of notation, or a rewrite of most of the diagram. Returns the validation result.',
+        parameters: {
+            type: 'object',
+            properties: {
+                type: { type: 'string', enum: DIAGRAM_TYPE_IDS, description: 'The notation of the code' },
+                code: { type: 'string', description: 'The complete diagram source, without markdown fences' }
+            },
+            required: ['type', 'code']
+        }
+    },
+    {
+        name: 'render_diagram',
+        description: 'Render the draft and look at the picture. Call once, after a new diagram or a structural change (elements added, removed or moved), to check for overlapping shapes, crossing lines and labels that cannot be read. Skip after a rename or a change of text. Call again only after you changed the layout because of what the picture showed.',
+        parameters: { type: 'object', properties: {} }
+    },
+    {
+        name: 'suggest_next_steps',
+        description: 'Offer the user two to four short follow-up requests, shown as buttons under your reply. Call this once, at the end of your turn.',
+        parameters: {
+            type: 'object',
+            properties: { suggestions: { type: 'array', items: { type: 'string' } } },
+            required: ['suggestions']
+        }
+    }
+];
+
+/** The draft with line numbers, as the model reads it. */
+export function numberLines(code) {
+    const lines = code.split('\n');
+    const width = String(lines.length).length;
+    return lines.map((line, i) => `${String(i + 1).padStart(width)}| ${line}`).join('\n');
+}
+
+const count = (text, part) => {
+    let n = 0;
+    for (let i = text.indexOf(part); i !== -1; i = text.indexOf(part, i + part.length)) n++;
+    return n;
+};
+
+/**
+ * Apply exact replacements in order. All replacements apply, or none do.
+ * @returns {{ code: string } | { error: string }}
+ */
+export function applyEdits(code, edits) {
+    if (!Array.isArray(edits) || edits.length === 0) return { error: 'edits must hold at least one replacement.' };
+    let next = code;
+    for (const [i, edit] of edits.entries()) {
+        const oldText = edit?.old_text;
+        const newText = edit?.new_text;
+        const label = edits.length > 1 ? `Edit ${i + 1}: ` : '';
+        if (typeof oldText !== 'string' || typeof newText !== 'string') return { error: `${label}old_text and new_text must both be strings.` };
+        if (oldText === '') return { error: `${label}old_text is empty. Use write_diagram to write a whole diagram.` };
+        const matches = count(next, oldText);
+        if (matches === 0) {
+            return { error: `${label}old_text was not found in the draft. No edits were applied. Call read_diagram to see the exact current text.` };
+        }
+        if (matches > 1) {
+            return { error: `${label}old_text appears ${matches} times in the draft. No edits were applied. Include more surrounding text so that old_text appears once.` };
+        }
+        const at = next.indexOf(oldText);
+        next = next.slice(0, at) + newText + next.slice(at + oldText.length);
+    }
+    return { code: next };
+}
+
+/** The validation result in the shape the model reads. */
+const verdict = (validation) => ({
+    status: validation.status,
+    ...(validation.error ? { error: validation.error } : {}),
+    ...(validation.line ? { line: validation.line } : {}),
+    ...(validation.warnings?.length ? { warnings: validation.warnings.slice(0, 5) } : {})
+});
+
+const LAYOUT_NOTES = {
+    kept: 'The structure is unchanged, so the user\'s layout was kept.',
+    regenerated: 'Elements or connections changed, so the app laid out the diagram again.',
+    created: 'The app laid out the diagram.'
+};
+
+/** The verdict for a BPMN change, with the layout outcome and the lint findings. */
+const bpmnVerdict = (draft) => ({
+    ...verdict(draft.validation),
+    ...(draft.layout ? { layout: LAYOUT_NOTES[draft.layout] } : {}),
+    ...(draft.lint.length ? { lint: draft.lint.slice(0, 8), lint_note: 'Fix these findings unless the user asked for the diagram this way.' } : {})
+});
+
+/**
+ * Set the draft's view, then derive the full code and check it.
+ * For BPMN: parse the view, keep or regenerate the layout, and lint the process.
+ */
+async function updateDraft(draft, view, type, { validate, complete, lint }) {
+    draft.type = type;
+    draft.view = view;
+    draft.layout = null;
+    draft.lint = [];
+    if (type !== 'bpmn') {
+        draft.code = view;
+        draft.validation = await validate(view, type);
+        return;
+    }
+    draft.code = view;
+    draft.validation = await validate(view, 'bpmn');
+    if (draft.validation.status !== 'valid') return;
+    try {
+        const done = await complete(view, draft, draft.pipeline);
+        draft.code = done.code;
+        draft.layout = done.layout;
+    } catch (e) {
+        draft.validation = { ...draft.validation, valid: false, status: 'invalid', error: `The app could not lay out the diagram: ${e?.message || e}` };
+        return;
+    }
+    draft.lint = await lint(view);
+}
+
+const stepOf = (draft, action) => ({
+    action,
+    ...(action === 'write' ? { type: draft.type } : {}),
+    status: draft.validation.status,
+    error: draft.validation.error,
+    ...(draft.layout ? { layout: draft.layout } : {}),
+    ...(draft.lint.length ? { lint: draft.lint.length } : {})
+});
+
+const resultOf = (draft) => (draft.type === 'bpmn' ? bpmnVerdict(draft) : verdict(draft.validation));
+
+/**
+ * Run one tool call against the draft.
+ * @param {object} deps  replaceable for tests: validate(code, type), look(code, type),
+ *                       complete(view, base, cache) and lint(xml) for BPMN
+ * @returns {Promise<{ content: object|string, isError: boolean, step: object|null, images?: object[] }>}
+ *   step is the entry for the validation trail, or null for tools that leave no entry.
+ *   images are image parts for the model to see, sent with the tool result.
+ */
+export async function runTool(draft, call, { validate = validateDiagram, look = lookAtDiagram, complete = completeBpmn, lint = lintBpmn } = {}) {
+    const deps = { validate, complete, lint };
+    if (call.invalidArgs !== undefined) {
+        return { content: 'The tool input was cut off or was not valid JSON. Send a smaller edit, or split the change into several edit_diagram calls.', isError: true, step: null };
+    }
+    const args = call.args || {};
+    switch (call.name) {
+        case 'read_diagram':
+            return {
+                content: {
+                    type: draft.type,
+                    code: draft.view ? numberLines(draft.view) : '(empty)',
+                    ...(draft.type === 'bpmn' ? { note: 'The layout section (bpmndi:BPMNDiagram) is hidden. The app keeps or regenerates the layout.' } : {})
+                },
+                isError: false,
+                step: null
+            };
+
+        case 'edit_diagram': {
+            if (!draft.view) return { content: 'The draft is empty. Use write_diagram.', isError: true, step: null };
+            const result = applyEdits(draft.view, args.edits);
+            if (result.error) return { content: result.error, isError: true, step: { action: 'edit', status: 'rejected', error: result.error } };
+            await updateDraft(draft, result.code, draft.type, deps);
+            return { content: resultOf(draft), isError: false, step: stepOf(draft, 'edit') };
+        }
+
+        case 'write_diagram': {
+            if (!DIAGRAM_TYPE_IDS.includes(args.type)) {
+                return { content: `Unknown type "${args.type}". Use one of: ${DIAGRAM_TYPE_IDS.join(', ')}.`, isError: true, step: null };
+            }
+            if (typeof args.code !== 'string' || !args.code.trim()) return { content: 'code is empty.', isError: true, step: null };
+            // A layout section the model wrote anyway is dropped: the app owns the BPMN layout
+            await updateDraft(draft, modelView(stripFence(args.code), args.type), args.type, deps);
+            return { content: resultOf(draft), isError: false, step: stepOf(draft, 'write') };
+        }
+
+        case 'render_diagram': {
+            if (!draft.code) return { content: 'The draft is empty, so there is no picture to render.', isError: true, step: null };
+            if (draft.type === 'bpmn') {
+                return { content: 'The app lays out BPMN, so the picture would show nothing you can change. Finish without looking.', isError: true, step: null };
+            }
+            if (draft.looks >= MAX_LOOKS) {
+                return { content: `You have already looked ${MAX_LOOKS} times in this turn. Finish without another look.`, isError: true, step: null };
+            }
+            draft.looks++;
+            const seen = await look(draft.code, draft.type);
+            if (seen.error) {
+                return { content: `Could not render the draft: ${seen.error}`, isError: true, step: { action: 'look', status: 'failed', error: seen.error } };
+            }
+            return {
+                content: { status: 'rendered', width: seen.width, height: seen.height, note: 'The rendered picture follows this result.' },
+                isError: false,
+                images: [seen.image],
+                step: { action: 'look', status: 'rendered' }
+            };
+        }
+
+        case 'suggest_next_steps': {
+            const list = Array.isArray(args.suggestions) ? args.suggestions : [];
+            draft.suggestions = list.filter(s => typeof s === 'string' && s.trim()).map(s => s.trim()).slice(0, 4);
+            return { content: 'Shown to the user.', isError: false, step: null };
+        }
+
+        default:
+            return { content: `Unknown tool "${call.name}".`, isError: true, step: null };
+    }
+}
+
+/** Remove a markdown fence that a model wrapped around the code despite the instruction. */
+function stripFence(code) {
+    const match = code.trim().match(/^```[\w-]*\n([\s\S]*?)\n```$/);
+    return match ? match[1] : code;
+}

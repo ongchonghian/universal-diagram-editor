@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smith Evaluation</title>
+    <!-- Development-only page. The production build uses index.html as its single entry, so this page is not published. -->
+    <style>
+        :root {
+            --bg: #f8fafc; --panel: #ffffff; --text: #0f172a; --muted: #64748b; --border: #e2e8f0;
+            --accent: #4f46e5; --pass: #15803d; --fail: #b91c1c; --unverified: #a16207; --error: #7c3aed;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+        main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+        h1 { font-size: 20px; margin: 0 0 4px; }
+        h2 { font-size: 15px; margin: 0 0 12px; }
+        p.lead { color: var(--muted); margin: 0 0 20px; max-width: 70ch; }
+        section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+        .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; }
+        label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+        input[type=text], input[type=number], select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; min-width: 180px; background: #fff; color: var(--text); }
+        fieldset { border: 0; padding: 0; margin: 0; }
+        fieldset label { display: inline-flex; gap: 4px; align-items: center; font-weight: 500; color: var(--text); margin-right: 12px; font-size: 13px; }
+        button { font: inherit; font-weight: 600; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: #fff; color: var(--text); cursor: pointer; }
+        button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        .notice { padding: 10px 12px; border-radius: 6px; background: #fef3c7; color: #78350f; margin-top: 12px; }
+        .notice[hidden] { display: none; }
+        #progress { color: var(--muted); margin-top: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        th { color: var(--muted); font-weight: 600; font-size: 12px; }
+        td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .outcome { font-weight: 700; }
+        .outcome.pass { color: var(--pass); } .outcome.fail { color: var(--fail); }
+        .outcome.unverified { color: var(--unverified); } .outcome.error { color: var(--error); }
+        details summary { cursor: pointer; color: var(--accent); }
+        pre { white-space: pre-wrap; word-break: break-word; background: var(--bg); padding: 8px; border-radius: 6px; max-height: 240px; overflow: auto; font-size: 12px; }
+        .table-wrap { overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Syntext Smith evaluation</h1>
+        <p class="lead">
+            Runs the evaluation cases in <code>evals/cases/</code> against a model and checks each answer with the real validators.
+            The page starts from the provider and model saved in the app's Syntext Smith settings. Changes made on this page apply to this page only and are not saved.
+            Download the report when the run finishes and commit the report to <code>evals/results/</code>.
+        </p>
+
+        <section aria-labelledby="setup-heading">
+            <h2 id="setup-heading">Run settings</h2>
+            <div class="row">
+                <div>
+                    <label for="path">Path</label>
+                    <select id="path"></select>
+                </div>
+                <div>
+                    <label for="provider">Provider</label>
+                    <select id="provider"></select>
+                </div>
+                <div>
+                    <label for="model">Model</label>
+                    <input id="model" type="text" spellcheck="false">
+                </div>
+                <div>
+                    <label for="api-key">API key (this page only)</label>
+                    <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Saved key if left empty">
+                </div>
+                <div>
+                    <label for="filter">Case id contains</label>
+                    <input id="filter" type="text" placeholder="for example bpmn-rename" spellcheck="false">
+                </div>
+                <div>
+                    <label for="delay">Pause between cases (ms)</label>
+                    <input id="delay" type="number" min="0" step="250" value="1500">
+                </div>
+            </div>
+            <fieldset id="groups" style="margin-top:12px">
+                <legend style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px">Diagram groups</legend>
+            </fieldset>
+            <div class="row" style="margin-top:12px">
+                <button id="run" class="primary" type="button">Run</button>
+                <button id="stop" type="button" disabled>Stop</button>
+                <button id="download" type="button" disabled>Download report</button>
+            </div>
+            <div id="key-notice" class="notice" hidden>
+                <span id="key-notice-text"></span>
+                A key that Smith keeps for one browser tab only is not visible here. Paste the key above, or tick "Remember keys" in Smith's settings.
+            </div>
+            <div id="progress" role="status" aria-live="polite"></div>
+        </section>
+
+        <section aria-labelledby="summary-heading">
+            <h2 id="summary-heading">Summary</h2>
+            <div class="table-wrap"><table id="summary"></table></div>
+        </section>
+
+        <section aria-labelledby="cases-heading">
+            <h2 id="cases-heading">Cases</h2>
+            <div class="table-wrap"><table id="cases"></table></div>
+        </section>
+    </main>
+    <script type="module" src="/evals/eval-page.js"></script>
+</body>
+</html>

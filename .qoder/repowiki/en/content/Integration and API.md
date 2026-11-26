@@ -474,27 +474,29 @@ D2 --> E2["Offer Alternative Actions"]
   - Reference: [testLibraryUpdates](file://js/update-tester.js#L398-L444)
 
 ## AI Service Integration
-**NEW**: The application integrates a neuro-symbolic AI pipeline to assist in diagram generation.
+The application integrates Syntext Smith, an AI assistant that helps users create, edit and fix diagrams.
 
 ### Components
-- **AICopilot**: The UI component (Sidebar) handling user chat and interaction.
-- **AIService**: The core service managing API communication with Google's Gemini models. It uses a "Neuro-Symbolic" approach:
-    1.  **Prompt Engineering**: Converts user requests into structured prompts for the LLM.
-    2.  **AST Generation**: Requests a JSON Abstract Syntax Tree (AST) from the LLM instead of raw code, ensuring structural validity.
-    3.  **Diagram Compiler**: Deterministically compiles the JSON AST into the target syntax (Mermaid, PlantUML), eliminating syntax errors common in direct LLM generation.
+- **AICopilot**: The chat panel in the sidebar.
+- **AIService**: Stores Smith's settings and running token totals.
+- **Smith's agent loop** (`js/services/smith/`): Sends the request, the earlier turns and the current editor code to the model. The model changes a working copy of the diagram through tools, and the shared validator checks every change before the user sees it. The preview's Auto-Fix button uses the same loop. Model calls go through the provider-neutral layer in `js/services/llm/`, which streams replies from Google Gemini, Anthropic or an OpenAI-compatible endpoint.
 - **Workflow**:
-    - User enters a request ("Create a login flow").
-    - `AIService` generates JSON AST.
-    - `DiagramCompiler` converts AST to code.
-    - Code is validated and applied to the editor.
+    - The user enters a request, for example "Create a login flow".
+    - Smith edits the working copy, reads each validation result, and repairs the copy when the parser reports an error.
+    - The reply shows a proposal card. The user reviews each change in the code pane, then applies the accepted changes as one undo step.
+    - The user can also attach a picture, such as a whiteboard photo, for Smith to turn into a diagram.
+- **Measured**: the evaluation set in `evals/` records Smith's pass rate per diagram group. See "Measured results" in [Syntext Smith](file://Advanced Features/Syntext Smith (AI Copilot).md).
 
 ### Configuration
-- **API Key**: Users must provide a valid Google Gemini API Key via the Settings modal to enable AI features. The key is stored locally in the browser.
+- **API Key**: Users provide a key for the chosen provider in the settings dialog. Keys are kept in `sessionStorage` for the browser tab, and also in `localStorage` as plain text when the user ticks "Remember keys in this browser". A local OpenAI-compatible server can run without a key.
+- **Model**: The default is Gemini with `gemini-3.8-flash`. The settings dialog loads each provider's own model list and accepts any other model id.
 
 **Section sources**
 - [js/services/ai-service.js](file://js/services/ai-service.js)
-- [js/services/diagram-compiler.js](file://js/services/diagram-compiler.js)
+- [js/services/smith/index.js](file://js/services/smith/index.js)
 - [js/components/AICopilot.jsx](file://js/components/AICopilot.jsx)
+- [js/components/editors/DiffReviewPane.jsx](file://js/components/editors/DiffReviewPane.jsx)
+- [evals/README.md](file://evals/README.md)
 
 **Section sources**
 - [js/config.js](file://js/config.js#L6-L116)

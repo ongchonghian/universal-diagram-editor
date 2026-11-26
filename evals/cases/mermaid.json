@@ -1,0 +1,243 @@
+[
+  {
+    "group": "mermaid",
+    "id": "mermaid-flowchart-create",
+    "type": "mermaid",
+    "task": "create",
+    "prompt": "Draw a Mermaid flowchart of a password reset: request reset, email a link, check whether the link has expired, set a new password, show a confirmation.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "expired"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-sequence-create",
+    "type": "mermaid",
+    "task": "create",
+    "prompt": "Draw a Mermaid sequence diagram of an online card payment between Shopper, Shop, Payment Gateway and Bank.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "Bank"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-class-create",
+    "type": "mermaid",
+    "task": "create",
+    "prompt": "Draw a Mermaid class diagram for a library with Book, Member and Loan, where a member can have many loans.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "Loan"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-state-create",
+    "type": "mermaid",
+    "task": "create",
+    "prompt": "Draw a Mermaid state diagram for a support ticket: New, Assigned, Waiting for customer, Resolved and Closed, where a resolved ticket can be reopened.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "Resolved"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-er-create",
+    "type": "mermaid",
+    "task": "create",
+    "prompt": "Draw a Mermaid entity relationship diagram for a school with Student, Course, Enrolment and Teacher.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "Student"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-gantt-create",
+    "type": "mermaid",
+    "task": "create",
+    "prompt": "Draw a Mermaid Gantt chart for a six-week website launch starting on 2027-01-04, with design, build, test and launch phases that depend on each other.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "launch"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-timeline-create",
+    "type": "mermaid",
+    "task": "create",
+    "prompt": "Draw a Mermaid timeline of a company's history: founded in 2019, first release in 2021, Series A in 2023, international launch in 2025.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "2023"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-mindmap-create",
+    "type": "mermaid",
+    "task": "create",
+    "prompt": "Draw a Mermaid mindmap for planning a team offsite, with branches for venue, agenda, travel and budget.",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "contains": "budget"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-flowchart-edit",
+    "type": "mermaid",
+    "task": "edit",
+    "prompt": "Add a payment check between 'Order received' and the stock check. If the payment fails, go to a new 'Cancel order' step.",
+    "startCode": "flowchart TD\n    Start([Order received]) --> Check{In stock?}\n    Check -->|Yes| Pack[Pack items]\n    Check -->|No| Backorder[Create backorder]\n    Pack --> Ship[Ship order]\n    Backorder --> Notify[Notify customer]",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Check",
+          "Pack",
+          "Ship",
+          "Backorder",
+          "Notify"
+        ]
+      },
+      {
+        "contains": "Cancel order"
+      },
+      "no-removals"
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-sequence-edit",
+    "type": "mermaid",
+    "task": "edit",
+    "prompt": "After Auth returns 401, Gateway should refresh the token with Auth and retry the validation once.",
+    "startCode": "sequenceDiagram\n    participant User\n    participant Gateway\n    participant Auth\n    User->>Gateway: GET /orders\n    Gateway->>Auth: Validate token\n    Auth-->>Gateway: 401 Unauthorized\n    Gateway-->>User: 401 Unauthorized",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "User",
+          "Gateway",
+          "Auth"
+        ]
+      },
+      {
+        "contains": "refresh"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-class-edit",
+    "type": "mermaid",
+    "task": "edit",
+    "prompt": "Add a LineItem class with quantity and price, and make each Order contain many LineItems.",
+    "startCode": "classDiagram\n    class Order {\n        +String id\n        +Date created\n        +total() Decimal\n    }\n    class Customer {\n        +String name\n        +String email\n    }\n    Customer \"1\" --> \"*\" Order : places",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Order",
+          "Customer",
+          "email"
+        ]
+      },
+      {
+        "contains": "LineItem"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-state-edit",
+    "type": "mermaid",
+    "task": "edit",
+    "prompt": "Add an Archived state that is reached from Published, and allow Archived to return to Draft.",
+    "startCode": "stateDiagram-v2\n    [*] --> Draft\n    Draft --> Review : submit\n    Review --> Draft : request changes\n    Review --> Published : approve\n    Published --> [*]",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Draft",
+          "Review",
+          "Published"
+        ]
+      },
+      {
+        "contains": "Archived"
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-flowchart-fix",
+    "type": "mermaid",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "flowchart TD\n    A[Start] --> B{Valid?\n    B -->|Yes| C[Save]\n    B -->|No| D[Reject]",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Start",
+          "Save",
+          "Reject"
+        ]
+      }
+    ]
+  },
+  {
+    "group": "mermaid",
+    "id": "mermaid-sequence-fix",
+    "type": "mermaid",
+    "task": "fix",
+    "prompt": null,
+    "startCode": "sequenceDiagram\n    Client->>Server: Poll\n    loop Every minute\n        Server-->>Client: Status",
+    "checks": [
+      "parses",
+      "renders",
+      {
+        "keeps": [
+          "Client",
+          "Server",
+          "Poll"
+        ]
+      }
+    ]
+  }
+]

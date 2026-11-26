@@ -1,0 +1,71 @@
+[
+  {
+    "group": "image",
+    "id": "image-whiteboard-flowchart",
+    "type": "mermaid",
+    "task": "create",
+    "prompt": "Turn this whiteboard photo into a Mermaid flowchart.",
+    "image": "whiteboard-flowchart.jpg",
+    "checks": [
+      "parses",
+      "renders",
+      { "contains": "Order received" },
+      { "contains": "Check stock" },
+      { "contains": "In stock" },
+      { "contains": "Reorder" },
+      { "contains": "Pack order" },
+      { "contains": "Ship" }
+    ]
+  },
+  {
+    "group": "image",
+    "id": "image-paper-sequence",
+    "type": "plantuml",
+    "task": "create",
+    "prompt": "Turn this sketch into a PlantUML sequence diagram.",
+    "image": "paper-sequence.jpg",
+    "checks": [
+      "parses",
+      "renders",
+      { "keeps": ["Browser", "API", "Database"] },
+      { "contains": "/login" },
+      { "contains": "find user" },
+      { "contains": "user row" },
+      { "contains": "token" }
+    ]
+  },
+  {
+    "group": "image",
+    "id": "image-paper-process-bpmn",
+    "type": "bpmn",
+    "task": "create",
+    "prompt": "Draw this sketched process as BPMN.",
+    "image": "paper-process.jpg",
+    "checks": [
+      "parses",
+      "renders",
+      "bpmn-layout",
+      { "contains": "Submit claim" },
+      { "contains": "Review claim" },
+      { "contains": "Approved" },
+      { "contains": "Pay claim" },
+      { "contains": "Reject claim" }
+    ]
+  },
+  {
+    "group": "image",
+    "id": "image-marked-up-edit",
+    "type": "mermaid",
+    "task": "edit",
+    "prompt": "I marked up a screenshot of this diagram in red. Change the code to match the markup.",
+    "image": "marked-up-screenshot.png",
+    "startCode": "flowchart LR\n    Draft --> Review\n    Review --> Publish",
+    "checks": [
+      "parses",
+      "renders",
+      { "contains": "Legal check" },
+      { "keeps": ["Draft", "Review", "Publish"] },
+      "no-removals"
+    ]
+  }
+]
