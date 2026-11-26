@@ -10,7 +10,7 @@
     "eval": "vite --open /eval.html"
   },
   "dependencies": {
-    "@excalidraw/excalidraw": "^0.18.0",
+    "@excalidraw/excalidraw": "^0.18.1",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/react-fontawesome": "^3.1.1",
     "@kanaries/graphic-walker": "^0.4.75",
@@ -34,7 +34,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "topojson-client": "^3.1.0",
-    "uuid": "^11.0.0",
+    "uuid": "^14.0.0",
     "vega": "^6.2.0",
     "vega-embed": "^7.1.0",
     "vega-lite": "^6.4.2"
@@ -47,7 +47,7 @@
     "jsdom": "^26.1.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
-    "vite": "^7.3.1",
+    "vite": "^7.3.2",
     "vitest": "^3.2.7"
   }
 }
