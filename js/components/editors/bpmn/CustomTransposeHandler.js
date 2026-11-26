@@ -22,6 +22,13 @@ export default function CustomTransposeHandler(modeling, elementFactory) {
   this._elementFactory = elementFactory;
 }
 
+// bpmn-js reads parameter names to inject services. The production build minifies those names,
+// so each service is named here instead.
+CustomTransposeHandler.$inject = [
+  'modeling',
+  'elementFactory'
+];
+
 CustomTransposeHandler.$inject = [
   'modeling',
   'elementFactory'

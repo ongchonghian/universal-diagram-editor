@@ -3,7 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Button, Modal, ModalHeader, ModalFooter, Spinner } from '../common.jsx';
 import { rendererAdapter } from '../../services/RendererAdapter.js';
 import { diffUtils } from '../../utils/diff-utils.js';
-import { BpmnDiffView } from '../diff/BpmnDiffView.jsx';
+import { LazyPanel, lazyNamed } from '../LazyPanel.jsx';
+
+// bpmn-js is large, so the BPMN diff viewer downloads only when a BPMN diff opens.
+const BpmnDiffView = lazyNamed(() => import('../diff/BpmnDiffView.jsx'), 'BpmnDiffView');
 
 export const SemanticDiffModal = ({ 
     isOpen, 
@@ -139,7 +142,9 @@ export const SemanticDiffModal = ({
                     {viewMode === 'semantic' && (
                         <div className="w-full h-full bg-white rounded-lg border border-slate-200 overflow-hidden relative">
                             {diagramType === 'bpmn' ? (
-                                <BpmnDiffView xml={newCode} diffData={semanticDiff.diffData} />
+                                <LazyPanel name="BPMN diff viewer">
+                                    <BpmnDiffView xml={newCode} diffData={semanticDiff.diffData} />
+                                </LazyPanel>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center p-4">
                                     {hybridSvg ? (
