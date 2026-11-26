@@ -57,8 +57,59 @@ export const ExcalidrawVisualEditor = ({ json, onChange, onError }) => {
         setTimeout(() => { isUpdatingRef.current = false; }, 0);
     }, [onChange]);
 
+    // Manual Copy fallback
+    const copyToClipboard = async () => {
+        if (!excalidrawAPI) return;
+        
+        try {
+            // First attempt: Standard library export
+            const elements = excalidrawAPI.getSceneElements();
+            const appState = excalidrawAPI.getAppState();
+            const files = excalidrawAPI.getFiles();
+            
+            const blob = await exportToBlob({
+                elements,
+                appState: {
+                    ...appState,
+                    exportWithDarkMode: appState.theme === 'dark',
+                    exportBackground: true
+                },
+                files,
+                mimeType: "image/png",
+            });
+
+            await navigator.clipboard.write([
+                new ClipboardItem({ [blob.type]: blob }),
+            ]);
+            console.log("Copied via exportToBlob");
+        } catch (e) {
+            console.warn("Standard export failed, trying canvas fallback", e);
+            
+            // Second attempt: Direct Canvas grab (bypasses font loading logic)
+            try {
+                const canvas = document.querySelector(".excalidraw__canvas");
+                if (canvas) {
+                    canvas.toBlob(async (blob) => {
+                        if (blob) {
+                            await navigator.clipboard.write([
+                                new ClipboardItem({ [blob.type]: blob }),
+                            ]);
+                            console.log("Copied via canvas fallback");
+                        }
+                    }, "image/png");
+                } else {
+                    throw new Error("Canvas not found");
+                }
+            } catch (fallbackError) {
+                console.error("All copy methods failed", fallbackError);
+                alert("Failed to copy to clipboard. Please check browser permissions.");
+            }
+        }
+    };
+
+
     return (
-        <div className="w-full h-full border border-slate-200 rounded-lg overflow-hidden bg-white">
+        <div className="w-full h-full border border-slate-200 rounded-lg overflow-hidden bg-white relative">
              <Excalidraw
                 excalidrawAPI={(api) => setExcalidrawAPI(api)}
                 initialData={initialDataRef.current || undefined}
@@ -71,6 +122,16 @@ export const ExcalidrawVisualEditor = ({ json, onChange, onError }) => {
                     }
                 }}
             />
+            {/* Custom Manual Copy Button as Fallback */}
+            <button 
+                onClick={copyToClipboard}
+                className="absolute bottom-4 right-4 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md shadow-lg transition-all flex items-center gap-2 z-[9999]"
+                title="Copy as PNG (Fallback)"
+            >
+                <i className="fas fa-copy"></i>
+                <span>Copy as PNG</span>
+            </button>
         </div>
     );
 };
+

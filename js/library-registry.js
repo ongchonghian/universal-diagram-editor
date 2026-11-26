@@ -324,19 +324,18 @@ export function parseVersionsFromHtml(html) {
         if (match && match[1]) {
             versions[id] = match[1];
         } else {
-            // Fallback: try to find version in any URL containing the package name
+            // Fallback: try to find version in any URL containing the package name with precise boundaries
             const packageName = lib.package.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             let fallbackRegex;
             
             if (lib.cdn === CDN_TYPES.CDNJS) {
-                // cdnjs: /package/version/
-                fallbackRegex = new RegExp(`/${packageName}/([\\d.]+)/`, 'i');
+                fallbackRegex = new RegExp(`cdnjs\\.cloudflare\\.com/ajax/libs/${packageName}/([\\d.]+)/`, 'i');
             } else if (lib.cdn === CDN_TYPES.UNPKG) {
-                // unpkg: @version/ or @version?
-                fallbackRegex = new RegExp(`${packageName}@([^/?"']+)`, 'i');
-            } else if (lib.cdn === CDN_TYPES.ESMSH || lib.cdn === CDN_TYPES.JSR) {
-                // esm.sh: @version? or @version'
-                fallbackRegex = new RegExp(`${packageName}@([^?'"]+)`, 'i');
+                fallbackRegex = new RegExp(`unpkg\\.com/${packageName}@([^/?"']+)`, 'i');
+            } else if (lib.cdn === CDN_TYPES.ESMSH) {
+                fallbackRegex = new RegExp(`esm\\.sh/${packageName}@([^?'"]+)`, 'i');
+            } else if (lib.cdn === CDN_TYPES.JSR) {
+                fallbackRegex = new RegExp(`esm\\.sh/jsr/${packageName}@([^?'"]+)`, 'i');
             }
             
             if (fallbackRegex) {

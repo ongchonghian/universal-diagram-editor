@@ -3,6 +3,7 @@ import { aiService } from '../services/ai-service.js';
 import { Button, LogoLoader } from './common.jsx';
 import { AISettingsModal } from './dialogs/AISettingsModal.jsx';
 import { SemanticDiffModal } from './dialogs/SemanticDiffModal.jsx';
+import { fileProcessor } from '../utils/file-processor.js';
 
 export const AICopilot = ({ 
     isOpen, 
@@ -20,6 +21,11 @@ export const AICopilot = ({
     const [showHistory, setShowHistory] = useState(false);
     const [currentConversationId, setCurrentConversationId] = useState(null);
     const [conversations, setConversations] = useState({});
+    
+    // File Upload State
+    const [uploadedFiles, setUploadedFiles] = useState([]);
+    const [isProcessingFile, setIsProcessingFile] = useState(false);
+    const [fileError, setFileError] = useState('');
     
     // Diff State
     const [showDiffModal, setShowDiffModal] = useState(false);
@@ -93,7 +99,36 @@ export const AICopilot = ({
         const textToSend = textOverride || input;
         if (!textToSend.trim() || !currentConversationId) return;
 
-        const userMessage = { role: 'user', content: textToSend };
+        // Prepare context with uploaded files
+        let fullContext = contextCode || '';
+        let fileContext = '';
+        
+        if (uploadedFiles.length > 0) {
+            fileContext = '\n\n--- UPLOADED FILES ---\n';
+            uploadedFiles.forEach((file, index) => {
+                fileContext += `\n📁 File ${index + 1}: ${file.filename} (${file.type.toUpperCase()})\n`;
+                if (file.isBase64) {
+                    fileContext += `📄 Content: [Visual Data Sent Separately]\n`;
+                } else {
+                    fileContext += `📄 Content:\n${file.text}\n`;
+                }
+                fileContext += '---\n';
+            });
+            
+            // Add file context to the user message
+            fullContext = `${contextCode || ''}${fileContext}`;
+        }
+
+        const userMessage = { 
+            role: 'user', 
+            content: textToSend,
+            // Store file metadata for reference
+            files: uploadedFiles.length > 0 ? uploadedFiles.map(f => ({
+                filename: f.filename,
+                type: f.type,
+                size: f.size
+            })) : undefined
+        };
         
         // Update UI immediately
         setMessages(prev => [...prev, userMessage]);
@@ -106,13 +141,17 @@ export const AICopilot = ({
         setConversations(aiService.getConversations());
 
         try {
-            // Use chat method for history awareness
-            // Filter history to exclude the just-added message (already in state) 
-            // and system messages if we handled them differently. 
-            // For now, pass previous messages as history.
-            const history = messages.filter(m => m.role !== 'system'); // Exclude system greeting if any
+            // Use chat method with file context
+            const history = messages.filter(m => m.role !== 'system');
             
-            const responseText = await aiService.chat(userMessage.content, history, contextCode, diagramType);
+            // Pass the enhanced context with file content
+            const responseText = await aiService.chatWithFiles(
+                userMessage.content, 
+                history, 
+                fullContext, 
+                diagramType,
+                uploadedFiles
+            );
 
             const botMessage = { role: 'assistant', content: responseText };
             setMessages(prev => [...prev, botMessage]);
@@ -202,6 +241,85 @@ export const AICopilot = ({
             e.preventDefault();
             handleSend();
         }
+    };
+
+    // File Upload Handlers
+    const handleFileUpload = async (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+
+        setFileError('');
+        setIsProcessingFile(true);
+
+        try {
+            // Check if user is uploading an image but using a text-only model
+            const hasImages = files.some(f => f.type.startsWith('image/'));
+            if (hasImages) {
+                const settings = aiService.getSettings();
+                if (!aiService.isModelMultimodal(settings.model)) {
+                    setFileError(
+                        "The current model (" + settings.model + ") does not support image uploads directly. Please switch to a multimodal model (like gemini-1.5-flash) in Settings to process images."
+                    );
+                    setIsProcessingFile(false);
+                    event.target.value = '';
+                    return;
+                }
+            }
+
+            const processedFiles = [];
+            
+            for (const file of files) {
+                // Validate file
+                const validationErrors = fileProcessor.validateFile(file);
+                if (validationErrors.length > 0) {
+                    setFileError(validationErrors[0]);
+                    continue;
+                }
+
+                // Process file
+                const result = await fileProcessor.processFile(file);
+                processedFiles.push(result);
+            }
+
+            if (processedFiles.length > 0) {
+                setUploadedFiles(prev => [...prev, ...processedFiles]);
+                
+                // Auto-generate a message with file context
+                const fileSummary = processedFiles.map(f => 
+                    `${f.filename} (${f.type.toUpperCase()}, ${fileProcessor.formatFileSize(f.size)})`
+                ).join(', ');
+                
+                const autoMessage = `I've uploaded ${processedFiles.length} file(s): ${fileSummary}. Please analyze the content and help me create a diagram based on this information.`;
+                
+                // Add system message showing file upload
+                const systemMessage = {
+                    role: 'system',
+                    content: `📁 Files uploaded: ${processedFiles.map(f => f.filename).join(', ')}`
+                };
+                setMessages(prev => [...prev, systemMessage]);
+                
+                // Auto-send the message
+                setTimeout(() => {
+                    handleSend(autoMessage);
+                }, 500);
+            }
+        } catch (error) {
+            setFileError(`Error processing file: ${error.message}`);
+            console.error('File processing error:', error);
+        } finally {
+            setIsProcessingFile(false);
+            // Reset file input
+            event.target.value = '';
+        }
+    };
+
+    const removeFile = (index) => {
+        setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const clearAllFiles = () => {
+        setUploadedFiles([]);
+        setFileError('');
     };
 
     const [isInputExpanded, setIsInputExpanded] = useState(false);
@@ -443,6 +561,74 @@ export const AICopilot = ({
 
             {/* Input Area */}
             <div className="p-4 bg-white border-t border-slate-200 shrink-0">
+                {/* File Upload Section */}
+                {uploadedFiles.length > 0 && (
+                    <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-xs font-semibold text-blue-800 flex items-center gap-2">
+                                <i className="fas fa-file-alt"></i>
+                                Uploaded Files ({uploadedFiles.length})
+                            </h4>
+                            <button
+                                onClick={clearAllFiles}
+                                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                            >
+                                <i className="fas fa-times"></i> Clear All
+                            </button>
+                        </div>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                            {uploadedFiles.map((file, index) => (
+                                <div key={index} className="flex items-center justify-between bg-white p-2 rounded border text-xs">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                        <i className={`fas ${file.type === 'pdf' ? 'fa-file-pdf text-red-500' : 'fa-file-image text-green-500'}`}></i>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="font-medium text-slate-700 truncate">{file.filename}</div>
+                                            <div className="text-slate-500">
+                                                {file.type.toUpperCase()} • {fileProcessor.formatFileSize(file.size)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => removeFile(index)}
+                                        className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-red-50"
+                                        title="Remove file"
+                                    >
+                                        <i className="fas fa-times text-xs"></i>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* File Error Message */}
+                {fileError && (
+                    <div className="mb-3 p-2 bg-red-50 text-red-700 text-xs rounded border border-red-200 flex items-center gap-2">
+                        <i className="fas fa-exclamation-circle"></i>
+                        {fileError}
+                    </div>
+                )}
+
+                {/* File Upload Button */}
+                <div className="mb-3">
+                    <label className="flex items-center justify-center w-full px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-dashed border-slate-300 rounded-lg cursor-pointer transition-colors text-sm text-slate-600">
+                        <i className="fas fa-cloud-upload-alt mr-2"></i>
+                        {isProcessingFile ? 'Processing...' : 'Upload PDF or Image'}
+                        <input
+                            type="file"
+                            multiple
+                            accept=".pdf,image/*"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                            disabled={isProcessingFile}
+                        />
+                    </label>
+                    <div className="text-[10px] text-slate-400 mt-1 text-center">
+                        Supports PDF, PNG, JPG, JPEG, GIF, WebP (max 10MB each)
+                    </div>
+                </div>
+
+                {/* Text Input */}
                 <div className="relative">
                     <button
                         onClick={() => setIsInputExpanded(!isInputExpanded)}

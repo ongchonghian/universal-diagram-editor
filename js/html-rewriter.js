@@ -108,30 +108,34 @@ function buildReplacementPatterns(lib, currentVersion, newVersion) {
     
     switch (lib.cdn) {
         case 'unpkg':
-            // Pattern: package@version/ or package@version?
             patterns.push({
-                searchPattern: `(${packageName}@)${escapedCurrent}([/?'"\`])`,
+                searchPattern: `(unpkg\\.com/${packageName}@)${escapedCurrent}([/?'"\`])`,
                 replacement: `$1${newVersion}$2`,
                 description: `unpkg ${lib.package}`
             });
             break;
             
         case 'cdnjs':
-            // Pattern: /package/version/
             patterns.push({
-                searchPattern: `(/${lib.package}/)${escapedCurrent}(/)`,
+                searchPattern: `(cdnjs\\.cloudflare\\.com/ajax/libs/${packageName}/)${escapedCurrent}(/)`,
                 replacement: `$1${newVersion}$2`,
                 description: `cdnjs ${lib.package}`
             });
             break;
             
         case 'esm.sh':
-        case 'jsr':
-            // Pattern: package@version? or package@version' or package@version"
             patterns.push({
-                searchPattern: `(${packageName}@)${escapedCurrent}([?'"\`])`,
+                searchPattern: `(esm\\.sh/${packageName}@)${escapedCurrent}([?'"\`])`,
                 replacement: `$1${newVersion}$2`,
                 description: `esm.sh ${lib.package}`
+            });
+            break;
+
+        case 'jsr':
+            patterns.push({
+                searchPattern: `(esm\\.sh/jsr/${packageName}@)${escapedCurrent}([?'"\`])`,
+                replacement: `$1${newVersion}$2`,
+                description: `esm.sh/jsr ${lib.package}`
             });
             break;
     }

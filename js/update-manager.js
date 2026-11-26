@@ -74,9 +74,9 @@ class UpdateManager {
             // Check for updates using actual versions from HTML
             const results = await checkAllUpdates({ actualVersions });
             
-            // Filter to only show libraries with updates
+            // Filter to only show libraries with updates that are actually present in the HTML
             this.availableUpdates = results
-                .filter(r => r.hasUpdate)
+                .filter(r => r.hasUpdate && actualVersions[r.id] !== undefined)
                 .map(r => {
                     const ignored = this.isIgnored(r.id, r.latest);
                     return {
@@ -264,6 +264,27 @@ class UpdateManager {
         this.notify();
 
         return { success: true, changes, summary };
+    }
+
+    /**
+     * Update all specified libraries (selects them and applies updates)
+     * @param {Array} updates - Array of update objects with id or key
+     */
+    async updateAll(updates) {
+        if (!updates || updates.length === 0) {
+            throw new Error('No updates to apply');
+        }
+
+        // Mark all specified updates as selected
+        updates.forEach(u => {
+            const id = u.id || u.key;
+            const update = this.availableUpdates.find(au => au.id === id);
+            if (update) {
+                update.selected = true;
+            }
+        });
+
+        return this.applyUpdates();
     }
 
     /**

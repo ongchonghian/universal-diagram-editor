@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">import { injectIntoGlobalHook } from "/@react-refresh";
+injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;</script>
+
+    <script type="module" src="/@vite/client"></script>
+
+    <script type="module" src="/index.html?html-proxy&index=0.js"></script>
+
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Universal Diagram Editor</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="/favicon/site.webmanifest">
+    
+    <!-- External Styles -->
+    <link href="https://unpkg.com/@xyflow/react@12.12.0/dist/style.css" rel="stylesheet">
+    <!-- Removed GraphicWalker CSS (imported via npm/css if needed, or handled by styles) -->
+    <!-- Removed styles.css link as it is imported in JS now -->
+    
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.2.0/pako.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/all.min.css">
+    <!-- Removed Tailwind CDN -->
+
+    <!-- Monaco Editor Loader (AMD) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.56.0/min/vs/loader.min.js"></script>
+  </head>
+  <body class="h-screen flex flex-col text-sm">
+    <div id="root" class="h-full"></div>
+    
+    <!-- External Libraries initialization -->
+    <script type="module" src="/index.html?html-proxy&index=0.js"></script>
+
+    <!-- Global Error Diagnostics (legacy load) -->
+    <!-- Global Error Diagnostics (legacy load - removed) -->
+    
+    <!-- Entry Point -->
+    <script type="module" src="/js/index.jsx?t=1785738472890"></script>
+  </body>
+</html>

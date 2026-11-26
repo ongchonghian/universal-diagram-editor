@@ -130,6 +130,20 @@ const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, t
         // Get Monaco instance
         getMonaco: () => {
             return window.monaco;
+        },
+        // Undo last edit
+        undo: () => {
+            if (editorRef.current) {
+                editorRef.current.trigger('keyboard', 'undo', null);
+                editorRef.current.focus();
+            }
+        },
+        // Redo last undone edit
+        redo: () => {
+            if (editorRef.current) {
+                editorRef.current.trigger('keyboard', 'redo', null);
+                editorRef.current.focus();
+            }
         }
     }));
 
@@ -212,9 +226,24 @@ const MonacoWrapper = forwardRef(({ value, onChange, language, onCursorChange, t
     }, []);
 
     // Sync value when editor is ready or value changes externally
+    // Uses executeEdits instead of setValue to preserve undo/redo history
     useEffect(() => {
-        if (editorReady && editorRef.current && value !== editorRef.current.getValue()) {
-            editorRef.current.setValue(value);
+        if (editorReady && editorRef.current && window.monaco) {
+            const currentValue = editorRef.current.getValue();
+            if (value !== currentValue) {
+                const model = editorRef.current.getModel();
+                const fullRange = model.getFullModelRange();
+                
+                // Use executeEdits to preserve undo stack
+                editorRef.current.executeEdits('external-sync', [{
+                    range: fullRange,
+                    text: value,
+                    forceMoveMarkers: true
+                }]);
+                
+                // Push an undo stop so this change is a single undoable unit
+                editorRef.current.pushUndoStop();
+            }
         }
     }, [value, editorReady]);
 

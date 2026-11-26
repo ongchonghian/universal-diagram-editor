@@ -1,8 +1,9 @@
 
-import { KROKI_BASE_URL, DIAGRAM_TYPES } from '../config.js';
+import { KROKI_BASE_URL, PLANTUML_BASE_URL, DIAGRAM_TYPES } from '../config.js';
 import { parseError } from '../error-diagnostics/index.js';
 import pako from 'pako';
 import mermaid from 'mermaid';
+import plantumlEncoder from 'plantuml-encoder';
 
 /**
  * Unified Renderer Adapter
@@ -11,6 +12,9 @@ import mermaid from 'mermaid';
 class RendererAdapter {
     constructor() {
         this.baseUrl = KROKI_BASE_URL;
+        this.plantumlBaseUrl = PLANTUML_BASE_URL;
+        this.plantumlWasmPromise = null;
+        this.plantumlWasmModule = null;
     }
 
     /**
@@ -42,52 +46,19 @@ class RendererAdapter {
              // Visual C4 is handled client-side completely
              return { svg: null, url: '', error: null, skipped: true };
         }
-        if (type === 'likec4') {
-            return { svg: null, url: '', error: null, skipped: true };
-        }
-
         // --- MERMAID CLIENT-SIDE RENDERING ---
         if (type === 'mermaid') {
-            const id = `mermaid-${Date.now()}`;
-            try {
-                // Initialize if needed (usually doing it once is enough, but safe to call)
-                // We use lazy initialization/ensure init here
-                mermaid.initialize({ 
-                    startOnLoad: false,
-                    theme: 'default', // or 'dark' based on user preference if we had access
-                    securityLevel: 'loose',
-                });
+            return this.renderMermaid(content);
+        }
 
-                // mermaid.render returns strict object { svg }
-                const { svg } = await mermaid.render(id, content);
-                
-                // For CSR, we don't have a URL, but we can generate a blob URL if needed for consistent API
-                // For now, we'll leave URL empty or use a placeholder to indicate local render
-                return { svg, url: '', error: null };
-            } catch (err) {
-                // Mermaid errors are often objects or strings
-                // We need to parse them to extract line numbers if possible
-                
-                // Clean up any potential DOM elements left by mermaid error in some versions
-                const errorElement = document.querySelector(`#d${id}`);
-                if (errorElement) errorElement.remove();
+        // --- PLANTUML RENDERING (Standard Remote) ---
+        if (type === 'plantuml') {
+             // Standard Remote (plantuml.com)
+             return this.renderPlantUmlRemote(content);
+        }
 
-                const errorMessage = err.message || err.str || String(err);
-                
-                // Parse mermaid error for line number
-                // Format often includes "Parse error on line X"
-                const errorInfo = this.parseMermaidError(errorMessage, content);
-                
-                return { 
-                    svg: null, 
-                    url: '', 
-                    error: { 
-                        message: errorInfo.message, 
-                        info: errorInfo 
-                    },
-                    errorLine: errorInfo.line
-                };
-            }
+        if (type === 'likec4') {
+            return { svg: null, url: '', error: null, skipped: true };
         }
 
         const encoded = this.encodeKroki(content);
@@ -170,6 +141,34 @@ class RendererAdapter {
             console.error("Compression error:", err);
             return null;
         }
+    }
+
+    /**
+     * Generate a Kroki rendering URL for any diagram type
+     * @param {string} content - The diagram source code
+     * @param {string} type - The diagram type
+     * @param {string} outputFormat - The output format ('svg', 'png', etc.)
+     * @returns {string}
+     */
+    getKrokiUrl(content, type, outputFormat = 'svg') {
+        if (!content || !content.trim()) return '';
+        
+        let krokiType = type;
+        if (type === 'c4') {
+            const isC4PlantUML = content.includes('@startuml') || content.includes('!include');
+            if (isC4PlantUML) {
+                krokiType = 'c4plantuml';
+            } else {
+                return '';
+            }
+        } else if (type === 'likec4') {
+            return '';
+        }
+        
+        const encoded = this.encodeKroki(content);
+        if (!encoded) return '';
+        
+        return `${this.baseUrl}/${krokiType}/${outputFormat}/${encoded}`;
     }
 
     /**
@@ -289,33 +288,208 @@ class RendererAdapter {
         URL.revokeObjectURL(url);
     }
 
+    async triggerRemoteDownload(url, filename) {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        this.downloadBlob(blob, filename);
+    }
+
+    downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     /**
      * Download PNG from SVG content
      */
-    downloadPng(svgContent, diagramType) {
+    async downloadPng(svgContent, diagramType, scale = 2, content = null, isC4PlantUML = false) {
+        if (!svgContent && !content) return;
+
+        // Try direct API download for supported remote types if content is available
+        if (content && diagramType !== 'mermaid' && diagramType !== 'likec4') {
+            try {
+                if (diagramType === 'plantuml') {
+                    const encoded = plantumlEncoder.encode(content);
+                    const url = `${this.plantumlBaseUrl}/png/${encoded}`;
+                    await this.triggerRemoteDownload(url, `diagram-${diagramType}.png`);
+                    return;
+                }
+
+                const encoded = this.encodeKroki(content);
+                if (encoded) {
+                    let krokiType = diagramType;
+                    if (diagramType === 'c4' && isC4PlantUML) {
+                        krokiType = 'c4plantuml';
+                    }
+                    const url = `${this.baseUrl}/${krokiType}/png/${encoded}`;
+                    
+                    if (url.length <= 4000) {
+                        await this.triggerRemoteDownload(url, `diagram-${diagramType}.png`);
+                        return;
+                    } else {
+                        const response = await fetch(`${this.baseUrl}/${krokiType}/png`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: content
+                        });
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        const blob = await response.blob();
+                        this.downloadBlob(blob, `diagram-${diagramType}.png`);
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to download PNG via API directly, falling back to canvas computation", err);
+            }
+        }
+
         if (!svgContent) return;
+
+        // 1. Create a container to parse the SVG to identify dimensions
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgContent, "image/svg+xml");
+        const svgElement = doc.documentElement;
+        
+        if (!svgElement) return;
+
+        // 2. Get original dimensions
+        let width = parseFloat(svgElement.getAttribute('width'));
+        let height = parseFloat(svgElement.getAttribute('height'));
+        
+        // If width/height missing, try viewBox
+        if (!width || !height) {
+            const viewBox = svgElement.getAttribute('viewBox');
+            if (viewBox) {
+                const parts = viewBox.split(/\s+|,/);
+                if (parts.length === 4) {
+                    width = parseFloat(parts[2]);
+                    height = parseFloat(parts[3]);
+                }
+            }
+        }
+        
+        // Fallback or default
+        width = width || 800;
+        height = height || 600;
+
+        // 3. Set scaled dimensions on the SVG element itself
+        // This is crucial: The browser rasters the SVG at these dimensions
+        const scaledWidth = width * scale;
+        const scaledHeight = height * scale;
+        
+        svgElement.setAttribute('width', `${scaledWidth}px`);
+        svgElement.setAttribute('height', `${scaledHeight}px`);
+        
+        // Serialise back to string
+        const serializer = new XMLSerializer();
+        const newSvgContent = serializer.serializeToString(doc);
+
         const img = new Image();
-        const svgBlob = new Blob([svgContent], { type: 'image/svg+xml' });
+        const svgBlob = new Blob([newSvgContent], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(svgBlob);
+        
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = img.width * 2; // 2x for better quality
-            canvas.height = img.height * 2;
+            // Canvas matches the scaled size
+            canvas.width = scaledWidth;
+            canvas.height = scaledHeight;
             const ctx = canvas.getContext('2d');
+            
+            // Standard white background
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob((blob) => {
-                const pngUrl = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = pngUrl;
-                a.download = `diagram-${diagramType}.png`;
-                a.click();
-                URL.revokeObjectURL(pngUrl);
-            }, 'image/png');
+            
+            // Draw image at full canvas size
+            // Since the SVG image itself now declares itself as scaledWidth x scaledHeight, 
+            // the browser rasterizer will run at that resolution.
+            ctx.drawImage(img, 0, 0);
+
+            try {
+                canvas.toBlob((blob) => {
+                    const pngUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = pngUrl;
+                    a.download = `diagram-${diagramType}.png`;
+                    a.click();
+                    URL.revokeObjectURL(pngUrl);
+                }, 'image/png');
+            } catch (e) {
+                console.error("Canvas output failed, likely a tainted canvas due to external images:", e);
+                alert("Cannot export as PNG because the diagram contains external resources that prevent it from being exported securely. Try exporting as SVG instead, or use a remote renderer.");
+            }
             URL.revokeObjectURL(url);
         };
         img.src = url;
+    }
+    async renderMermaid(content) {
+        const id = `mermaid-${Date.now()}`;
+        try {
+            mermaid.initialize({ 
+                startOnLoad: false,
+                theme: 'default',
+                securityLevel: 'loose',
+            });
+
+            const { svg } = await mermaid.render(id, content);
+            return { svg, url: '', error: null };
+        } catch (err) {
+            const errorElement = document.querySelector(`#d${id}`);
+            if (errorElement) errorElement.remove();
+
+            const errorMessage = err.message || err.str || String(err);
+            const errorInfo = this.parseMermaidError(errorMessage, content);
+            
+            return { 
+                svg: null, 
+                url: '', 
+                error: { message: errorInfo.message, info: errorInfo },
+                errorLine: errorInfo.line
+            };
+        }
+    }
+
+
+
+    async renderPlantUmlRemote(content) {
+        try {
+            const encoded = plantumlEncoder.encode(content);
+            const url = `${this.plantumlBaseUrl}/svg/${encoded}`;
+            
+            const response = await fetch(url);
+            
+            // enhanced error handling using headers
+            if (!response.ok) {
+                const errorHeader = response.headers.get('X-PlantUML-Diagram-Error');
+                const errorLineHeader = response.headers.get('X-PlantUML-Diagram-Error-Line');
+                
+                if (errorHeader) {
+                    throw new Error(`PlantUML Error: ${errorHeader} (Line: ${errorLineHeader})`);
+                }
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const svg = await response.text();
+            return { svg, url, error: null };
+        } catch (err) {
+            // Try standard error parsing
+            const errorInfo = parseError(err.message, 'plantuml', content) || this.parseErrorInfoFallback(err.message);
+            const line = errorInfo?.line || this.extractErrorLine(err.message);
+            
+            return { 
+                svg: null, 
+                url: '', 
+                error: { 
+                    message: err.message, 
+                    info: errorInfo 
+                },
+                errorLine: line
+            };
+        }
     }
 }
 

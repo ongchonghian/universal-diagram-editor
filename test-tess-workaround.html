@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<body>
+<!-- Simulate Monaco's AMD loader snippet -->
+<script>
+    window.define = function(deps, factory) {
+        console.log("Called anonymous define!", deps);
+        if (typeof factory !== 'function') factory = deps;
+        if (typeof factory === 'function') factory();
+    };
+    window.define.amd = true;
+</script>
+<script>
+    async function test() {
+        const url = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        const response = await fetch(url);
+        const scriptText = await response.text();
+        
+        const script = document.createElement('script');
+        script.text = `
+            (function() {
+                var tempAmd = typeof define === 'function' ? define.amd : null;
+                if (tempAmd) define.amd = null;
+                
+                ${scriptText}
+                
+                if (tempAmd) define.amd = tempAmd;
+            })();
+        `;
+        document.head.appendChild(script);
+        console.log("Tesseract is:", typeof window.Tesseract);
+    }
+    test();
+</script>
+</body>
+</html>

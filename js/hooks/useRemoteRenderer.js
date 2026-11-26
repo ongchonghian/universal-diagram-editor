@@ -3,6 +3,7 @@ import { rendererAdapter } from '../services/RendererAdapter.js';
 
 export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUML, bpmnMissingDI) => {
     const [url, setUrl] = useState('');
+    const [krokiUrl, setKrokiUrl] = useState('');
     const [stats, setStats] = useState({ length: 0, method: 'GET' });
     const [loading, setLoading] = useState(false);
     const [previewError, setPreviewError] = useState(null);
@@ -13,6 +14,7 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
     useEffect(() => {
         if (!textInput.trim()) {
             setUrl('');
+            setKrokiUrl('');
             setPreviewImage(null);
             setSvgContent(null);
             setPreviewError(null);
@@ -36,6 +38,7 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
              if (result.skipped) {
                  setSvgContent(null);
                  setPreviewImage(null);
+                 setKrokiUrl('');
                  setLoading(false);
                  return;
              }
@@ -44,6 +47,9 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
                  setPreviewError(result.error.message);
                  setSvgContent(null);
                  setPreviewImage(null);
+                 
+                 const kUrl = rendererAdapter.getKrokiUrl(textInput, diagramType, 'svg');
+                 setKrokiUrl(kUrl);
                  
                  const line = result.errorLine;
                  const errorInfo = result.error.info;
@@ -71,9 +77,16 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
                 }
              } else {
                  setSvgContent(result.svg);
-                 setPreviewImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(result.svg)}`);
-                 setUrl(result.url);
-                 setStats({ length: textInput.length, method: result.url.length > 4000 ? 'POST' : 'GET' });
+                 const kUrl = rendererAdapter.getKrokiUrl(textInput, diagramType, 'svg');
+                 setKrokiUrl(kUrl);
+                 if (result.pngDataUrl) {
+                     setPreviewImage(result.pngDataUrl);
+                     setStats({ length: textInput.length, method: 'WASM' });
+                 } else {
+                     setPreviewImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(result.svg)}`);
+                     setUrl(result.url);
+                     setStats({ length: textInput.length, method: result.url.length > 4000 ? 'POST' : 'GET' });
+                 }
              }
              setLoading(false);
         };
@@ -86,12 +99,13 @@ export const useRemoteRenderer = (textInput, diagramType, editorRef, isC4PlantUM
         rendererAdapter.downloadSvg(svgContent, diagramType);
     };
 
-    const handleDownloadPng = () => {
-        rendererAdapter.downloadPng(svgContent, diagramType);
+    const handleDownloadPng = (scale = 2) => {
+        rendererAdapter.downloadPng(svgContent, diagramType, scale, textInput, isC4PlantUML);
     };
 
     return {
         url,
+        krokiUrl,
         stats,
         loading,
         previewError, setPreviewError,

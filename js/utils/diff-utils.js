@@ -1,11 +1,6 @@
 
 /* eslint-disable no-unused-vars */
-import * as BpmnDifferPkg from 'bpmn-js-differ';
-// Safe extraction of diff function due to CJS/ESM interop
-const diff = BpmnDifferPkg.diff 
-          || (BpmnDifferPkg.default && BpmnDifferPkg.default.diff) 
-          || BpmnDifferPkg.default 
-          || BpmnDifferPkg;
+import { diff } from 'bpmn-js-differ';
 
 export const diffUtils = {
     async generateSemanticDiff(oldCode, newCode, diagramType) {
@@ -47,7 +42,7 @@ export const diffUtils = {
     async _parseBpmn(xml) {
         // Dynamic import to avoid top-level CJS instantiation issues
         const moddlePkg = await import('bpmn-moddle');
-        const BpmnModdle = moddlePkg.default || moddlePkg;
+        const BpmnModdle = moddlePkg.default || moddlePkg.BpmnModdle || moddlePkg;
         const moddle = new BpmnModdle();
         
         const { rootElement } = await moddle.fromXML(xml);

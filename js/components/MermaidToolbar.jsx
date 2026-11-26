@@ -1,7 +1,7 @@
-import React from 'react';
 import { MERMAID_SNIPPETS } from '../config.js';
+import { parseGantt, generateCsv, generateSuperPa, downloadFile } from '../utils/gantt-utils.js';
 
-export const MermaidToolbar = ({ detectedModel, contextModel, onInsert }) => {
+export const MermaidToolbar = ({ detectedModel, contextModel, onInsert, code }) => {
     // Determine context based on detected model
     // Use contextModel if available (from context-detection.js) 
 
@@ -77,6 +77,43 @@ export const MermaidToolbar = ({ detectedModel, contextModel, onInsert }) => {
                     <span className="text-[10px] text-slate-400 group-hover:text-indigo-500 leading-none truncate w-full text-center px-1">{snippet.label}</span>
                 </button>
             ))}
+
+            {context === 'gantt' && (
+                <>
+                    <div className="w-px h-8 bg-slate-300 mx-1 self-center"></div>
+                    <button
+                        onClick={() => {
+                            try {
+                                const tasks = parseGantt(code);
+                                const csv = generateCsv(tasks);
+                                downloadFile(csv, 'gantt.csv', 'text/csv');
+                            } catch (e) { console.error(e); alert('Export failed'); }
+                        }}
+                        className="flex flex-col items-center justify-center w-12 h-12 bg-white border border-slate-200 rounded hover:bg-emerald-50 hover:border-emerald-200 transition-all flex-shrink-0 group"
+                        title="Export CSV"
+                    >
+                        <i className="fas fa-file-csv text-slate-500 group-hover:text-emerald-600 mb-1 text-sm"></i>
+                        <span className="text-[10px] text-slate-400 group-hover:text-emerald-500 leading-none truncate w-full text-center px-1">CSV</span>
+                    </button>
+                    <button
+                        onClick={() => {
+                            try {
+                                const tasks = parseGantt(code);
+                                const titleMatch = code?.match(/title\s+(.+)$/m);
+                                const title = titleMatch ? titleMatch[1].trim() : 'Project Plan';
+                                const md = generateSuperPa(tasks, title);
+                                const filename = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+                                downloadFile(md, filename, 'text/markdown');
+                            } catch (e) { console.error(e); alert('Export failed'); }
+                        }}
+                        className="flex flex-col items-center justify-center w-12 h-12 bg-white border border-slate-200 rounded hover:bg-purple-50 hover:border-purple-200 transition-all flex-shrink-0 group"
+                        title="Export SuperPA"
+                    >
+                        <i className="fas fa-clipboard-list text-slate-500 group-hover:text-purple-600 mb-1 text-sm"></i>
+                        <span className="text-[10px] text-slate-400 group-hover:text-purple-500 leading-none truncate w-full text-center px-1">SuperPA</span>
+                    </button>
+                </>
+            )}
         </div>
     );
 };

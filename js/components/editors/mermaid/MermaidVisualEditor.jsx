@@ -9,6 +9,7 @@ import {
     MermaidMindmapEditor 
 } from './MermaidEditors.jsx';
 import { EditorToolbar } from '../common/EditorToolbar.jsx';
+import { parseGantt, generateCsv, generateSuperPa, downloadFile } from '../../../utils/gantt-utils.js';
 
 // Main Mermaid Visual Editor Orchestrator
 export const MermaidVisualEditor = ({ ast, code, astLoaded, detectedModel, onChange, onCodeChange, onError }) => {
@@ -66,12 +67,57 @@ export const MermaidVisualEditor = ({ ast, code, astLoaded, detectedModel, onCha
         );
     };
 
+    const getToolbarActions = () => {
+        if (detectedModel && detectedModel.includes('Gantt')) {
+            return [
+                {
+                    label: 'CSV',
+                    icon: 'fas fa-file-csv',
+                    title: 'Export as CSV',
+                    onClick: () => {
+                        try {
+                            const tasks = parseGantt(code);
+                            const csv = generateCsv(tasks);
+                            const filename = 'gantt-export.csv';
+                            downloadFile(csv, filename, 'text/csv');
+                        } catch (e) {
+                            if (onError) onError('Failed to export CSV: ' + e.message);
+                            console.error(e);
+                        }
+                    }
+                },
+                {
+                    label: 'SuperPA',
+                    icon: 'fas fa-clipboard-list',
+                    title: 'Export as SuperPA Markdown',
+                    onClick: () => {
+                         try {
+                            const tasks = parseGantt(code);
+                            // Extract title from code if possible, or use generic
+                            const titleMatch = code.match(/title\s+(.+)$/m);
+                            const title = titleMatch ? titleMatch[1].trim() : 'Project Plan';
+                            
+                            const md = generateSuperPa(tasks, title);
+                            const filename = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+                            downloadFile(md, filename, 'text/markdown');
+                        } catch (e) {
+                            if (onError) onError('Failed to export SuperPA: ' + e.message);
+                            console.error(e);
+                        }
+                    }
+                }
+            ];
+        }
+        return [];
+    };
+
     return (
         <div className="w-full h-full bg-white overflow-auto relative">
             <EditorToolbar
                 title={`${detectedModel || 'Mermaid'} Editor`}
                 subTitle="Visual Mode (Beta)"
                 className="sticky top-0 z-10"
+                actions={getToolbarActions()}
             />
             {renderSubEditor()}
         </div>

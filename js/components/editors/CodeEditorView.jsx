@@ -81,6 +81,40 @@ export const CodeEditorView = ({
         }
     }, []);
 
+    const [editorWidth, setEditorWidth] = useState(50); // percentage
+    const splitPaneRef = useRef(null);
+
+    // Resize handler
+    const handleResizeMouseDown = useCallback((e) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startWidth = editorWidth;
+        const containerWidth = splitPaneRef.current?.getBoundingClientRect().width || window.innerWidth;
+
+        const handleMouseMove = (moveEvent) => {
+            const deltaX = moveEvent.clientX - startX;
+            const deltaPercent = (deltaX / containerWidth) * 100;
+            const newWidth = Math.min(Math.max(20, startWidth + deltaPercent), 80); // Min 20%, Max 80%
+            setEditorWidth(newWidth);
+            
+            // Trigger Monaco layout update
+            if (editorRef.current) {
+                // We might need to access the monaco instance directly or trigger a resize event
+                window.dispatchEvent(new Event('resize')); 
+            }
+        };
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            // Final layout update
+            window.dispatchEvent(new Event('resize'));
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }, [editorWidth]);
+
     // Handle Auto-Fix request
     const handleAutoFix = async () => {
         if (!previewError || !textInput) return;
@@ -104,9 +138,12 @@ export const CodeEditorView = ({
     };
 
     return (
-        <div className="flex-1 flex transition-opacity duration-300 opacity-100 z-10 relative">
+        <div ref={splitPaneRef} className="flex-1 flex overflow-hidden transition-opacity duration-300 opacity-100 z-10 relative h-full">
             {/* Editor Panel */}
-            <div className="w-1/2 flex flex-col border-r border-slate-200 relative">
+            <div 
+                className="flex flex-col border-r border-slate-200 relative h-full" 
+                style={{ width: `${editorWidth}%` }}
+            >
                 {!readOnly && diagramType === 'plantuml' && (
                     <PlantUmlToolbar 
                         detectedModel={detectedModel} 
@@ -120,26 +157,49 @@ export const CodeEditorView = ({
                         detectedModel={detectedModel} 
                         contextModel={contextModel} 
                         onInsert={(code) => handleSnippetInsert(code, 'cursor')} 
+                        code={textInput}
                     />
                 )}
-                <div className="flex-1">
-                    <MonacoWrapper
-                        ref={editorRef}
-                        value={textInput}
-                        onChange={setTextInput}
-                        language={
-                            diagramType === 'bpmn' ? 'xml' : 
-                            diagramType === 'vega' || diagramType === 'vegalite' || diagramType === 'excalidraw' ? 'json' :
-                            diagramType === 'c4' ? 'plantuml' : // default
-                            diagramType
-                        }
-                        onCursorChange={(line, col) => setCursorPos({ line, col })}
-                        readOnly={readOnly}
-                    />
+                <div className="flex-1 relative min-h-0">
+                    <div className="absolute inset-0">
+                        <MonacoWrapper
+                            ref={editorRef}
+                            value={textInput}
+                            onChange={setTextInput}
+                            language={
+                                diagramType === 'bpmn' ? 'xml' : 
+                                diagramType === 'vega' || diagramType === 'vegalite' || diagramType === 'excalidraw' ? 'json' :
+                                diagramType === 'c4' ? 'plantuml' : // default
+                                diagramType
+                            }
+                            onCursorChange={(line, col) => setCursorPos({ line, col })}
+                            readOnly={readOnly}
+                        />
+                    </div>
                 </div>
                 <div className="flex-none px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
                     <span>Ln {cursorPos.line}, Col {cursorPos.col}</span>
-                    <span>{stats.length} chars {stats.method && `| ${stats.method}`}</span>
+                    <div className="flex items-center gap-3">
+                        {!readOnly && (
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => editorRef.current?.undo()}
+                                    className="p-1 hover:bg-slate-200 rounded transition-colors" 
+                                    title="Undo (Ctrl+Z)"
+                                >
+                                    <i className="fas fa-undo text-slate-600"></i>
+                                </button>
+                                <button
+                                    onClick={() => editorRef.current?.redo()}
+                                    className="p-1 hover:bg-slate-200 rounded transition-colors" 
+                                    title="Redo (Cmd+Shift+Z)"
+                                >
+                                    <i className="fas fa-redo text-slate-600"></i>
+                                </button>
+                            </div>
+                        )}
+                        <span>{stats.length} chars {stats.method && `| ${stats.method}`}</span>
+                    </div>
                 </div>
                 
                 {/* Empty State Overlay */}
@@ -185,26 +245,38 @@ export const CodeEditorView = ({
                 )}
             </div>
 
+            {/* Resize Handle */}
+            <div
+                className="w-1 cursor-col-resize hover:bg-indigo-400 active:bg-indigo-600 transition-colors z-20 flex flex-col justify-center items-center group touch-none"
+                onMouseDown={handleResizeMouseDown}
+                style={{ backgroundColor: '#e2e8f0' }} // slate-200
+            >
+                 <div className="h-8 w-1 bg-slate-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </div>
+
             {/* Preview Panel */}
-            <PreviewPanel 
-                svgContent={svgContent}
-                previewImage={previewImage}
-                loading={loading}
-                error={previewError}
-                bpmnMissingDI={bpmnMissingDI}
-                errorLine={errorLine}
-                onElementClick={handleElementClick}
-                onInlineAutoLayout={onInlineAutoLayout}
-                autoLayoutProcessing={autoLayoutProcessing}
-                onScrollToLine={scrollToLine}
-                contextModel={contextModel}
-                onSnippetSelect={handleSnippetSelect}
-                onInsert={handleSnippetInsert}
-                onRenameRequest={handleRenameRequest}
-                onRetry={handleAutoFix}
-                isFixing={isFixing}
-                diagramType={diagramType}
-            />
+            <div style={{ width: `${100 - editorWidth}%` }} className="flex flex-col relative">
+                <PreviewPanel 
+                    svgContent={svgContent}
+                    previewImage={previewImage}
+                    loading={loading}
+                    error={previewError}
+                    bpmnMissingDI={bpmnMissingDI}
+                    errorLine={errorLine}
+                    onElementClick={handleElementClick}
+                    onInlineAutoLayout={onInlineAutoLayout}
+                    autoLayoutProcessing={autoLayoutProcessing}
+                    onScrollToLine={scrollToLine}
+                    contextModel={contextModel}
+                    onSnippetSelect={handleSnippetSelect}
+                    onInsert={handleSnippetInsert}
+                    onRenameRequest={handleRenameRequest}
+                    onRetry={handleAutoFix}
+                    isFixing={isFixing}
+                    diagramType={diagramType}
+                    code={textInput}
+                />
+            </div>
 
             <SnippetInsertionDialog 
                 isOpen={!!snippetDialogSnippet}

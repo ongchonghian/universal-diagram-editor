@@ -2,6 +2,8 @@
 // This file contains all diagram type definitions, snippets, and templates
 
 export const KROKI_BASE_URL = 'https://kroki.io';
+export const PLANTUML_BASE_URL = 'https://www.plantuml.com/plantuml';
+export const ENABLE_PLANTUML_WASM = false;
 
 export const DIAGRAM_TYPES = {
     bpmn: { 

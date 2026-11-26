@@ -196,10 +196,29 @@ export const applyBpmnAutoLayout = async (xml) => {
         const { layoutProcess } = await import('bpmn-auto-layout');
         // Dynamic import bpmn-moddle
         const BpmnModdleModule = await import('bpmn-moddle');
-        const BpmnModdle = BpmnModdleModule.default || BpmnModdleModule;
+        const BpmnModdle = BpmnModdleModule.default || BpmnModdleModule.BpmnModdle || BpmnModdleModule;
         
         const moddle = new BpmnModdle();
-        const { rootElement: definitions } = await moddle.fromXML(xml);
+        
+        let definitions;
+        try {
+            const { rootElement } = await moddle.fromXML(xml);
+            definitions = rootElement;
+        } catch (parseErr) {
+            console.warn("Auto-layout parse error, attempting repair...", parseErr);
+            const repaired = repairBpmnXml(xml);
+            if (repaired && repaired !== xml) {
+                try {
+                    const { rootElement } = await moddle.fromXML(repaired);
+                    definitions = rootElement;
+                    xml = repaired; // Update xml reference for simple layout fallback
+                } catch (e) {
+                    throw parseErr; // Throw original error if repair fails
+                }
+            } else {
+                throw parseErr;
+            }
+        }
         
         // Check if there is a collaboration
         const collaboration = definitions.rootElements?.find(e => e.$type === 'bpmn:Collaboration');
@@ -463,6 +482,45 @@ function getShiftedElements(moddle, planeElements, shiftX, shiftY, processRef) {
     }
     
     return newElements;
+}
+
+/**
+ * Simple heuristic repair for truncated BPMN XML
+ * @param {string} xml 
+ * @returns {string}
+ */
+function repairBpmnXml(xml) {
+    if (!xml) return xml;
+    let content = xml.trim();
+    
+    // Check for common truncation pattern: Missing closing </definitions>
+    // We look for the opening tag name (bpmn:definitions or definitions)
+    const rootMatch = content.match(/<(\w+:)?definitions/);
+    if (rootMatch) {
+        const prefix = rootMatch[1] || ''; // e.g. "bpmn:" or ""
+        const tagName = `${prefix}definitions`;
+        const closingTag = `</${tagName}>`;
+        
+        if (!content.endsWith(closingTag) && !content.endsWith(closingTag + '>')) {
+            console.log("Repairing BPMN: Appending missing closing tag", closingTag);
+            
+            // Handle partial cut-off
+            if (content.endsWith('</')) {
+                content += `${tagName}>`;
+            } else if (content.endsWith('<')) {
+                content += `/${tagName}>`;
+            } else {
+                // Also check if we are inside a process tag that needs closing
+                // Simple heuristic: if we see <process but no </process>
+                if (content.includes(`<${prefix}process`) && !content.includes(`</${prefix}process`)) {
+                    content += `\n</${prefix}process>`;
+                }
+                content += `\n${closingTag}`;
+            }
+        }
+    }
+    
+    return content;
 }
 
 

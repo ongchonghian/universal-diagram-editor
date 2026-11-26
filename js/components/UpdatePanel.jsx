@@ -70,10 +70,10 @@ export const UpdatePanel = ({ isOpen, onClose }) => {
                     {updates.length > 0 && (
                         <div className="bg-slate-50 rounded-lg p-3 max-h-60 overflow-y-auto mb-6 border border-slate-100">
                             {updates.map(lib => (
-                                <div key={lib.key} className="flex justify-between items-center py-2 border-b border-slate-200 last:border-0">
+                                <div key={lib.id} className="flex justify-between items-center py-2 border-b border-slate-200 last:border-0">
                                     <div>
                                         <p className="font-medium text-sm text-slate-800">{lib.name}</p>
-                                        <p className="text-xs text-slate-500">{lib.currentVersion} → <span className="text-green-600 font-bold">{lib.latestVersion}</span></p>
+                                        <p className="text-xs text-slate-500">{lib.current} → <span className="text-green-600 font-bold">{lib.latest}</span></p>
                                     </div>
                                     <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Update Available</span>
                                 </div>

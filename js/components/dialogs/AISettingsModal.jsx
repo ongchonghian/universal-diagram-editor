@@ -13,17 +13,23 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
         if (isOpen) {
             const currentSettings = aiService.getSettings();
             const knownModels = [
-                'gemini-3-pro-preview', 'gemini-3-flash-preview',
-                'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash',
-                'gemini-1.5-flash', 'gemini-1.5-pro', 
-                'gemini-1.5-flash-001', 'gemini-1.5-pro-001', 
+                'gemini-3.1-pro-preview', 'gemini-3.5-flash', 'gemini-3-flash-preview',
+                'gemini-3.1-flash-lite', 'gemini-2.5-pro', 'gemini-2.5-flash',
+                'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash',
+                'gemini-1.5-pro', 'gemini-1.5-flash-001', 'gemini-1.5-pro-001', 
                 'gemini-pro'
             ];
             const isCustom = !knownModels.includes(currentSettings.model);
             
+            // Auto-migrate retired models if selected
+            let selectedModel = currentSettings.model;
+            if (selectedModel === 'gemini-3-pro-preview') {
+                selectedModel = 'gemini-3.1-pro-preview';
+            }
+            
             setSettings({
                 ...currentSettings,
-                model: isCustom ? 'custom' : currentSettings.model,
+                model: isCustom ? 'custom' : selectedModel,
                 customModel: isCustom ? currentSettings.model : ''
             });
         }
@@ -91,16 +97,19 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                             onChange={handleChange}
                             className="w-full px-3 py-2 bg-white text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                         >
-                            <optgroup label="Next Gen (Preview)">
-                                <option value="gemini-3-pro-preview">Gemini 3 Pro Preview</option>
+                            <optgroup label="Gemini 3 Series">
+                                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
+                                <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
                                 <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
                             </optgroup>
-                            <optgroup label="2.x Series">
+                            <optgroup label="Gemini 2.5 Series">
                                 <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                                 <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
                                 <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                             </optgroup>
-                            <optgroup label="1.x Series">
+                            <optgroup label="Gemini 1.5 Series">
                                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                                 <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                                 <option value="gemini-1.5-flash-001">Gemini 1.5 Flash-001</option>
@@ -114,7 +123,7 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                         {settings.model === 'custom' && (
                             <input
                                 type="text"
-                                placeholder="Enter model name (e.g. gemini-3.0-flash)"
+                                placeholder="Enter model name (e.g. gemini-3.5-flash)"
                                 value={settings.customModel || ''}
                                 onChange={(e) => setSettings(prev => ({ ...prev, customModel: e.target.value }))}
                                 className="mt-2 w-full px-3 py-2 bg-slate-50 text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono"

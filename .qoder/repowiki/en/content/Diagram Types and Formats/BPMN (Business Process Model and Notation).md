@@ -364,6 +364,67 @@ Diagnostic workflow:
 - [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L314-L423)
 - [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L57-L66)
 
+## JSON AST Generation & Modification Pipeline
+To improve diagram generation accuracy and allow granular edits without full rewrites, the Universal Diagram Editor implements an AST-based intermediate representation for BPMN. Instead of writing raw XML, the AI Copilot (Syntext Smith) operates on a structured JSON process tree.
+
+### 1. The BPMN JSON AST Schema
+The process tree starts with a top-level `process` list. Gates and events nesting is structurally represented in JSON:
+- **Tasks**: `task`, `userTask`, `serviceTask`, `sendTask`, `receiveTask`, `businessRuleTask`, `manualTask`, `scriptTask`. All tasks require a `label`.
+- **Events**: `startEvent`, `endEvent`, `intermediateThrowEvent`, `intermediateCatchEvent`.
+- **Gateways**: `exclusiveGateway`, `inclusiveGateway`, `parallelGateway`. Each gateway houses a `branches` array representing conditional/parallel paths.
+
+Example AST structure:
+```json
+{
+  "process": [
+    { "type": "startEvent", "id": "start1" },
+    { "type": "userTask", "id": "task1", "label": "Review application" },
+    {
+      "type": "exclusiveGateway",
+      "id": "gateway1",
+      "label": "Is approved?",
+      "has_join": true,
+      "branches": [
+        {
+          "condition": "Approved",
+          "path": [{ "type": "sendTask", "id": "notifyApprove", "label": "Send offer" }]
+        },
+        {
+          "condition": "Rejected",
+          "path": [{ "type": "sendTask", "id": "notifyReject", "label": "Send rejection" }]
+        }
+      ]
+    },
+    { "type": "endEvent", "id": "end1" }
+  ]
+}
+```
+
+### 2. Compilation (JSON AST to XML)
+1. **Validation**: `BpmnValidator` (inside `bpmn-compiler.js`) enforces schema rules:
+   - Exactly one `startEvent` at the top level.
+   - At least one `endEvent`.
+   - Gateways are properly structured and balanced.
+   - No duplicate IDs.
+2. **Flattening**: `BpmnProcessTransformer` traverses the nested process tree, flattening it into list elements and generating target links (`bpmn:sequenceFlow` and join gateway nodes).
+3. **XML Generation**: `BpmnXmlGenerator` creates semantic, valid XML strings representing elements and sequence flows.
+4. **Auto-Layout**: The semantic XML is passed to `applyBpmnAutoLayout(xml)` (in `utils.js`), which dynamically calculates coordinate bounds and appends the standard `<bpmndi:BPMNDiagram>` details.
+
+### 3. Decompilation (XML to JSON AST)
+The `BpmnJsonGenerator` uses the client-side `DOMParser` to parse the BPMN XML definitions, extract process elements and flows, and reconstruct the nested process tree representation. This allows existing diagrams to be parsed back to JSON for editing.
+
+### 4. Agentic Loop for Modifications
+When the user requests changes to an existing BPMN diagram:
+1. The app decompiles the current XML into JSON AST.
+2. The AI Copilot is given the JSON AST and change request, and responds with fine-grained operations (e.g. `delete_element`, `add_element`, `move_element`, `update_element`, `redirect_branch`).
+3. `BpmnEditingService` executes the operations in memory step-by-step, validating structure at each iteration.
+4. Once completed, the final JSON is compiled back to XML and auto-layouted.
+
+**Reference files**:
+- [bpmn-compiler.js](file://js/services/bpmn-compiler.js) (Core compilation & decompilation logic)
+- [bpmn-editor-service.js](file://js/services/bpmn-editor-service.js) (Structural modification and loop agent)
+- [ai-service.js](file://js/services/ai-service.js) (AI Copilot prompt configuration and edit hook integration)
+
 ## Conclusion
 The Universal Diagram Generator provides robust BPMN support through a visual editor powered by bpmn-js and a code editor integrated with Monaco. The declarative configuration system, dynamic asset loading, and integrated diagnostics deliver a smooth authoring experience. By combining the visual editor for interactive design with the code editor for validation and export, teams can efficiently model and iterate on business processes.
 

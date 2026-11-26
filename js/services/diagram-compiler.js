@@ -4,10 +4,16 @@
  * Ensures deterministic output and syntax validity.
  */
 
+import { bpmnCompiler } from './bpmn-compiler.js';
+
 export class DiagramCompiler {
     
     compile(ast, targetSyntax) {
         if (!ast || !ast.meta) {
+            // Special fallback for raw arrays (e.g. process array directly from BPMN LLM prompt)
+            if (targetSyntax.toLowerCase() === 'bpmn' && (Array.isArray(ast) || ast.process)) {
+                return bpmnCompiler.compile(ast);
+            }
             throw new Error("Invalid AST: Missing meta information");
         }
 
@@ -17,8 +23,9 @@ export class DiagramCompiler {
             case 'plantuml':
             case 'c4': // C4 is often implemented via PlantUML
                 return this.compilePlantUML(ast);
+            case 'bpmn': 
+                return bpmnCompiler.compile(ast);
             // Future support for other types
-            // case 'bpmn': return this.compileBPMN(ast);
             // case 'vega': return this.compileVega(ast);
             default:
                 throw new Error(`Unsupported target syntax: ${targetSyntax}`);

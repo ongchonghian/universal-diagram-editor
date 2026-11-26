@@ -47,6 +47,7 @@ const getPlantUmlContext = (lines, cursorLineIdx) => {
 
     // Search backwards for start directive
     for (let i = cursorLineIdx; i >= 0; i--) {
+        if (!lines[i]) continue; // Guard against undefined lines
         const lineText = lines[i].trim();
         if (lineText.startsWith('@start')) {
             startLine = i;

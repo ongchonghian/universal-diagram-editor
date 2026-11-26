@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+    window.onload = function() {
+        console.log("Tesseract type:", typeof window.Tesseract);
+        console.log("Keys on window with 'Tess':", Object.keys(window).filter(k => k.toLowerCase().includes('tess')));
+    }
+</script>
+</body>
+</html>

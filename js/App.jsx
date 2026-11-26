@@ -44,6 +44,8 @@ const App = () => {
     const editorRef = useRef(null);
     const fileInputRef = useRef(null);
     const [showUpdatePanel, setShowUpdatePanel] = React.useState(false);
+    const [showExportMenu, setShowExportMenu] = React.useState(false);
+    const [copiedKrokiUrl, setCopiedKrokiUrl] = React.useState(false);
 
     // Derived state for fallback/checks
     const isC4PlantUML = diagramType === 'c4' && (detectedModel === 'C4 Model (PlantUML)' || (textInput && textInput.includes('@startuml')));
@@ -55,6 +57,7 @@ const App = () => {
     // 2. Remote Renderer (Kroki)
     const {
         url,
+        krokiUrl,
         stats,
         loading,
         previewError, setPreviewError,
@@ -137,6 +140,20 @@ const App = () => {
         if (editorRef.current) editorRef.current.insertAtCursor(code);
     }, []);
 
+    // Handle Copy Kroki URL
+    const handleCopyKrokiUrl = useCallback(() => {
+        if (!krokiUrl) return;
+        navigator.clipboard.writeText(krokiUrl)
+            .then(() => {
+                setCopiedKrokiUrl(true);
+                setTimeout(() => setCopiedKrokiUrl(false), 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy Kroki URL:', err);
+                alert('Failed to copy to clipboard: ' + err.message);
+            });
+    }, [krokiUrl]);
+
     return (
         <div className="h-full flex flex-col bg-slate-50"
              onDrop={handleFileDrop}
@@ -173,7 +190,55 @@ const App = () => {
                         <Button variant="secondary" size="sm" icon="fas fa-folder-open" onClick={() => fileInputRef.current?.click()}>Open</Button>
                         <Button variant="secondary" size="sm" icon="fas fa-save" onClick={handleDownloadSource} disabled={!textInput.trim()}>Save</Button>
                         <Button variant="secondary" size="sm" icon="fas fa-download" onClick={handleDownloadSvg} disabled={!svgContent}>SVG</Button>
-                        <Button variant="secondary" size="sm" icon="fas fa-image" onClick={handleDownloadPng} disabled={!svgContent}>PNG</Button>
+                        
+                        <div className="relative">
+                            <Button 
+                                variant="secondary" 
+                                size="sm" 
+                                icon="fas fa-image" 
+                                onClick={() => setShowExportMenu(!showExportMenu)} 
+                                disabled={!svgContent}
+                                className={showExportMenu ? 'bg-slate-100 ring-2 ring-indigo-500 ring-offset-1' : ''}
+                            >
+                                PNG <i className="fas fa-chevron-down ml-1 text-[10px] opacity-60"></i>
+                            </Button>
+                            
+                            {showExportMenu && (
+                                <>
+                                    <div 
+                                        className="fixed inset-0 z-40" 
+                                        onClick={() => setShowExportMenu(false)}
+                                    ></div>
+                                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-xl border border-slate-200 z-50 py-1 flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                                        <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1 bg-slate-50">
+                                            Export Resolution
+                                        </div>
+                                        <button onClick={() => { handleDownloadPng(1); setShowExportMenu(false); }} className="text-left px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center justify-between group">
+                                            <span>Standard (1x)</span>
+                                            <span className="text-xs text-slate-400 group-hover:text-indigo-400">Low</span>
+                                        </button>
+                                        <button onClick={() => { handleDownloadPng(2); setShowExportMenu(false); }} className="text-left px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center justify-between group">
+                                            <span>High (2x)</span>
+                                            <span className="text-xs text-slate-400 group-hover:text-indigo-400 font-medium">Default</span>
+                                        </button>
+                                        <button onClick={() => { handleDownloadPng(4); setShowExportMenu(false); }} className="text-left px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center justify-between group">
+                                            <span>Ultra (4x)</span>
+                                            <span className="text-xs text-slate-400 group-hover:text-indigo-400">Print</span>
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            icon={copiedKrokiUrl ? "fas fa-check text-green-500" : "fas fa-link"} 
+                            onClick={handleCopyKrokiUrl} 
+                            disabled={!krokiUrl}
+                            title="Copy shareable Kroki preview link to clipboard"
+                        >
+                            {copiedKrokiUrl ? "Copied!" : "Kroki Link"}
+                        </Button>
                         <div className="w-px h-6 bg-slate-200 mx-1"></div>
                         <Button 
                             variant="secondary" 
@@ -236,11 +301,11 @@ const App = () => {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 flex overflow-hidden relative">
+            <main className="flex-1 flex overflow-hidden relative min-h-0">
                 {/* Editor Area Wrapper */}
-                <div className="flex-1 flex flex-col relative overflow-hidden">
+                <div className="flex-1 flex flex-col relative overflow-hidden min-h-0">
                     {/* Code View (Split) */}
-                    <div className={`flex-1 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
+                    <div className={`absolute inset-0 flex transition-opacity duration-300 ${viewMode === 'code' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
                         <CodeEditorView
                             textInput={textInput}
                             setTextInput={setTextInput}
@@ -268,7 +333,7 @@ const App = () => {
                     </div>
 
                     {/* Visual View */}
-                    <div className={`flex-1 w-full h-full transition-opacity duration-300 ${viewMode === 'visual' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
+                    <div className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${viewMode === 'visual' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
                         {diagramType === 'bpmn' && viewMode === 'visual' && (
                             <BpmnVisualEditor xml={textInput} onChange={handleVisualChange} onError={setPreviewError} readOnly={readOnly} />
                         )}

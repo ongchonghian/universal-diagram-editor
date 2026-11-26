@@ -6,6 +6,9 @@
 - [js/config.js](file://js/config.js)
 - [js/utils.js](file://js/utils.js)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [js/services/RendererAdapter.js](file://js/services/RendererAdapter.js)
+- [js/hooks/useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js)
+- [js/App.jsx](file://js/App.jsx)
 </cite>
 
 ## Table of Contents
@@ -125,31 +128,36 @@ EndNoop --> End
 - [index.html](file://index.html#L1561-L1598)
 
 ### URL Encoding and Sharing
-- Compression: The diagram source is compressed using a deflate algorithm and then base64-encoded with URL-safe characters.
-- URL construction: The encoded string is appended to the Kroki base URL along with the diagram type to form a shareable GET URL. If the URL would exceed a threshold, the system falls back to a POST request to the service endpoint with the raw source.
-- Share link: When using GET, a link to the generated URL is shown in the preview header for easy copying and sharing.
+- **Compression**: The diagram source is compressed using the `pako` library's deflate algorithm at maximum compression level (level 9) and then base64-encoded with URL-safe characters (replacing `+` with `-`, `/` with `_`, and stripping padding `=`).
+- **URL Construction**: The URL is constructed by appending the encoded string to the Kroki base URL (`https://kroki.io`) along with the diagram type and target format: `${baseUrl}/${krokiType}/svg/${encoded}`.
+- **Kroki Link Sharing**: Users can directly copy this generated Kroki rendering URL to their clipboard using the **Kroki Link** button in the main header. This feature generates a Kroki URL for any diagram type (including Mermaid and PlantUML), copying it to the clipboard and displaying a green checkmark with "Copied!" for 2 seconds.
 
 ```mermaid
 sequenceDiagram
-participant UI as "UI"
-participant Utils as "Utils.encodeKroki"
-participant URL as "URL Builder"
-participant Share as "Share Link"
-UI->>Utils : "encodeKroki(source)"
-Utils-->>UI : "encoded"
-UI->>URL : "build /{type}/svg/{encoded}"
-URL-->>UI : "share URL"
-UI->>Share : "display link"
-Share-->>User : "copy/open link"
+participant User as "User"
+participant App as "App.jsx"
+participant Hook as "useRemoteRenderer"
+participant Adapter as "RendererAdapter"
+participant Clipboard as "Navigator Clipboard"
+
+User->>App : Click "Kroki Link" button
+App->>Hook : Get "krokiUrl" state
+Hook->>Adapter : getKrokiUrl(content, type)
+Adapter-->>Hook : return URL
+Hook-->>App : return URL
+App->>Clipboard : writeText(url)
+Clipboard-->>User : URL copied to clipboard
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1444-L1522)
-- [js/utils.js](file://js/utils.js#L14-L28)
+- [js/services/RendererAdapter.js](file://js/services/RendererAdapter.js#L147-L174)
+- [js/hooks/useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js#L67-L70)
+- [js/App.jsx](file://js/App.jsx#L137-L150)
 
 **Section sources**
-- [index.html](file://index.html#L1444-L1522)
-- [js/utils.js](file://js/utils.js#L14-L28)
+- [js/services/RendererAdapter.js](file://js/services/RendererAdapter.js#L147-L174)
+- [js/hooks/useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js#L67-L70)
+- [js/App.jsx](file://js/App.jsx#L137-L150)
 
 ### Preview Rendering and Error Handling
 - Preview rendering: The application fetches SVG from the Kroki service either via GET or POST depending on URL length. It sets the preview image and clears text-based SVG content upon success.
