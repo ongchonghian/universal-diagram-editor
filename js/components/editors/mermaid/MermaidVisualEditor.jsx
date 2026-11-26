@@ -15,10 +15,10 @@ export const MermaidVisualEditor = ({ ast, code, astLoaded, detectedModel, onCha
     if (!astLoaded) {
         return (
             <div className="w-full h-full flex items-center justify-center bg-slate-50">
-                <div className="text-center">
-                    <div className="loader mb-3 mx-auto"></div>
-                    <span className="text-slate-500 text-sm">Loading visual editor...</span>
-                </div>
+                <span className="inline-flex items-center gap-2 text-[13px] text-slate-500" role="status">
+                    <span className="ui-spinner" aria-hidden="true"></span>
+                    Loading the visual editor…
+                </span>
             </div>
         );
     }
@@ -53,14 +53,13 @@ export const MermaidVisualEditor = ({ ast, code, astLoaded, detectedModel, onCha
         
         // Fallback
         return (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-500">
-                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                    <i className="fas fa-project-diagram text-2xl opacity-50"></i>
-                </div>
-                <h3 className="text-lg font-medium text-slate-700 mb-2">Universal Mode</h3>
-                <p className="max-w-md text-sm">
-                    Visual editing for this diagram type is generic. 
-                    Structure editing is best done via code.
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                <span className="mb-4 w-11 h-11 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center" aria-hidden="true">
+                    <i className="fas fa-project-diagram"></i>
+                </span>
+                <h3 className="text-[15px] font-semibold text-slate-900">Edit this diagram in code</h3>
+                <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-slate-500">
+                    The visual editor handles pie charts only for now. Switch to Code to change this {detectedModel || 'diagram'}.
                 </p>
             </div>
         );
@@ -69,8 +68,8 @@ export const MermaidVisualEditor = ({ ast, code, astLoaded, detectedModel, onCha
     return (
         <div className="w-full h-full bg-white overflow-auto relative">
             <EditorToolbar
-                title={`${detectedModel || 'Mermaid'} Editor`}
-                subTitle="Visual Mode (Beta)"
+                title={detectedModel || 'Mermaid'}
+                subTitle="Visual editor · Beta"
                 className="sticky top-0 z-10"
             />
             {renderSubEditor()}

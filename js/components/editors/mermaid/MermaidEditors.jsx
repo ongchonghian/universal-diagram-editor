@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 
 // Common helper for visual editing disclaimer
 export const VisualEditingNotAvailable = ({ type }) => (
-    <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-500">
-        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-            <i className="fas fa-code text-2xl opacity-50"></i>
-        </div>
-        <h3 className="text-lg font-medium text-slate-700 mb-2">Code-Only Editing</h3>
-        <p className="max-w-md text-sm">
-            Visual editing for <strong>{type}</strong> diagrams is not yet available.
-            Please use the code editor to make changes.
+    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <span className="mb-4 w-11 h-11 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center" aria-hidden="true">
+            <i className="fas fa-code"></i>
+        </span>
+        <h3 className="text-[15px] font-semibold text-slate-900">Edit this diagram in code</h3>
+        <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-slate-500">
+            The visual editor cannot change a {type} yet. Switch to Code to make changes.
         </p>
     </div>
 );
@@ -19,27 +18,16 @@ export const MermaidFlowchartEditor = ({ code, onChange }) => {
     // Parsing flowchart requires complex DOM analysis or bespoke parser
     // For this MVP, we provide node-based text editing helper
     return (
-        <div className="p-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <div className="flex items-start gap-3">
-                    <i className="fas fa-info-circle text-blue-500 mt-1"></i>
-                    <div>
-                        <h4 className="font-medium text-blue-800 text-sm">Flowchart Editor</h4>
-                        <p className="text-blue-600 text-xs mt-1">
-                            Interactive node editing coming soon. Use the code editor for full control.
-                        </p>
-                    </div>
-                </div>
-            </div>
+        <div className="h-full">
             {/* Placeholder for future visual graph editor */}
-            <VisualEditingNotAvailable type="Flowchart" />
+            <VisualEditingNotAvailable type="flowchart" />
         </div>
     );
 };
 
 // Sequence diagram visual editor
 export const MermaidSequenceEditor = ({ code, onChange }) => {
-    return <VisualEditingNotAvailable type="Sequence Diagram" />;
+    return <VisualEditingNotAvailable type="sequence diagram" />;
 };
 
 // Pie chart visual editor
@@ -96,43 +84,47 @@ export const MermaidPieEditor = ({ code, onChange }) => {
     };
     
     return (
-        <div className="p-6">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">Edit Pie Chart</h3>
+        <div className="p-6 max-w-2xl">
             
             <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Chart Title</label>
+                <label htmlFor="pie-title" className="block text-xs font-medium text-slate-700 mb-1.5">Chart title</label>
                 <input 
                     type="text" 
                     value={title} 
                     onChange={(e) => { setTitle(e.target.value); updateCode(e.target.value, data); }}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    placeholder="Enter chart title"
+                    id="pie-title"
+                    className="w-full h-9 px-3 bg-white text-[13px] text-slate-800 border border-slate-200 rounded-md shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
+                    placeholder="Enter the chart title"
                 />
             </div>
             
-            <div className="space-y-3 mb-6">
-                <label className="block text-sm font-medium text-slate-700">Data Slices</label>
+            <div className="space-y-2 mb-4">
+                <div className="flex items-center gap-2 text-xs font-medium text-slate-700"><span className="flex-1">Slices</span><span className="w-24">Value</span><span className="w-8" aria-hidden="true"></span></div>
                 {data.map((item, idx) => (
                     <div key={idx} className="flex gap-2 items-center">
                         <input 
                             type="text" 
                             value={item.label}
                             onChange={(e) => handleLabelChange(idx, e.target.value)}
-                            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                            aria-label={`Slice ${idx + 1} label`}
+                            className="flex-1 h-9 px-3 bg-white text-[13px] text-slate-800 border border-slate-200 rounded-md shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
                             placeholder="Label"
                         />
                         <input 
                             type="number" 
                             value={item.value}
                             onChange={(e) => handleValueChange(idx, e.target.value)}
-                            className="w-24 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                            aria-label={`Slice ${idx + 1} value`}
+                            className="w-24 tabular-nums h-9 px-3 bg-white text-[13px] text-slate-800 border border-slate-200 rounded-md shadow-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
                             placeholder="Value"
                         />
                         <button 
                             onClick={() => removeSlice(idx)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            aria-label={`Remove the ${item.label} slice`}
+                            title="Remove the slice"
+                            className="w-8 h-8 inline-flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                         >
-                            <i className="fas fa-trash"></i>
+                            <i className="fas fa-trash-alt text-xs" aria-hidden="true"></i>
                         </button>
                     </div>
                 ))}
@@ -140,9 +132,9 @@ export const MermaidPieEditor = ({ code, onChange }) => {
             
             <button 
                 onClick={addNewSlice}
-                className="px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors text-sm"
+                className="h-8 px-3 inline-flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 font-medium rounded-md shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-colors text-[13px]"
             >
-                <i className="fas fa-plus mr-2"></i> Add Slice
+                <i className="fas fa-plus text-xs" aria-hidden="true"></i> Add a slice
             </button>
         </div>
     );
@@ -150,20 +142,20 @@ export const MermaidPieEditor = ({ code, onChange }) => {
 
 // Gantt chart visual editor
 export const MermaidGanttEditor = ({ code, onChange }) => {
-    return <VisualEditingNotAvailable type="Gantt Chart" />;
+    return <VisualEditingNotAvailable type="Gantt chart" />;
 };
 
 // Timeline visual editor
 export const MermaidTimelineEditor = ({ code, onChange }) => {
-    return <VisualEditingNotAvailable type="Timeline" />;
+    return <VisualEditingNotAvailable type="timeline" />;
 };
 
 // Journey visual editor
 export const MermaidJourneyEditor = ({ code, onChange }) => {
-    return <VisualEditingNotAvailable type="User Journey" />;
+    return <VisualEditingNotAvailable type="user journey" />;
 };
 
 // Mindmap visual editor
 export const MermaidMindmapEditor = ({ code, onChange }) => {
-    return <VisualEditingNotAvailable type="Mindmap" />;
+    return <VisualEditingNotAvailable type="mind map" />;
 };

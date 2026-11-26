@@ -25,15 +25,15 @@ export const EditorToolbar = ({
     className = ""
 }) => {
     return (
-        <div className={`flex items-center justify-between px-4 py-2 bg-white border-b border-slate-200 shadow-sm shrink-0 z-10 ${className}`}>
+        <div className={`flex items-center justify-between gap-3 h-10 px-3 bg-white border-b border-slate-200 shrink-0 z-10 ${className}`}>
             
             {/* Left Section: Title & Logo */}
             <div className="flex items-center gap-3">
                 {title && (
                     <div className="flex items-center">
-                        <span className="text-sm font-semibold text-slate-700">{title}</span>
+                        <span className="text-[13px] font-semibold text-slate-900">{title}</span>
                         {subTitle && (
-                            <span className="ml-2 text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                            <span className="ml-2 h-5 px-1.5 inline-flex items-center text-[11px] font-medium text-slate-500 bg-slate-100 rounded">
                                 {subTitle}
                             </span>
                         )}
@@ -42,28 +42,28 @@ export const EditorToolbar = ({
                 
                 {/* Custom Left/Center Children (e.g. Toggles) */}
                 {children && (
-                    <div className={title ? "ml-4 border-l border-slate-200 pl-4" : ""}>
+                    <div className={title ? "ml-3 border-l border-slate-200 pl-3" : ""}>
                         {children}
                     </div>
                 )}
             </div>
 
             {/* Right Section: Actions */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-1.5">
                 
                 {/* Custom Actions */}
                 {actions.map((action, idx) => (
                     <button
                         key={idx}
                         onClick={action.onClick}
-                        className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-lg transition-colors shadow-sm ${
+                        className={`flex items-center h-7 px-2.5 text-xs font-medium rounded-md transition-colors shadow-sm ${
                             action.primary 
                             ? 'text-white bg-indigo-600 hover:bg-indigo-700' 
-                            : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50'
+                            : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                         }`}
                         title={action.title || action.label}
                     >
-                        {action.icon && <i className={`${action.icon} ${action.label ? 'mr-1.5' : ''}`}/>}
+                        {action.icon && <i className={`${action.icon} ${action.label ? 'mr-1.5' : ''}`} aria-hidden="true"/>}
                         {action.label}
                     </button>
                 ))}
@@ -73,10 +73,10 @@ export const EditorToolbar = ({
                 {onAiAssist && (
                     <button
                         onClick={onAiAssist}
-                        className="flex items-center px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-lg shadow-sm transition-all border border-transparent"
+                        className="flex items-center h-7 px-2.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
                         title="AI Copilot"
                     >
-                        <i className="fas fa-magic mr-1.5"></i>
+                        <i className="fas fa-magic mr-1.5 text-indigo-600" aria-hidden="true"></i>
                         AI Assist
                     </button>
                 )}
@@ -84,18 +84,18 @@ export const EditorToolbar = ({
                 {onAutoLayout && (
                     <button
                         onClick={onAutoLayout}
-                        className="flex items-center px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                        title="Auto Layout"
+                        className="flex items-center h-7 px-2.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                        title="Lay out the diagram automatically"
                     >
                         <i className="fas fa-sitemap mr-1.5"/>
-                        Auto Layout
+                        Auto layout
                     </button>
                 )}
 
                 {onImport && (
                     <button
                         onClick={onImport}
-                        className="flex items-center px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                        className="flex items-center h-7 px-2.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
                         title="Import File"
                     >
                         <i className="fas fa-file-import mr-1.5"/>
@@ -106,7 +106,7 @@ export const EditorToolbar = ({
                 {onExport && (
                     <button
                         onClick={onExport}
-                        className="flex items-center px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                        className="flex items-center h-7 px-2.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
                         title="Export"
                     >
                         <i className="fas fa-download mr-1.5"/>

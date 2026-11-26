@@ -150,8 +150,9 @@ export const BpmnVisualEditor = ({ xml, onChange, onError }) => {
     return (
         <div className="w-full h-full relative">
             <div ref={containerRef} className="w-full h-full bg-white"></div>
-            <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur border border-slate-200 rounded-lg shadow-sm p-2 text-xs text-slate-500">
-                Powered by bpmn.io
+            {/* Sits just left of the bpmn.io logo, which bpmn-js draws 15px from the bottom-right corner */}
+            <div className="absolute bottom-[19px] right-[76px] text-[11px] text-slate-400 pointer-events-none select-none">
+                Powered by
             </div>
         </div>
     );
