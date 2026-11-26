@@ -1,12 +1,7 @@
 
 /* eslint-disable no-unused-vars */
-import * as BpmnDifferPkg from 'bpmn-js-differ';
+import { diff } from 'bpmn-js-differ';
 import { createBpmnModdle } from './bpmn-moddle.js';
-// Safe extraction of diff function due to CJS/ESM interop
-const diff = BpmnDifferPkg.diff 
-          || (BpmnDifferPkg.default && BpmnDifferPkg.default.diff) 
-          || BpmnDifferPkg.default 
-          || BpmnDifferPkg;
 
 export const diffUtils = {
     async generateSemanticDiff(oldCode, newCode, diagramType) {
