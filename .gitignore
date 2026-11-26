@@ -2,3 +2,7 @@
 dist
 .DS_Store
 node_modules
+
+# Reference PDFs kept on disk only
+PlantUML_Language_Reference_Guide_en.pdf
+BPMN_Interchange (1).pdf
