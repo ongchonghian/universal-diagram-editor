@@ -3,12 +3,9 @@
 <cite>
 **Referenced Files in This Document**
 - [index.html](file://index.html)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js)
 - [error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
 - [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
@@ -47,30 +44,30 @@
 This document explains the advanced features and technical implementations powering the diagramming platform, with a focus on:
 - Bi-directional synchronization between code and visual modes using Mermaid AST
 - Change detection, debouncing, and state management to prevent infinite loops
-- Real-time preview generation via Kroki and memory-safe blob URLs
+- Real-time preview generation via Kroki, with debounced requests (blob URLs are used only for downloads)
 - Conflict resolution between code and visual modes
 - Advanced editor features: cursor tracking, error highlighting, syntax validation, and quick fixes
 - **NEW: Sophisticated library update management system with automated dependency version tracking**
 - **NEW: Advanced iframe-based testing framework for safe library updates**
-- Performance optimizations: memory management, lazy loading, caching, and bundle size reduction
+- Performance optimizations: memory management, debouncing, caching, and a Vite build
 - Extensibility points for power users and developers
 
 ## Project Structure
-The application is a single-page app built with React and Monaco Editor, with modular Mermaid visual editors and robust error diagnostics. The new update management system integrates seamlessly with the existing architecture.
+The application is a single-page app built with React and Monaco Editor and bundled by Vite. It has a Mermaid visual editor (Beta) and robust error diagnostics. The new update management system integrates seamlessly with the existing architecture.
 
 ```mermaid
 graph TB
 subgraph "Browser Runtime"
-A["index.html<br/>CDNs + Mermaid AST module"]
+A["index.html<br/>Vite shell, CDN scripts + Mermaid AST module"]
 B["Monaco Editor"]
-C["React + JSX via Babel"]
+C["React + JSX (Vite build)"]
 end
 subgraph "Mermaid Editors"
 D["MermaidVisualEditor<br/>(router)"]
-D1["MermaidFlowchartEditor"]
-D2["MermaidSequenceEditor"]
-D3["MermaidDataEditors<br/>(Timeline/Gantt/Pie/Mindmap/Journey)"]
-D4["MermaidGenericEditor"]
+D1["MermaidFlowchartEditor<br/>(placeholder)"]
+D2["MermaidSequenceEditor<br/>(placeholder)"]
+D3["MermaidPieEditor (working)<br/>Gantt, Timeline, Journey, Mindmap (placeholders)"]
+D4["Universal Mode fallback"]
 end
 subgraph "Synchronization"
 E["MermaidSyncController"]
@@ -98,7 +95,7 @@ D --> D1
 D --> D2
 D --> D3
 D --> D4
-D --> E
+C --> E
 C --> B
 C --> F
 F --> F1
@@ -114,50 +111,47 @@ C --> J
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L53-L59)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [index.html](file://index.html)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - [utils.js](file://js/utils.js#L14-L28)
 - [react-helpers.js](file://js/react-helpers.js#L4-L39)
 - [ui.js](file://js/components/ui.js#L16-L66)
 - [update-manager.js](file://js/update-manager.js#L1-L343)
 - [library-registry.js](file://js/library-registry.js#L1-L409)
-- [cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [cdn-version-checker.js](file://js/cdn-version-checker.js)
 - [update-tester.js](file://js/update-tester.js#L1-L505)
-- [html-rewriter.js](file://js/html-rewriter.js#L1-L274)
+- [html-rewriter.js](file://js/html-rewriter.js)
 
 **Section sources**
-- [index.html](file://index.html#L53-L59)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [index.html](file://index.html)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - [utils.js](file://js/utils.js#L14-L28)
 - [react-helpers.js](file://js/react-helpers.js#L4-L39)
 - [ui.js](file://js/components/ui.js#L16-L66)
 - [update-manager.js](file://js/update-manager.js#L1-L343)
 - [library-registry.js](file://js/library-registry.js#L1-L409)
-- [cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [cdn-version-checker.js](file://js/cdn-version-checker.js)
 - [update-tester.js](file://js/update-tester.js#L1-L505)
-- [html-rewriter.js](file://js/html-rewriter.js#L1-L274)
+- [html-rewriter.js](file://js/html-rewriter.js)
 
 ## Core Components
 - Mermaid AST synchronization controller: central state machine for bi-directional sync, debouncing, and loop prevention
-- Mermaid visual editor router: routes to specialized editors based on AST type and manages live previews
-- Specialized editors: flowchart, sequence, and data editors with inline editing and element lists
+- Mermaid visual editor router: routes to a sub-editor by the detected model name, or shows the Universal Mode fallback
+- Sub-editors (in `MermaidEditors.jsx`): only the pie editor edits the diagram; the flowchart, sequence, Gantt, timeline, journey and mindmap editors are placeholders that point the user to the code editor
 - Error diagnostics: structured error parsing, fix suggestions, and human-readable explanations
 - **NEW: Library update management system: comprehensive dependency version tracking and automated update workflow**
 - **NEW: Update tester: iframe-based sandbox testing for safe library updates**
-- Utilities: compression, regex escaping, script/CSS loaders, and debounce helpers
+- Utilities: model detection, regex escaping, script/CSS loaders, and debounce helpers (Kroki compression lives in the renderer adapter)
 - UI primitives: reusable buttons, badges, loaders, and editable fields
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L10-L117)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L50)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L7-L171)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L98)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - [error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L332-L366)
 - [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
@@ -170,8 +164,8 @@ C --> J
 
 ## Architecture Overview
 The system integrates three pillars:
-- AST-based synchronization: parse code to AST and render AST back to code
-- Real-time preview pipeline: debounce user input, call Kroki, manage blob URLs
+- AST-based synchronization: parse code to AST (live) and render AST back to code (available in the controller, but not yet called by any sub-editor)
+- Real-time preview pipeline: debounce user input, call Kroki through the renderer adapter, show the returned SVG
 - Error diagnostics and quick fixes: parse errors, suggest fixes, and present explanations
 - **NEW: Library update management pipeline: automated dependency version tracking and safe update application**
 
@@ -179,20 +173,22 @@ The system integrates three pillars:
 sequenceDiagram
 participant U as "User"
 participant M as "Monaco Editor"
-participant VS as "MermaidVisualEditor"
+participant ST as "useDiagramState"
 participant SC as "MermaidSyncController"
 participant AST as "Mermaid AST"
+participant RR as "useRemoteRenderer"
 participant KR as "Kroki API"
 U->>M : "Edit code"
-M->>VS : "onChange(code)"
-VS->>SC : "parseCode(code)"
+M->>ST : "onChange(code)"
+ST->>SC : "parseCode(code)"
 SC->>AST : "parse(code)"
 AST-->>SC : "ast"
-SC-->>VS : "ast"
-VS->>KR : "POST /mermaid/svg (debounced)"
-KR-->>VS : "SVG blob"
-VS-->>U : "Live preview update"
-Note over VS,SC : "Visual → Code sync uses render(ast) and resets changeSource"
+SC-->>ST : "ast"
+ST->>RR : "textInput"
+RR->>KR : "Request SVG (debounced 500 ms)"
+KR-->>RR : "SVG"
+RR-->>U : "Preview panel update"
+Note over ST,SC : "renderToCode(ast) sets and resets changeSource, but no sub-editor calls it today"
 Note over U,G : "Library Update Workflow"
 U->>G : "Check for Updates"
 G->>G2 : "Query CDN APIs"
@@ -204,9 +200,9 @@ G4-->>U : "Download updated HTML"
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L58)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L25-L53)
-- [index.html](file://index.html#L794-L800)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [index.html](file://index.html)
 - [update-manager.js](file://js/update-manager.js#L63-L98)
 - [cdn-version-checker.js](file://js/cdn-version-checker.js#L191-L214)
 - [update-tester.js](file://js/update-tester.js#L398-L444)
@@ -219,7 +215,7 @@ The controller encapsulates:
 - AST state and change-source tracking to avoid infinite loops
 - Debounced parsing from code to AST
 - AST rendering back to code for visual-mode edits
-- Diagram type detection and MermaidAST readiness checks
+- MermaidAST readiness checks (diagram model detection is a separate function, `detectSpecificModel` in `utils.js`)
 
 ```mermaid
 classDiagram
@@ -230,14 +226,12 @@ class MermaidSyncController {
 +parseCode(code, onSuccess, onError)
 +renderToCode(updatedAst) string|null
 +getAst() Object|null
-+setAst(newAst) void
-+detectType(code) string|null
 +isLoaded() boolean
 }
 ```
 
 **Diagram sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 Key behaviors:
 - Debounce parsing to reduce redundant AST computations
@@ -245,90 +239,83 @@ Key behaviors:
 - Reset changeSource asynchronously to allow subsequent code changes
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L58)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### Mermaid Visual Editor Router and Preview Pipeline
-The router:
-- Generates a preview URL from code via Kroki
-- Debounces requests and manages loading states
-- Revokes previous blob URLs to prevent memory leaks
-- Routes to specialized editors based on AST type
+The router (`MermaidVisualEditor`):
+- Shows a "Loading visual editor..." spinner until the Mermaid AST library has loaded
+- Routes to a sub-editor by the detected model name (Flowchart, Sequence, Pie, Gantt, Timeline, Journey, Mindmap)
+- Shows the Universal Mode fallback for any other model
+- Passes only `code` and `onChange` to the sub-editor
+
+The preview pipeline is separate and lives in `useRemoteRenderer`:
+- Debounces code changes by 500 ms
+- Requests the SVG from Kroki through the renderer adapter (GET, or POST when the URL exceeds 4000 characters)
+- Stores the SVG for the preview panel and for the SVG and PNG downloads
 
 ```mermaid
 flowchart TD
 Start(["Code change"]) --> Debounce["Debounce 500ms"]
-Debounce --> Fetch["Fetch SVG from Kroki"]
+Debounce --> Fetch["Request SVG from Kroki"]
 Fetch --> Ok{"Response OK?"}
-Ok --> |Yes| Blob["Create Object URL"]
-Blob --> SetPrev["Revoke previous URL"]
-SetPrev --> Update["Set previewUrl"]
-Ok --> |No| Error["Log error"]
-Update --> End(["Render preview"])
+Ok --> |Yes| Svg["Set svgContent and previewImage"]
+Ok --> |No| Error["Set previewError and editor markers"]
+Svg --> End(["Render preview"])
 Error --> End
 ```
 
 **Diagram sources**
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L25-L60)
+- [useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js)
+- [RendererAdapter.js](file://js/services/RendererAdapter.js)
 
 **Section sources**
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L20-L121)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js)
 
-### Flowchart Editor: Node/Edge Management
-The flowchart editor:
-- Parses AST to extract nodes and edges
-- Supports inline editing of node labels
-- Generates precise replacements for node labels in code
-- Adds new nodes and edges via code injection
+### Flowchart Editor: Placeholder
+The flowchart editor (`MermaidFlowchartEditor`):
+- Shows a "Flowchart Editor: interactive node editing coming soon" note
+- Shows the "Code-Only Editing" message from `VisualEditingNotAvailable`
+- Does not edit nodes or edges; flowcharts are edited in the code editor
 
 ```mermaid
 sequenceDiagram
-participant V as "FlowchartEditor"
-participant AST as "AST"
-participant CODE as "Code"
-participant SYNC as "MermaidSyncController"
-V->>AST : "Read nodes/edges"
-V->>V : "handleNodeEdit(id)"
-V->>CODE : "Replace label in code"
-CODE-->>SYNC : "onCodeChange(newCode)"
-SYNC-->>V : "parseCode(newCode)"
-V->>V : "Re-render preview"
+participant R as "MermaidVisualEditor"
+participant V as "MermaidFlowchartEditor"
+participant U as "User"
+R->>V : "code, onChange"
+V-->>U : "Coming-soon note + Code-Only Editing message"
+U->>U : "Edits flowchart in the code editor"
 ```
 
 **Diagram sources**
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L62-L105)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L21-L38)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
 **Section sources**
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L10-L117)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
-### Sequence Editor: Participants and Messages
-The sequence editor:
-- Extracts participants and messages from AST
-- Adds new participants and messages by injecting code at appropriate positions
+### Sequence Editor: Placeholder
+The sequence editor (`MermaidSequenceEditor`) returns the "Code-Only Editing" message. Participants and messages are edited in the code editor.
 
 **Section sources**
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L50)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 
-### Data Editors: Timeline, Gantt, Pie, Mindmap, Journey
-These editors:
-- Parse diagram-specific constructs from code
-- Provide inline controls to add elements
-- Display structured views of extracted data
-
-**Section sources**
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L7-L171)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L91-L151)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L154-L203)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L206-L234)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js#L237-L305)
-
-### Generic Editor: AST Explorer and Preview
-The generic editor:
-- Renders a live preview and an AST structure panel
-- Useful fallback when a specialized editor is not available
+### Data-Chart Editors: Pie, Gantt, Timeline, Mindmap, Journey
+These editors are in `MermaidEditors.jsx`:
+- `MermaidPieEditor` reads the title and slices from the code with regular expressions, lets the user edit the title, labels and values and add or remove a slice, and writes the regenerated pie code through `onChange`
+- `MermaidGanttEditor`, `MermaidTimelineEditor`, `MermaidJourneyEditor` and `MermaidMindmapEditor` are one-line placeholders that return the "Code-Only Editing" message
 
 **Section sources**
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L98)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+
+### Universal Mode Fallback
+For any diagram model without a sub-editor, `MermaidVisualEditor` shows a "Universal Mode" panel:
+- Says "Visual editing for this diagram type is generic. Structure editing is best done via code."
+- Has no AST explorer, preview panel or property panel
+- Keeps the editor toolbar titled "<model> Editor" with the sub-title "Visual Mode (Beta)"
+
+**Section sources**
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ### Error Diagnostics: Parsing, Fix Suggestions, and Explanations
 The diagnostics system:
@@ -365,10 +352,10 @@ E7 --> E8["formatForHover()"]
 - [error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 
 ### Utilities and Helpers
-- Compression for Kroki URLs
+- Compression for Kroki URLs (in the renderer adapter, `js/services/RendererAdapter.js`)
 - Regex escaping and debounce helpers
 - Script/CSS loaders with AMD compatibility handling
-- React helpers for JSX-like syntax without a bundler
+- React helpers (`react-helpers.js`) that bind htm tagged templates to React for the older components
 
 **Section sources**
 - [utils.js](file://js/utils.js#L14-L28)
@@ -499,8 +486,8 @@ Q --> R["Download updated HTML"]
 ## Dependency Analysis
 High-level dependencies:
 - index.html loads Mermaid AST module and initializes window.MermaidAST
-- MermaidVisualEditor depends on MermaidSyncController and Monaco Editor
-- Specialized editors depend on AST parsing and code injection
+- `useDiagramState` depends on MermaidSyncController and passes the code, detected model and AST-loaded flag to MermaidVisualEditor
+- Sub-editors depend on the code they receive (the pie editor regenerates the code; the others are placeholders)
 - Error diagnostics depend on Monaco markers and code actions
 - **NEW: Update system components depend on each other in a coordinated workflow**
 - Utilities support compression, debouncing, and dynamic asset loading
@@ -509,13 +496,14 @@ High-level dependencies:
 graph LR
 IDX["index.html"] --> AST["window.MermaidAST"]
 IDX --> MON["Monaco Editor"]
-IDX --> REACT["React + Babel"]
+IDX --> REACT["React (Vite build)"]
+REACT --> HOOK["useDiagramState"]
+HOOK --> MSC["MermaidSyncController"]
 REACT --> MVE["MermaidVisualEditor"]
-MVE --> MSC["MermaidSyncController"]
-MVE --> ED1["FlowchartEditor"]
-MVE --> ED2["SequenceEditor"]
-MVE --> ED3["DataEditors"]
-MVE --> EDF["GenericEditor"]
+MVE --> ED1["FlowchartEditor (placeholder)"]
+MVE --> ED2["SequenceEditor (placeholder)"]
+MVE --> ED3["Pie editor + placeholders"]
+MVE --> EDF["Universal Mode fallback"]
 REACT --> ERR["Error Diagnostics"]
 REACT --> UTM["Update Manager"]
 UTM --> LR["Library Registry"]
@@ -527,34 +515,34 @@ REACT --> UI["UI Components"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L53-L59)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [index.html](file://index.html)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - [update-manager.js](file://js/update-manager.js#L1-L343)
 - [library-registry.js](file://js/library-registry.js#L1-L409)
-- [cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [cdn-version-checker.js](file://js/cdn-version-checker.js)
 - [update-tester.js](file://js/update-tester.js#L1-L505)
-- [html-rewriter.js](file://js/html-rewriter.js#L1-L274)
+- [html-rewriter.js](file://js/html-rewriter.js)
 - [utils.js](file://js/utils.js#L14-L28)
 - [ui.js](file://js/components/ui.js#L16-L66)
 
 **Section sources**
-- [index.html](file://index.html#L53-L59)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L20-L121)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [index.html](file://index.html)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L44)
 - [update-manager.js](file://js/update-manager.js#L1-L343)
 - [library-registry.js](file://js/library-registry.js#L1-L409)
-- [cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [cdn-version-checker.js](file://js/cdn-version-checker.js)
 - [update-tester.js](file://js/update-tester.js#L1-L505)
-- [html-rewriter.js](file://js/html-rewriter.js#L1-L274)
+- [html-rewriter.js](file://js/html-rewriter.js)
 - [utils.js](file://js/utils.js#L14-L28)
 - [ui.js](file://js/components/ui.js#L16-L66)
 
 ## Performance Considerations
 - Memory management
-  - Revoke object URLs after use to prevent memory leaks
+  - Revoke object URLs after use to prevent memory leaks (the download helpers create and revoke them)
   - Clear Monaco markers and decorations when switching contexts
   - **NEW: Manage iframe sandbox memory for update testing**
 - Debouncing
@@ -566,12 +554,11 @@ REACT --> UI["UI Components"]
   - Initialize Monaco and visual editors on demand
   - **NEW: Load update system components on-demand for better performance**
 - Bundle size optimization
-  - Use CDN-hosted libraries and ESM modules
-  - Avoid bundling by leveraging browser-native modules and CDNs
+  - Vite bundles the npm packages; a few libraries (Monaco loader, Mermaid AST, pako, dagre) load from CDNs
   - **NEW: Minimize update system bundle size with selective imports**
 - Caching
-  - Reuse blob URLs until code changes
-  - Cache Mermaid AST when possible during short editing sessions
+  - The preview reuses the last SVG until the debounced request returns
+  - The sync controller keeps the latest parsed AST in memory
   - **NEW: Cache CDN version responses for 5 minutes to improve performance**
 
 ## Troubleshooting Guide
@@ -580,7 +567,7 @@ REACT --> UI["UI Components"]
 - Missing MermaidAST
   - Check MermaidAST readiness before parsing or rendering
 - Preview not updating
-  - Confirm debounce timing and that blob URLs are revoked and re-created
+  - Confirm the 500 ms debounce has elapsed and read the preview error message from the renderer
 - Error markers not appearing
   - Verify Monaco language registration and provider registration
   - Ensure markers are attached to the correct model and diagnostic code matches
@@ -591,26 +578,25 @@ REACT --> UI["UI Components"]
   - **Version parsing issues**: Check library registry configuration and URL patterns
 
 **Section sources**
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L46-L58)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L28-L31)
-- [MermaidVisualEditor.js](file://js/editors/mermaid/index.js#L41-L49)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 - [error-diagnostics/index.js](file://js/error-diagnostics/index.js#L261-L298)
 - [update-manager.js](file://js/update-manager.js#L93-L97)
 - [update-tester.js](file://js/update-tester.js#L427-L438)
 - [html-rewriter.js](file://js/html-rewriter.js#L240-L264)
 
 ## Conclusion
-The platform combines AST-driven synchronization, real-time previews, and intelligent diagnostics to deliver a seamless authoring experience. Its architecture emphasizes correctness (loop prevention), responsiveness (debouncing), and efficiency (memory-safe blob URLs, lazy loading, and CDN-first bundles). **The new library update management system adds powerful automation capabilities for dependency version tracking and safe updates, while the iframe-based testing framework ensures compatibility and stability.** Developers can extend editors, add new diagram types, integrate additional diagnostics, and leverage the comprehensive update system for maintaining modern, secure dependencies.
+The platform combines AST-driven synchronization, real-time previews, and intelligent diagnostics to deliver a seamless authoring experience. Its architecture emphasizes correctness (loop prevention), responsiveness (debouncing), and efficiency (revoked download URLs, a Vite bundle, and a few CDN scripts). **The new library update management system adds powerful automation capabilities for dependency version tracking and safe updates, while the iframe-based testing framework ensures compatibility and stability.** Developers can extend editors, add new diagram types, integrate additional diagnostics, and leverage the comprehensive update system for maintaining modern, secure dependencies.
 
 ## Appendices
 
 ### Advanced Usage Scenarios and Power User Tips
 - Visual-to-code editing
-  - Use specialized editors to modify nodes and edges; rely on render(ast) to keep code synchronized
+  - Use the pie editor to edit slices; it regenerates the pie code. Edit other Mermaid types in the code editor
 - Quick fixes
   - Apply Monaco quick fixes to add missing declarations or brackets
 - Cursor tracking
-  - Use Monaco's cursor change callbacks to highlight corresponding AST elements
+  - Monaco's cursor change callback reports the cursor position, which the app uses to work out the diagram context for snippets
 - Error explanations
   - Hover over markers to see contextual help with examples and documentation links
 - **NEW: Library updates**

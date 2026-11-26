@@ -5,12 +5,9 @@
 - [index.html](file://index.html)
 - [config.js](file://js/config.js)
 - [utils.js](file://js/utils.js)
-- [MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
-- [MermaidDataEditors.js](file://js/editors/mermaid/MermaidDataEditors.js)
-- [MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
-- [MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js)
-- [MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
-- [index.js](file://js/editors/mermaid/index.js)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 - [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js)
 </cite>
@@ -28,103 +25,99 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document explains how Entity Relationship (ER) diagrams are supported and rendered within the Universal Diagram Generator. It focuses on the Mermaid ER diagram syntax, how the application detects ER diagrams, and how the visual editor routes to the generic editor for ER diagrams. It also documents the syntax for entity definitions, attribute types, primary and foreign keys, relationship cardinalities, and how the system handles ER-related errors and suggestions.
+This document explains how Entity Relationship (ER) diagrams are supported and rendered within the Universal Diagram Generator. It focuses on the Mermaid ER diagram syntax, how the application detects ER diagrams, and how the Mermaid visual editor treats ER diagrams (the Universal Mode fallback). It also documents the syntax for entity definitions, attribute types, primary and foreign keys, relationship cardinalities, and how the system handles ER-related errors and suggestions.
 
 ## Project Structure
 The Universal Diagram Generator supports multiple diagram types. For Mermaid ER diagrams, the application:
 - Detects ER diagram type from code
-- Routes to the generic editor for ER diagrams
-- Renders previews via Kroki
+- Shows the Universal Mode fallback in the Mermaid visual editor, because no ER editor exists
+- Renders the preview pane through Kroki
 - Provides error diagnostics and fix suggestions
 
 ```mermaid
 graph TB
 A["User Code"] --> B["detectSpecificModel()"]
-B --> |erDiagram| C["MermaidGenericEditor"]
-C --> D["Kroki Preview (mermaid/svg)"]
+B --> |erDiagram| C["Universal Mode fallback (MermaidVisualEditor)"]
+B --> D["Kroki Preview (mermaid/svg)"]
 D --> E["Browser Image"]
 B --> |Other Types| F["Type-Specific Editor"]
 G["Error Diagnostics"] --> B
-G --> C
+G --> D
 ```
 
 **Diagram sources**
-- [index.js](file://js/editors/mermaid/index.js#L77-L116)
+- [MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 - [utils.js](file://js/utils.js#L49-L85)
-- [index.html](file://index.html#L34-L53)
+- [index.html](file://index.html)
 
 **Section sources**
-- [index.html](file://index.html#L127-L145)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L58-L69)
 - [js/utils.js](file://js/utils.js#L49-L85)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L77-L116)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ## Core Components
 - Diagram detection: The application identifies ER diagrams by scanning for the erDiagram declaration.
-- Editor routing: ER diagrams are routed to the generic editor because there is no specialized ER editor.
-- Preview rendering: The generic editor requests a live SVG preview from the Kroki service.
+- Editor routing: `MermaidVisualEditor` has no branch for ER diagrams, so the detected model "Entity Relationship" reaches the Universal Mode fallback.
+- Preview rendering: The main preview pane requests the SVG from the Kroki service, with a 500 ms debounce, whatever the editor shows.
 - Error diagnostics: The system provides explanations and fix suggestions for ER-related errors.
 
 Key behaviors:
 - ER diagram detection uses a regex against the code content.
-- The Mermaid generic editor displays a live preview and an AST property panel.
+- The Universal Mode fallback shows the message "Visual editing for this diagram type is generic. Structure editing is best done via code." The Mermaid visual editor shows no property panel and no preview of its own.
 - Error diagnostics map error patterns to human-readable explanations and suggested fixes.
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L53-L64)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L77-L116)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L98)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L611-L656)
 
 ## Architecture Overview
-The ER diagram workflow integrates with the broader diagram generator architecture. The Mermaid ER diagram is treated as a class-like diagram and rendered using the generic editor.
+The ER diagram workflow integrates with the broader diagram generator architecture. The Mermaid ER diagram is edited as code in Monaco, and the Mermaid visual editor shows the Universal Mode fallback for ER diagrams.
 
 ```mermaid
 sequenceDiagram
 participant U as "User"
 participant MVE as "MermaidVisualEditor"
 participant DET as "detectSpecificModel()"
-participant GEN as "MermaidGenericEditor"
+participant GEN as "Universal Mode fallback"
 participant KRO as "Kroki (mermaid/svg)"
 participant IMG as "Preview Image"
-U->>MVE : Enter ER diagram code
-MVE->>DET : Analyze code
+U->>DET : Enter ER diagram code
 DET-->>MVE : "Entity Relationship"
-MVE->>GEN : Render generic editor
-GEN->>KRO : POST code
-KRO-->>GEN : SVG Blob
-GEN-->>U : Display preview
+MVE->>GEN : No ER branch, show fallback panel
+U->>KRO : Preview pane posts the code
+KRO-->>IMG : SVG Blob
+IMG-->>U : Display preview
 ```
 
 **Diagram sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L121)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 - [js/utils.js](file://js/utils.js#L49-L85)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L98)
 
 ## Detailed Component Analysis
 
 ### ER Diagram Detection and Routing
 - Detection: The application checks for the erDiagram keyword to identify ER diagrams.
-- Routing: ER diagrams are routed to the generic editor, which provides a live preview and an AST property panel.
+- Routing: `MermaidVisualEditor` checks the detected model for Flowchart, Sequence, Pie, Gantt, Timeline, Journey and Mindmap. "Entity Relationship" matches none of these, so the Universal Mode fallback appears.
 
 ```mermaid
 flowchart TD
 Start(["Code Input"]) --> Check["Check for 'erDiagram'"]
-Check --> |Found| Route["Route to MermaidGenericEditor"]
-Check --> |Not Found| Other["Route to other editor or generic fallback"]
-Route --> Preview["Render Preview via Kroki"]
-Other --> Preview
-Preview --> End(["Display"])
+Check --> |Found| Route["Show Universal Mode fallback"]
+Check --> |Not Found| Other["Route to other editor or Universal Mode fallback"]
+Route --> End(["Display fallback panel"])
+Other --> End
 ```
 
 **Diagram sources**
 - [js/utils.js](file://js/utils.js#L53-L64)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L77-L116)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L53-L64)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L77-L116)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ### Mermaid ER Diagram Syntax and Semantics
 The application supports ER diagrams in two forms:
@@ -144,46 +137,36 @@ PlantUML ER-like syntax highlights:
 These examples demonstrate the supported syntax patterns for ER diagrams.
 
 **Section sources**
-- [index.html](file://index.html#L317-L335)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L441-L490)
 
-### Mermaid Generic Editor for ER Diagrams
-The generic editor provides:
-- Live preview rendering
-- AST property panel
-- Basic property inspection
+### Universal Mode fallback for ER diagrams
+The fallback panel inside `MermaidVisualEditor` shows a "Universal Mode" heading and the message "Visual editing for this diagram type is generic. Structure editing is best done via code." The panel sits under the shared `EditorToolbar`, titled "Entity Relationship Editor" with the sub-title "Visual Mode (Beta)".
 
-It is used for ER diagrams because there is no specialized ER editor.
+The fallback appears for ER diagrams because no ER editor exists. The user edits the erDiagram text in Monaco, and the preview pane renders the result.
 
 ```mermaid
 classDiagram
-class MermaidGenericEditor {
-+ast
-+code
-+onChange()
-+onCodeChange()
-+previewUrl
-+previewLoading
-+render()
+class UniversalModeFallback {
++message
 }
 class MermaidVisualEditor {
 +ast
 +code
++astLoaded
++detectedModel
 +onChange()
 +onCodeChange()
 +onError()
-+render()
 }
-MermaidVisualEditor --> MermaidGenericEditor : "routes ER to"
+MermaidVisualEditor --> UniversalModeFallback : "shows for ER"
 ```
 
 **Diagram sources**
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L98)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L121)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 **Section sources**
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L98)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L77-L116)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ### Error Diagnostics and Fix Suggestions for ER Diagrams
 The system provides:
@@ -226,28 +209,25 @@ The ER diagram support depends on:
 ```mermaid
 graph TB
 CFG["js/config.js"] --> DET["js/utils.js::detectSpecificModel"]
-DET --> ROUTE["js/editors/mermaid/index.js::route"]
-ROUTE --> GEN["MermaidGenericEditor"]
-GEN --> KRO["Kroki Preview"]
+DET --> ROUTE["js/components/editors/mermaid/MermaidVisualEditor.jsx::route"]
+ROUTE --> GEN["Universal Mode fallback"]
+DET --> KRO["Kroki Preview"]
 DIAG["Error Diagnostics"] --> DET
-DIAG --> GEN
 ```
 
 **Diagram sources**
 - [js/config.js](file://js/config.js#L58-L69)
 - [js/utils.js](file://js/utils.js#L49-L85)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L77-L116)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L98)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 **Section sources**
 - [js/config.js](file://js/config.js#L58-L69)
 - [js/utils.js](file://js/utils.js#L49-L85)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L77-L116)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L98)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ## Performance Considerations
 - Preview rendering is debounced to reduce network requests.
-- The generic editor avoids heavy computations and focuses on live preview updates.
+- The Universal Mode fallback is a static panel, so ER diagrams add no editor-side work.
 - Error diagnostics are computed only when errors occur.
 
 [No sources needed since this section provides general guidance]
@@ -266,7 +246,7 @@ Use the error explanations and fix suggestions for targeted guidance.
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L611-L656)
 
 ## Conclusion
-The Universal Diagram Generator supports ER diagrams by detecting the erDiagram type and rendering them via the generic editor with live preview. While there is no specialized ER editor, the system provides robust error diagnostics and fix suggestions to help users author correct ER diagrams. The documented syntax patterns and troubleshooting steps enable reliable ER modeling within the platform.
+The Universal Diagram Generator supports ER diagrams by detecting the erDiagram type and rendering them in the preview pane through Kroki, with the Universal Mode fallback in the visual editor. While there is no specialized ER editor, the system provides robust error diagnostics and fix suggestions to help users author correct ER diagrams. The documented syntax patterns and troubleshooting steps enable reliable ER modeling within the platform.
 
 [No sources needed since this section summarizes without analyzing specific files]
 
@@ -277,7 +257,7 @@ The Universal Diagram Generator supports ER diagrams by detecting the erDiagram 
 - PlantUML ER-like syntax: entity blocks with attribute lists, primary and foreign key markers, and relationships.
 
 **Section sources**
-- [index.html](file://index.html#L317-L335)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L441-L490)
 
 ### Appendix B: Relationship Lines and Multiplicity Indicators
@@ -285,5 +265,5 @@ The Universal Diagram Generator supports ER diagrams by detecting the erDiagram 
 - Multiplicity indicators reflect one-to-one, one-to-many, and many-to-many relationships.
 
 **Section sources**
-- [index.html](file://index.html#L217-L222)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L485-L487)

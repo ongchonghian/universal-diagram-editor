@@ -5,18 +5,21 @@
 - [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js)
 - [js/react-helpers.js](file://js/react-helpers.js)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js)
+- [js/services/RendererAdapter.js](file://js/services/RendererAdapter.js)
+- [js/hooks/useDiagramState.js](file://js/hooks/useDiagramState.js)
+- [js/hooks/useRemoteRenderer.js](file://js/hooks/useRemoteRenderer.js)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/config.js](file://js/config.js)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
+- [js/components/PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
+- [js/components/editors/PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
 - [js/components/ui.js](file://js/components/ui.js)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 - [js/library-registry.js](file://js/library-registry.js)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js)
 - [js/update-manager.js](file://js/update-manager.js)
@@ -46,28 +49,29 @@
 10. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the advanced technical implementations and architectural patterns used in the Universal Diagram Editor. It covers the utility function architecture (encoding/decoding, error handling, cross-platform compatibility), React helper utilities for DOM/event/lifecycle management, the Monaco wrapper implementation (syntax highlighting, error markers, custom languages), integration patterns for external libraries and CDNs, configuration and plugin/extensibility points, advanced JavaScript patterns, asynchronous programming, state management strategies, and the comprehensive library update management system with enhanced error handling and testing scenarios.
+This document explains the advanced technical implementations and architectural patterns used in the Universal Diagram Editor. It covers the utility function architecture (encoding/decoding, error handling, cross-platform compatibility), React helper utilities for DOM/event/lifecycle management, the Monaco wrapper implementation (syntax highlighting, error markers, custom languages), integration patterns for external libraries (npm packages bundled by Vite, plus a few CDN scripts), configuration and plugin/extensibility points, advanced JavaScript patterns, asynchronous programming, state management strategies, and the comprehensive library update management system with enhanced error handling and testing scenarios.
 
 ## Project Structure
-The application is a single-page React application with a hybrid module approach:
-- The main HTML loads React, ReactDOM, Babel, Monaco, and other libraries via CDN.
-- Core logic is split into modular JS files under js/ for utilities, React helpers, Monaco wrapper, configuration, error diagnostics, specialized editors, and the enhanced library update management system.
-- The main application is bootstrapped inside a Babel-enabled script tag in index.html.
+The application is a single-page React application built with Vite:
+- `index.html` is a small shell. It loads the Monaco AMD loader, pako, dagre, SheetJS and Font Awesome from CDNs, imports the Mermaid AST module, and loads the `js/index.jsx` entry point.
+- React, ReactDOM, bpmn-js and the other npm packages are bundled by Vite.
+- Core logic is split into modular JS and JSX files under js/ for utilities, hooks, the Monaco wrapper, configuration, error diagnostics, visual editors, and the enhanced library update management system.
+- The main application is bootstrapped by `js/index.jsx`, which renders `App.jsx`.
 - The library update system is integrated as an ES module with a dedicated UI panel featuring reactive state management.
 
 ```mermaid
 graph TB
-A["index.html<br/>CDN scripts, Babel, Monaco, Update System"] --> B["React App Root<br/>(App component)"]
+A["index.html<br/>Vite shell, CDN scripts, Mermaid AST module"] --> B["React App Root<br/>(App.jsx)"]
 B --> C["MonacoWrapper<br/>(Monaco Editor)"]
 B --> D["BpmnVisualEditor<br/>(bpmn-js)"]
-B --> E["Mermaid Editors<br/>(Flowchart, Sequence, Generic)"]
+B --> E["MermaidVisualEditor<br/>(Pie editor + placeholders, Universal Mode)"]
 B --> F["UI Components<br/>(Buttons, Badges, Update Panel)"]
-B --> G["PlantUML Components<br/>(Toolbar, Gallery, Context Menu)"]
+B --> G["PlantUML UI<br/>(Toolbar, Gallery, Preview context menu)"]
 H["js/utils.js<br/>Encoding, Error Parsing, Script/CSS Loading"] --> C
 I["js/config.js<br/>Diagram Types, Snippets, Templates"] --> B
 J["js/error-diagnostics/*<br/>Parsing, Fixes, Explanations"] --> C
 K["js/react-helpers.js<br/>htm + React bindings"] --> F
-L["js/editors/*<br/>Specialized editors"] --> B
+L["js/components/editors/*<br/>Visual editors"] --> B
 M["js/library-registry.js<br/>Enhanced CDN Dependencies, Version Tracking"] --> N["Update System"]
 N["js/update-manager.js<br/>Improved Workflow Orchestration"] --> O["js/update-tester.js<br/>Advanced Sandbox Testing"]
 N --> P["js/html-rewriter.js<br/>Precise URL Replacement, Validation"]
@@ -75,64 +79,62 @@ Q["js/cdn-version-checker.js<br/>Multi-Provider API Integration"] --> N
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1-L80)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L1-L177)
 - [js/config.js](file://js/config.js#L1-L566)
 - [js/react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/library-registry.js](file://js/library-registry.js#L1-L487)
-- [js/update-manager.js](file://js/update-manager.js#L1-L461)
-- [js/update-tester.js](file://js/update-tester.js#L1-L706)
-- [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
-- [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/library-registry.js](file://js/library-registry.js)
+- [js/update-manager.js](file://js/update-manager.js)
+- [js/update-tester.js](file://js/update-tester.js)
+- [js/html-rewriter.js](file://js/html-rewriter.js)
+- [js/cdn-version-checker.js](file://js/cdn-version-checker.js)
 
 **Section sources**
-- [index.html](file://index.html#L1-L120)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L120)
 
 ## Core Components
-- Utility functions: Encoding (Kroki URL-safe base64), MIME/type detection, error extraction, regex escaping, dynamic script/CSS loading, debouncing.
-- React helpers: htm-based JSX-like syntax bound to React globals loaded from CDN.
-- Monaco wrapper: AMD-configured Monaco editor with custom PlantUML/Mermaid Monarch tokens, error providers, and imperative methods.
+- Utility functions: model detection, regex escaping, dynamic script/CSS loading and debouncing in `utils.js`. The renderer adapter (`js/services/RendererAdapter.js`) holds Kroki encoding (deflate plus URL-safe base64), type detection from a file name, and error-line extraction.
+- React helpers: `react-helpers.js` binds htm tagged templates to React for the older components. Newer components are JSX compiled by Vite.
+- Monaco wrapper: `MonacoWrapper.jsx` configures the Monaco AMD loader, registers PlantUML, Mermaid and LikeC4 Monarch tokens, attaches error providers, and exposes imperative methods through a ref.
 - Error diagnostics: Parser for extracting line/column, categorization, and conversion to Monaco markers; fix suggestions and explanations.
 - Configuration: Central registry of diagram types, language mappings, snippets, and templates.
-- Specialized editors: BPMN visual editor (bpmn-js), Mermaid editors (flowchart, sequence, generic), and UI components.
+- Visual editors: BPMN visual editor (bpmn-js), the Mermaid visual editor (a working pie editor, placeholder sub-editors and a Universal Mode fallback), and UI components.
 - **Syntext Smith**: AI assistant that edits native diagram code through tools. The real parsers check every edit, and the model repairs the draft within the same turn, in up to eight model steps. See [Syntext Smith](file://Advanced Features/Syntext Smith (AI Copilot).md).
 - **Enhanced**: Library update management system: Comprehensive dependency tracking, CDN version checking, automated testing, and HTML rewriting with advanced validation.
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L1-L177)
 - [js/react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L170)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 - [js/config.js](file://js/config.js#L1-L120)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/library-registry.js](file://js/library-registry.js#L1-L487)
-- [js/update-manager.js](file://js/update-manager.js#L1-L461)
-- [js/update-tester.js](file://js/update-tester.js#L1-L706)
-- [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
-- [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/library-registry.js](file://js/library-registry.js)
+- [js/update-manager.js](file://js/update-manager.js)
+- [js/update-tester.js](file://js/update-tester.js)
+- [js/html-rewriter.js](file://js/html-rewriter.js)
+- [js/cdn-version-checker.js](file://js/cdn-version-checker.js)
 
 ## Architecture Overview
 High-level architecture:
-- Frontend: React + Monaco + specialized editors.
-- External integrations: CDN-hosted libraries (React, Monaco, bpmn-js, Mermaid AST), Kroki backend for rendering.
-- Data flow: Code changes trigger debounced preview generation; errors are parsed and surfaced via Monaco markers and hover explanations; visual editors update code and vice versa via a sync controller.
+- Frontend: React + Monaco + visual editors.
+- External integrations: npm packages bundled by Vite (React, bpmn-js and others), CDN-hosted scripts (Monaco loader, Mermaid AST, pako, dagre), and the Kroki backend for rendering.
+- Data flow: Code changes trigger debounced preview generation; errors are parsed and surfaced via Monaco markers and hover explanations; the Mermaid sync controller parses code into an AST, and the pie editor writes regenerated code back.
 - **Enhanced**: Update system: Comprehensive dependency version tracking, testing, and HTML rewriting with sandboxed validation and error handling.
 
 ```mermaid
 sequenceDiagram
 participant U as "User"
-participant App as "App (index.html)"
+participant App as "App (App.jsx)"
 participant UM as "UpdateManager"
 participant CV as "CDNVersionChecker"
 participant UT as "UpdateTester"
@@ -152,7 +154,7 @@ App-->>U : "Display update results"
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L2200-L2237)
+- [index.html](file://index.html)
 - [js/update-manager.js](file://js/update-manager.js#L63-L98)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L191-L214)
 - [js/update-tester.js](file://js/update-tester.js#L398-L444)
@@ -161,9 +163,9 @@ App-->>U : "Display update results"
 ## Detailed Component Analysis
 
 ### Utility Function Architecture
-- Encoding/Decoding: Converts text to bytes, compresses with pako, base64-encodes, and URL-safes the result for Kroki URLs.
-- Type Detection: Infers diagram type from file extension and content.
-- Error Extraction: Parses line/column from various error formats.
+- Encoding/Decoding: `RendererAdapter.encodeKroki` converts text to bytes, compresses with pako, base64-encodes, and URL-safes the result for Kroki URLs.
+- Type Detection: `RendererAdapter.detectType` infers the diagram type from a file name and content, and `detectSpecificModel` in `utils.js` infers the model from code.
+- Error Extraction: Parses line/column from various error formats (`RendererAdapter` and the diagnostics modules).
 - Regex Escaping: Safe construction of RegExp from user-provided strings.
 - Dynamic Loading: Loads external scripts/CSS avoiding AMD conflicts; deduplicates existing resources.
 - Debounce: Throttles expensive operations (e.g., Mermaid AST parsing).
@@ -184,23 +186,24 @@ Hover --> End
 
 **Diagram sources**
 - [js/utils.js](file://js/utils.js#L14-L85)
+- [js/services/RendererAdapter.js](file://js/services/RendererAdapter.js)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L13-L145)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L1-L177)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 
 ### React Helper Utilities
-- Uses htm to enable JSX-like syntax without a bundler, binding to globally loaded React.
-- Exports React hooks and html tagged template for consistent component creation.
-- Enables zero-build development while maintaining modern React patterns.
+- `react-helpers.js` imports htm from a CDN module and binds it to the React that Vite bundles.
+- Exports React hooks and the `html` tagged template for the components that still use that syntax.
+- Newer components are written in JSX and compiled by Vite, so the helper is no longer the main way to write components.
 
 ```mermaid
 graph LR
-CDN["CDN React + Babel"] --> RH["react-helpers.js"]
+NPM["npm React (bundled by Vite)"] --> RH["react-helpers.js"]
 RH --> Cmp["Components using html`...`"]
 ```
 
@@ -213,18 +216,18 @@ RH --> Cmp["Components using html`...`"]
 
 ### Monaco Wrapper Implementation
 Key capabilities:
-- AMD configuration for Monaco loader.
-- Registers PlantUML and Mermaid Monarch grammars with keywords, operators, and tokenizer rules.
-- Registers error providers: CodeActionProvider for quick fixes and HoverProvider for explanations.
-- Exposes imperative methods: setValue, insertAtCursor, setMarkers, clearMarkers, scrollToLine, getModel, getMonaco.
-- Synchronizes language and value changes; clears decorations on content change.
+- AMD configuration for the Monaco loader (loaded from a CDN by `index.html`; the wrapper warns and does not start if `window.require` is missing).
+- Registers PlantUML, Mermaid and LikeC4 Monarch grammars with keywords, operators, and tokenizer rules.
+- Registers error providers for Mermaid, PlantUML, XML and Structurizr: CodeActionProvider for quick fixes and HoverProvider for explanations.
+- Exposes imperative methods through `forwardRef` and `useImperativeHandle`: scrollToLine, setValue, insertAtCursor, insertAtLocation, findAndSelect, setMarkers, clearMarkers, getModel, getMonaco.
+- Synchronizes language, value and read-only changes; clears decorations on content change.
 
 ```mermaid
 classDiagram
 class MonacoWrapper {
 +ref : forwardRef
 +state : editorReady
-+methods : scrollToLine(), setValue(), insertAtCursor(), setMarkers(), clearMarkers(), getModel(), getMonaco()
++methods : scrollToLine(), setValue(), insertAtCursor(), insertAtLocation(), findAndSelect(), setMarkers(), clearMarkers(), getModel(), getMonaco()
 +effects : initialize editor, register languages/providers, sync language/value
 }
 class Providers {
@@ -235,17 +238,17 @@ class Providers {
 class Languages {
 +registerPlantUMLLanguage()
 +registerMermaidLanguage()
++registerLikeC4Language()
 }
 MonacoWrapper --> Providers : "uses"
 MonacoWrapper --> Languages : "registers"
 ```
 
 **Diagram sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L309-L423)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 **Section sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Error Diagnostics System
 - Parsing: Extracts line/column from error text using diagram-type-aware patterns; categorizes errors and assigns codes.
@@ -271,7 +274,7 @@ S --> CA["toMonacoCodeAction()"]
 
 **Section sources**
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 
 ### Configuration and Plugin Architecture
@@ -296,36 +299,38 @@ CFG --> MR["Mermaid Snippets/Templates"]
 - [js/config.js](file://js/config.js#L1-L566)
 
 ### Advanced JavaScript Patterns and Asynchronous Programming
-- Debouncing: Used for Mermaid AST parsing to avoid excessive re-renders.
+- Debouncing: Used for Mermaid AST parsing (300 ms) and preview rendering (500 ms) to avoid excessive re-renders.
 - Promise-based dynamic loading: Ensures AMD compatibility and avoids conflicts.
-- Controlled state updates: Change-source flag prevents feedback loops between code and visual editors.
+- Controlled state updates: The sync controller's change-source flag is designed to prevent feedback loops between code and visual editors.
 - Event-driven editors: Monaco emits change/cursor events; bpmn-js emits command stack changes.
 
 ```mermaid
 sequenceDiagram
 participant MW as "MonacoWrapper"
+participant ST as "useDiagramState"
 participant SYNC as "MermaidSyncController"
 participant AST as "MermaidAST"
-MW->>SYNC : "parseCode(code)"
+MW->>ST : "onChange(code)"
+ST->>SYNC : "parseCode(code)"
 SYNC->>AST : "parse(code)"
 AST-->>SYNC : "ast"
-SYNC-->>MW : "ast"
-Note over SYNC : "changeSource='visual' during renderToCode"
+SYNC-->>ST : "ast"
+Note over SYNC : "changeSource='visual' during renderToCode (no sub-editor calls it today)"
 SYNC->>AST : "render(ast)"
 AST-->>SYNC : "code"
 ```
 
 **Diagram sources**
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L93)
-- [index.html](file://index.html#L532-L557)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [index.html](file://index.html)
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L165-L177)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
-- [index.html](file://index.html#L532-L557)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [index.html](file://index.html)
 
 ### State Management Strategies
-- Local React state: App manages diagram type, detected model, text input, preview URL, stats, loading, errors, cursor position, view mode, and template modal visibility.
+- Local React state: `App.jsx` and its hooks (`useDiagramState`, `useRemoteRenderer`) manage diagram type, detected model, text input, preview URL, stats, loading, errors, cursor position and view mode. The template modal visibility lives in `App.jsx`.
 - Editor refs: Imperative methods on MonacoWrapper coordinate with App state.
 - Visual editor state: BPMN visual editor maintains internal modeler state and syncs XML back to code.
 - **Enhanced**: Update system state: UpdateManager maintains available updates, test results, and loading states with subscription-based notifications and comprehensive error handling.
@@ -336,7 +341,7 @@ stateDiagram-v2
 CodeView --> VisualView : "Switch to Design"
 VisualView --> CodeView : "Switch to Code"
 CodeView --> CodeView : "Edit + Debounce + Preview"
-VisualView --> VisualView : "Edit + Sync Controller"
+VisualView --> VisualView : "Edit in visual editor"
 [*] --> UpdatePanel
 UpdatePanel --> Checking : "Check for Updates"
 UpdatePanel --> Testing : "Test Selected"
@@ -344,46 +349,45 @@ UpdatePanel --> Downloading : "Apply Updates"
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1398-L1751)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L91)
+- [index.html](file://index.html)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/update-manager.js](file://js/update-manager.js#L23-L58)
 
 **Section sources**
-- [index.html](file://index.html#L1398-L1751)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/update-manager.js](file://js/update-manager.js#L1-L461)
+- [index.html](file://index.html)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/update-manager.js](file://js/update-manager.js)
 
 ### Integration Patterns for External Libraries and CDNs
-- React and ReactDOM loaded from CDN; Babel standalone enables JSX without build step.
+- React and ReactDOM come from npm and are bundled by Vite, which compiles the JSX at build time.
 - Monaco AMD loader configured to load from CDN; language providers registered post-load.
-- bpmn-js dynamically loaded and initialized; CSS assets injected.
-- Mermaid AST loaded as an ES module; event-driven readiness.
-- Pako for zlib compression used in encoding.
+- bpmn-js is an npm import in `BpmnVisualEditor.jsx`, with its CSS imported alongside, so Vite bundles both.
+- Mermaid AST loaded as an ES module from a CDN in `index.html`; readiness is tracked by the `window.MermaidASTLoaded` flag.
+- Pako for zlib compression used in encoding (an npm import in the renderer adapter and `utils.js`; `index.html` also loads it from a CDN).
 - **Enhanced**: Library update system integrates with CDN APIs for version checking and automated updates with comprehensive validation.
 
 ```mermaid
 graph TB
-CDN["CDN Scripts"] --> R["React + ReactDOM"]
-CDN --> B["Babel Standalone"]
-CDN --> M["Monaco Loader"]
-CDN --> PJ["bpmn-js"]
+NPM["npm packages (Vite bundle)"] --> R["React + ReactDOM"]
+NPM --> PJ["bpmn-js + bpmn-js-task-resize"]
+NPM --> P["Pako"]
+CDN["CDN Scripts"] --> M["Monaco Loader"]
 CDN --> PA["Mermaid AST (ESM)"]
-CDN --> P["Pako"]
 US["Update System"] --> CV["CDN Version APIs"]
 US --> HT["HTML Rewriter"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L8-L59)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L116-L158)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L20-L30)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/library-registry.js](file://js/library-registry.js#L16-L228)
 
 **Section sources**
-- [index.html](file://index.html#L1-L80)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L116-L158)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/library-registry.js](file://js/library-registry.js#L1-L487)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/library-registry.js](file://js/library-registry.js)
 
 ### React Helpers, DOM Manipulation, and Lifecycle
 - DOM manipulation: Components use refs to attach to containers and inject SVG content for interactive previews.
@@ -392,7 +396,7 @@ US --> HT["HTML Rewriter"]
 
 ```mermaid
 sequenceDiagram
-participant Comp as "InteractiveSvgPreview"
+participant Comp as "PreviewPanel"
 participant DOM as "DOM Container"
 Comp->>DOM : "innerHTML = svgContent"
 DOM-->>Comp : "querySelectorAll('text/g')"
@@ -401,39 +405,38 @@ Comp->>Comp : "useState/setElements on mount"
 ```
 
 **Diagram sources**
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L153-L214)
+- [js/components/editors/PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
 
 **Section sources**
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/components/ui.js](file://js/components/ui.js#L1-L175)
+- [js/components/PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
+- [js/components/editors/PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
+- [js/components/ui.js](file://js/components/ui.js)
 
 ### Specialized Editors
-- BPMN Visual Editor: Dynamically loads bpmn-js, initializes modeler, listens for changes, and imports XML.
-- Mermaid Editors: Dedicated editors for flowchart, sequence, pie, gantt, timeline, journey, mindmap; generic fallback with AST explorer.
-- Mermaid Sync Controller: Debounces parsing, prevents sync loops, and renders AST back to code.
+- BPMN Visual Editor: Imports the bpmn-js modeler from npm, creates it with custom context pad, renderer, lane split and transpose modules, listens for changes, and imports XML (falling back to an empty diagram on error).
+- Mermaid Visual Editor: Routes by detected model name to the sub-editors in `MermaidEditors.jsx` (pie, flowchart, sequence, gantt, timeline, journey, mindmap). Only the pie editor edits the diagram; the others show "Code-Only Editing" placeholders. Any other model shows the Universal Mode fallback panel, with no AST explorer.
+- Mermaid Sync Controller (`createMermaidSyncController`): Debounces parsing, guards against sync loops, and can render an AST back to code.
 
 ```mermaid
 graph TB
 B["BpmnVisualEditor"] --> BJ["bpmn-js Modeler"]
-MFlow["MermaidFlowchartEditor"] --> AST["Mermaid AST"]
-MSeq["MermaidSequenceEditor"] --> AST
-MGnr["MermaidGenericEditor"] --> AST
-Sync["MermaidSyncController"] --> AST
+MVE["MermaidVisualEditor"] --> MPie["MermaidPieEditor (edits code)"]
+MVE --> MStub["Flowchart, Sequence, Gantt, Timeline,<br/>Journey, Mindmap placeholders"]
+MVE --> MUni["Universal Mode fallback"]
+Sync["MermaidSyncController"] --> AST["Mermaid AST"]
 ```
 
 **Diagram sources**
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L91)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L10-L59)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L4-L36)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L11-L97)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L93)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 **Section sources**
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
-- [js/editors/mermaid/MermaidSequenceEditor.js](file://js/editors/mermaid/MermaidSequenceEditor.js#L1-L110)
-- [js/editors/mermaid/MermaidGenericEditor.js](file://js/editors/mermaid/MermaidGenericEditor.js#L1-L101)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### Syntext Smith (AI assistant)
 Syntext Smith lets a language model write native diagram code through tools, and checks every edit with the same parsers the editor uses:
@@ -479,7 +482,7 @@ The library registry serves as the central configuration hub for all CDN depende
 **Updated** Enhanced dependency conflict detection with comprehensive validation and error reporting.
 
 **Section sources**
-- [js/library-registry.js](file://js/library-registry.js#L1-L487)
+- [js/library-registry.js](file://js/library-registry.js)
 
 ### CDN Version Checker
 Integrates with multiple CDN APIs to fetch the latest versions of libraries with intelligent caching, error handling, and comprehensive version comparison.
@@ -501,7 +504,7 @@ Integrates with multiple CDN APIs to fetch the latest versions of libraries with
 **Updated** Improved error handling and caching mechanisms for better reliability.
 
 **Section sources**
-- [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [js/cdn-version-checker.js](file://js/cdn-version-checker.js)
 
 ### Enhanced Update Manager
 Orchestrates the complete library update workflow with comprehensive state management, testing, and HTML rewriting with advanced error handling and user interaction.
@@ -528,7 +531,7 @@ Orchestrates the complete library update workflow with comprehensive state manag
 - **Time-based last check**: Human-readable timestamps for update freshness
 
 **Section sources**
-- [js/update-manager.js](file://js/update-manager.js#L1-L461)
+- [js/update-manager.js](file://js/update-manager.js)
 
 ### Advanced Update Tester
 Provides comprehensive sandboxed testing for library updates using iframe isolation, visual validation, and sophisticated dependency management.
@@ -563,7 +566,7 @@ Provides comprehensive sandboxed testing for library updates using iframe isolat
 - **Console filtering**: Noise reduction in test results with favicon and 404 filtering
 
 **Section sources**
-- [js/update-tester.js](file://js/update-tester.js#L1-L706)
+- [js/update-tester.js](file://js/update-tester.js)
 
 ### Enhanced HTML Rewriter
 Handles precise URL replacement in HTML with sophisticated pattern matching, validation, and comprehensive change tracking.
@@ -588,7 +591,7 @@ Handles precise URL replacement in HTML with sophisticated pattern matching, val
 - **URL categorization**: CDN provider identification for accurate pattern matching
 
 **Section sources**
-- [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
+- [js/html-rewriter.js](file://js/html-rewriter.js)
 
 ### Integration with Main Application
 The update system is seamlessly integrated into the main application with a dedicated UI panel, React component subscriptions, and comprehensive user interaction.
@@ -610,8 +613,8 @@ The update system is seamlessly integrated into the main application with a dedi
 - **Error recovery**: Comprehensive error handling with user guidance and retry options
 
 **Section sources**
-- [index.html](file://index.html#L117-L132)
-- [index.html](file://index.html#L2200-L2397)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 
 ## Dependency Analysis
 - Internal dependencies:
@@ -620,15 +623,15 @@ The update system is seamlessly integrated into the main application with a dedi
   - Specialized editors depend on shared UI components and utils.
   - **Enhanced**: Update system components depend on each other in a coordinated workflow with comprehensive error handling.
 - External dependencies:
-  - CDN-hosted React, ReactDOM, Babel, Monaco, bpmn-js, Mermaid AST, Pako.
+  - npm-bundled React, ReactDOM, bpmn-js and Pako, plus CDN-hosted Monaco loader, Mermaid AST and Pako.
   - **Enhanced**: CDN APIs for version checking (unpkg, cdnjs, npm registry, jsr.io) with caching and error handling.
   - **Enhanced**: Third-party services for library testing and validation with sandboxed iframe isolation.
 
 ```mermaid
 graph TB
-App["App (index.html)"] --> MW["MonacoWrapper"]
+App["App (App.jsx)"] --> MW["MonacoWrapper"]
 App --> BVE["BpmnVisualEditor"]
-App --> ME["Mermaid Editors"]
+App --> ME["MermaidVisualEditor"]
 App --> UPS["Enhanced Update System Panel"]
 MW --> ED["Error Diagnostics"]
 UPS --> LM["UpdateManager"]
@@ -642,46 +645,48 @@ HR --> LR
 App --> CFG["Config"]
 App --> Utils["Utils"]
 App --> UI["UI Components"]
-App --> PU["PlantUML Components"]
+App --> PU["PlantUML toolbar and PreviewPanel"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1398-L1751)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
+- [index.html](file://index.html)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
 - [js/config.js](file://js/config.js#L1-L566)
 - [js/utils.js](file://js/utils.js#L1-L177)
-- [js/components/ui.js](file://js/components/ui.js#L1-L175)
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/update-manager.js](file://js/update-manager.js#L1-L461)
-- [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
-- [js/update-tester.js](file://js/update-tester.js#L1-L706)
-- [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
-- [js/library-registry.js](file://js/library-registry.js#L1-L487)
+- [js/components/ui.js](file://js/components/ui.js)
+- [js/components/PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
+- [js/components/editors/PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
+- [js/update-manager.js](file://js/update-manager.js)
+- [js/cdn-version-checker.js](file://js/cdn-version-checker.js)
+- [js/update-tester.js](file://js/update-tester.js)
+- [js/html-rewriter.js](file://js/html-rewriter.js)
+- [js/library-registry.js](file://js/library-registry.js)
 
 **Section sources**
-- [index.html](file://index.html#L1398-L1751)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
-- [js/editors/mermaid/MermaidFlowchartEditor.js](file://js/editors/mermaid/MermaidFlowchartEditor.js#L1-L276)
+- [index.html](file://index.html)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidEditors.jsx](file://js/components/editors/mermaid/MermaidEditors.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
 - [js/config.js](file://js/config.js#L1-L566)
 - [js/utils.js](file://js/utils.js#L1-L177)
-- [js/components/ui.js](file://js/components/ui.js#L1-L175)
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
-- [js/update-manager.js](file://js/update-manager.js#L1-L461)
-- [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
-- [js/update-tester.js](file://js/update-tester.js#L1-L706)
-- [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
-- [js/library-registry.js](file://js/library-registry.js#L1-L487)
+- [js/components/ui.js](file://js/components/ui.js)
+- [js/components/PlantUmlToolbar.jsx](file://js/components/PlantUmlToolbar.jsx)
+- [js/components/editors/PreviewPanel.jsx](file://js/components/editors/PreviewPanel.jsx)
+- [js/update-manager.js](file://js/update-manager.js)
+- [js/cdn-version-checker.js](file://js/cdn-version-checker.js)
+- [js/update-tester.js](file://js/update-tester.js)
+- [js/html-rewriter.js](file://js/html-rewriter.js)
+- [js/library-registry.js](file://js/library-registry.js)
 
 ## Performance Considerations
 - Debouncing: Applied to Mermaid AST parsing and preview fetching to reduce network and CPU usage.
-- Lazy loading: Visual editors and libraries are loaded on demand to minimize initial payload.
+- Mounting on demand: `App.jsx` imports every visual editor statically, but each editor mounts only in visual mode. Dynamic imports could shrink the initial bundle.
 - Efficient Monaco updates: Imperative setValue and deltaDecorations used to avoid full re-renders.
-- CDN caching: Leveraging CDN-hosted libraries improves load times and reduces bandwidth.
+- CDN caching: The CDN-hosted scripts (Monaco loader, Mermaid AST, pako, dagre) benefit from shared browser caches.
 - **Enhanced**: Update system caching: 5-minute TTL for version checks to minimize API calls with intelligent error handling.
 - **Enhanced**: Sandbox testing: Isolated iframe testing prevents DOM pollution and improves reliability with timeout management.
 - **Enhanced**: Incremental HTML rewriting: Only modified URLs are replaced, reducing processing overhead with comprehensive validation.
@@ -690,8 +695,8 @@ App --> PU["PlantUML Components"]
 ## Troubleshooting Guide
 - Monaco AMD conflicts: Dynamic script loader temporarily removes window.define to avoid conflicts; restores it on load/error.
 - Error markers: If markers do not appear, verify diagram type mapping and ensure error providers are registered.
-- Visual editor failures: Check console logs for bpmn-js load errors; ensure CORS allows external CSS/JS.
-- Encoding issues: If preview fails, confirm encodeKroki returns a non-empty string and URL length does not exceed GET limits.
+- Visual editor failures: Check console logs for bpmn-js import or custom-module errors. If the Mermaid editor shows a spinner for ever, check that the Mermaid AST CDN module loaded.
+- Encoding issues: If preview fails, confirm `RendererAdapter.encodeKroki` returns a non-empty string and URL length does not exceed GET limits.
 - **Enhanced**: Update system failures: Check browser console for update system errors; verify CDN accessibility for version checking with detailed error messages.
 - **Enhanced**: Test failures: Review test results in update panel; check sandbox iframe for rendering errors with specific library details.
 - **Enhanced**: HTML rewrite issues: Verify generated HTML validates; check for blocked downloads or security restrictions with change summaries.
@@ -700,10 +705,10 @@ App --> PU["PlantUML Components"]
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L116-L146)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L309-L423)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L63-L75)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/update-manager.js](file://js/update-manager.js#L94-L97)
 - [js/update-tester.js](file://js/update-tester.js#L427-L438)
 
 ## Conclusion
-The Universal Diagram Editor combines a CDN-first architecture with modular React components and a powerful Monaco-based editor. Its error diagnostics system, dynamic loading utilities, and specialized editors deliver a robust authoring experience across multiple diagram types. The enhanced comprehensive library update management system represents a significant architectural advancement, providing automated dependency version tracking, sophisticated sandboxed testing, and safe HTML rewriting capabilities with comprehensive error handling and user interaction. This system ensures the application stays current with library updates while maintaining stability and preventing breaking changes through comprehensive validation, testing workflows, and dependency conflict resolution. The design emphasizes extensibility (configuration-driven), maintainability (modular JS), and usability (imperative editor APIs, quick fixes, and hover explanations), now augmented with automated dependency management for long-term sustainability and enhanced user experience through comprehensive state management and real-time updates.
+The Universal Diagram Editor combines a Vite-built React application (with a few CDN scripts) and modular components and a powerful Monaco-based editor. Its error diagnostics system, dynamic loading utilities, and specialized editors deliver a robust authoring experience across multiple diagram types. The enhanced comprehensive library update management system represents a significant architectural advancement, providing automated dependency version tracking, sophisticated sandboxed testing, and safe HTML rewriting capabilities with comprehensive error handling and user interaction. This system ensures the application stays current with library updates while maintaining stability and preventing breaking changes through comprehensive validation, testing workflows, and dependency conflict resolution. The design emphasizes extensibility (configuration-driven), maintainability (modular JS), and usability (imperative editor APIs, quick fixes, and hover explanations), now augmented with automated dependency management for long-term sustainability and enhanced user experience through comprehensive state management and real-time updates.

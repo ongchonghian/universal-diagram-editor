@@ -6,12 +6,12 @@
 - [js/config.js](file://js/config.js)
 - [js/utils.js](file://js/utils.js)
 - [js/react-helpers.js](file://js/react-helpers.js)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
 - [js/components/ui.js](file://js/components/ui.js)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js)
@@ -32,7 +32,7 @@
 Universal Diagram Generator is a web-based, unified diagramming tool that supports 20+ diagram formats through a single interface. It combines React for UI composition, Monaco Editor for code editing, and external rendering services (via Kroki) to deliver a dual-mode editing experience: code-first and visual-preview. The platform emphasizes intelligent error detection, a robust template system, and flexible export capabilities, targeting both beginners who want simple diagram creation and advanced users who require complex visual modeling.
 
 Key benefits:
-- Dual-mode editing: write code or manipulate visuals, with bidirectional synchronization for Mermaid.
+- Dual-mode editing: write code or manipulate visuals. BPMN synchronizes both ways; the Mermaid pie chart editor writes its edits back to the code.
 - Intelligent error detection: real-time parsing, structured error extraction, and actionable quick fixes.
 - Template system: curated snippets and templates for PlantUML and Mermaid to accelerate creation.
 - Export-ready previews: live SVG rendering via Kroki for instant visual feedback.
@@ -41,29 +41,29 @@ Key benefits:
 Supported diagram families include BPMN, Mermaid (flowcharts, sequences, class/state/ER charts, Gantt, pie, timelines, journeys, mindmaps, git graphs, quadrants), PlantUML and C4 PlantUML (UML diagrams, ERDs, component diagrams, deployment diagrams, WBS), GraphViz, Excalidraw, Structurizr, Vega/Vega-Lite, ERD, and more.
 
 Technology stack highlights:
-- React 18 with a lightweight helper for JSX-like syntax.
-- Monaco Editor with custom language support for PlantUML and Mermaid.
+- React, compiled with Vite from `.jsx` files (older components use a lightweight `htm` helper for JSX-like syntax).
+- Monaco Editor with custom language support for PlantUML, Mermaid and LikeC4.
 - Google Gemini (default model `gemini-3.8-flash`), Anthropic Claude, or any OpenAI-compatible endpoint for **Syntext Smith** AI services.
 - Mermaid rendered in the browser; external rendering via Kroki for the other formats.
 - bpmn-js for BPMN visual editing.
 - Tailwind CSS for responsive UI.
-- Mermaid AST for Mermaid code ↔ AST synchronization.
+- Mermaid AST for parsing Mermaid code into an AST.
 
 ## Project Structure
-The project is organized into modular JavaScript modules under js/, with HTML and CSS at the root. The structure separates concerns across configuration, UI components, editors, diagnostics, and utilities.
+The project is organized into modular JavaScript modules under js/, with a Vite HTML shell and CSS at the root. The structure separates concerns across configuration, UI components, editors, diagnostics, and utilities.
 
 ```mermaid
 graph TB
-Root["index.html<br/>Entry point and global libraries"]
+Root["index.html<br/>Vite shell and CDN libraries"]
 Config["js/config.js<br/>Diagram types, snippets, templates"]
 Utils["js/utils.js<br/>Encoding, detection, loaders"]
 ReactHelpers["js/react-helpers.js<br/>JSX-like bindings"]
-Monaco["js/components/MonacoWrapper.js<br/>Monaco editor wrapper"]
+Monaco["js/components/editors/MonacoWrapper.jsx<br/>Monaco editor wrapper"]
 PlantUml["js/components/PlantUmlComponents.js<br/>PlantUML UI (toolbar, templates)"]
 UI["js/components/ui.js<br/>Shared UI components"]
-MermaidIndex["js/editors/mermaid/index.js<br/>Mermaid router"]
-MermaidSync["js/editors/mermaid/MermaidSyncController.js<br/>AST sync controller"]
-BpmnEditor["js/editors/bpmn/BpmnVisualEditor.js<br/>BPMN visual editor"]
+MermaidIndex["js/components/editors/mermaid/MermaidVisualEditor.jsx<br/>Mermaid router and Universal Mode fallback"]
+MermaidSync["js/components/editors/mermaid/utils.js<br/>AST sync controller"]
+BpmnEditor["js/components/editors/BpmnVisualEditor.jsx<br/>BPMN visual editor"]
 Diagnostics["js/error-diagnostics/index.js<br/>Error parsing and markers"]
 Explanations["js/error-diagnostics/explanations.js<br/>Error explanations"]
 Fixes["js/error-diagnostics/fixes.js<br/>Quick fixes"]
@@ -82,22 +82,22 @@ Root --> Fixes
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1-L120)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L120)
 - [js/utils.js](file://js/utils.js#L1-L60)
 - [js/react-helpers.js](file://js/react-helpers.js#L1-L39)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L60)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L60)
 - [js/components/ui.js](file://js/components/ui.js#L1-L60)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L40)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L40)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L40)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L40)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L40)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L40)
 
 **Section sources**
-- [index.html](file://index.html#L1-L120)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L120)
 
 ## Core Components
@@ -111,9 +111,9 @@ Root --> Fixes
 
 **Section sources**
 - [js/config.js](file://js/config.js#L1-L120)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L120)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L60)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L60)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L60)
 - [js/components/ui.js](file://js/components/ui.js#L1-L60)
 - [js/utils.js](file://js/utils.js#L1-L60)
@@ -122,9 +122,9 @@ Root --> Fixes
 The application is a single-page React app that dynamically loads external libraries and services. The core flow:
 - Users select a diagram type and open the editor.
 - The Monaco editor provides syntax highlighting and error diagnostics.
-- For Mermaid, an AST sync controller enables bidirectional editing between code and visual views.
+- For Mermaid, an AST sync controller parses the code into an AST (debounced by 300 ms). The Mermaid visual editor routes to a sub-editor by detected diagram model.
 - For BPMN, the visual editor integrates with bpmn-js and syncs XML to code.
-- Rendering is delegated to external services (e.g., Kroki) for Mermaid and other formats.
+- Rendering is delegated to external services (e.g., Kroki) for Mermaid and other formats. The `useRemoteRenderer` hook sends the code and the preview panel shows the SVG.
 
 ```mermaid
 sequenceDiagram
@@ -139,23 +139,23 @@ UI->>Monaco : Initialize editor with language
 Monaco-->>UI : Content changes
 UI->>MermaidAST : Parse code (when applicable)
 MermaidAST-->>UI : AST
-UI->>MermaidEditor : Render visual view
-MermaidEditor->>Kroki : Request SVG preview
-Kroki-->>MermaidEditor : SVG blob
-MermaidEditor-->>UI : Preview URL
-UI-->>User : Live visual feedback
+UI->>Kroki : Request SVG preview (useRemoteRenderer)
+Kroki-->>UI : SVG
+UI-->>User : Live preview in the code view
+User->>MermaidEditor : Switch to Visual mode
+MermaidEditor-->>User : Sub-editor or Universal Mode message
 ```
 
 **Diagram sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L90-L170)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L70)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L40)
-- [index.html](file://index.html#L34-L80)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
+- [index.html](file://index.html)
 
 ## Detailed Component Analysis
 
 ### Monaco Editor Integration
-MonacoWrapper encapsulates the Monaco editor lifecycle, registers PlantUML and Mermaid languages with Monarch tokenizers, and wires up error providers for quick fixes and hover explanations. It exposes imperative methods to scroll to errors, insert text at the cursor, and manage markers.
+MonacoWrapper encapsulates the Monaco editor lifecycle, registers PlantUML, Mermaid and LikeC4 languages with Monarch tokenizers, and wires up error providers for quick fixes and hover explanations. It exposes imperative methods to scroll to errors, insert text at the cursor or a chosen location, find and select text, and manage markers.
 
 ```mermaid
 classDiagram
@@ -168,6 +168,8 @@ class MonacoWrapper {
 +scrollToLine(lineNumber)
 +setValue(newValue)
 +insertAtCursor(text)
++insertAtLocation(text, mode)
++findAndSelect(text)
 +setMarkers(markers)
 +clearMarkers()
 +getModel()
@@ -182,44 +184,38 @@ MonacoWrapper --> ErrorProviders : "registers"
 ```
 
 **Diagram sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L309-L423)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 **Section sources**
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L170)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ### Mermaid Visual Editor and AST Sync
-The Mermaid editor routes to specialized editors based on AST type and renders previews via Kroki. The sync controller manages bi-directional synchronization, prevents infinite loops, and detects diagram types from code.
+The Mermaid visual editor routes to a sub-editor by the detected diagram model. Flowchart, sequence, pie, Gantt, timeline, journey and mindmap each have a sub-editor in `MermaidEditors.jsx`, and every other Mermaid type shows a "Universal Mode" message that points back to the code view. Only the pie chart sub-editor edits the diagram today: it reads the slices from the code, lets you change labels and values or add a slice, and writes the new code back. The sync controller parses the code into an AST with a 300 ms debounce and skips parsing while a visual edit is being written back, which prevents infinite loops. Previews are not part of the Mermaid visual editor: the preview panel in the code view renders them via Kroki.
 
 ```mermaid
 sequenceDiagram
 participant Code as "Mermaid Code"
-participant Sync as "MermaidSyncController"
+participant Sync as "createMermaidSyncController"
 participant AST as "Mermaid AST"
 participant Visual as "MermaidVisualEditor"
-participant Kroki as "Kroki"
 Code->>Sync : parseCode(code)
 Sync->>AST : parse(code)
 AST-->>Sync : ast
 Sync-->>Visual : ast
-Visual->>Kroki : POST /mermaid/svg
-Kroki-->>Visual : SVG blob
-Visual-->>User : Preview
-User->>Visual : Modify visual
-Visual->>Sync : renderToCode(updatedAst)
-Sync-->>Code : rendered code
+User->>Visual : Edit in the pie chart sub-editor
+Visual-->>Code : onCodeChange(newCode)
 ```
 
 **Diagram sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L20-L121)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L9-L92)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 **Section sources**
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L1-L137)
-- [js/editors/mermaid/MermaidSyncController.js](file://js/editors/mermaid/MermaidSyncController.js#L1-L93)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
+- [js/components/editors/mermaid/utils.js](file://js/components/editors/mermaid/utils.js)
 
 ### BPMN Visual Editor
-The BPMN editor integrates bpmn-js, loads required CSS and scripts, and synchronizes XML changes back to the code editor. It handles initial import and external updates safely.
+The BPMN editor uses the bpmn-js modeler from the npm package (bundled by Vite, with its CSS), adds `bpmn-js-task-resize` and custom lane, context-pad and renderer modules, and synchronizes XML changes back to the code editor. It imports the XML, falls back to an empty diagram if the import fails, and skips re-importing XML that it has just saved.
 
 ```mermaid
 sequenceDiagram
@@ -227,7 +223,7 @@ participant XML as "BPMN XML"
 participant Bpmn as "BpmnVisualEditor"
 participant Modeler as "bpmn-js"
 participant Monaco as "Monaco Editor"
-Bpmn->>Modeler : new BpmnJS(container)
+Bpmn->>Modeler : new BpmnModeler(container)
 Modeler-->>Bpmn : ready
 Bpmn->>Modeler : importXML(XML)
 Modeler-->>Bpmn : commandStack.changed
@@ -237,10 +233,10 @@ Bpmn-->>Monaco : onChange(xml)
 ```
 
 **Diagram sources**
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L90)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 **Section sources**
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ### Error Diagnostics Pipeline
 The error diagnostics module parses raw error messages, extracts line/column information, categorizes errors, and produces Monaco markers and quick fixes. It also formats human-readable explanations for hover tooltips.
@@ -267,7 +263,7 @@ Actions --> End
 
 **Section sources**
 - [js/error-diagnostics/index.js](file://js/error-diagnostics/index.js#L1-L303)
-- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L1-L302)
+- [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js)
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L1-L403)
 
 ### PlantUML Template Gallery and Snippets
@@ -300,7 +296,7 @@ TemplateGalleryModal --> Config : "reads"
 - [js/config.js](file://js/config.js#L194-L565)
 
 **Section sources**
-- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js#L1-L249)
+- [js/components/PlantUmlComponents.js](file://js/components/PlantUmlComponents.js)
 - [js/config.js](file://js/config.js#L118-L565)
 
 ### Conceptual Overview
@@ -312,7 +308,7 @@ The application’s design balances simplicity and power:
 graph TB
 Beginner["Beginner"] --> Templates["Templates & Snippets"]
 Beginner --> Hover["Hover Explanations"]
-Advanced["Advanced User"] --> Sync["Bi-directional Sync"]
+Advanced["Advanced User"] --> Sync["Code and Visual Sync"]
 Advanced --> Visual["Visual Editors"]
 Templates --> UI["Unified UI"]
 Hover --> UI
@@ -326,7 +322,7 @@ Visual --> UI
 
 ## Dependency Analysis
 External dependencies and integration points:
-- React 18 and JSX-like syntax via htm.
+- React, compiled by Vite, with `htm` for JSX-like syntax in the older `.js` components.
 - Monaco Editor with custom language registrations and error providers.
 - Mermaid AST for parsing and rendering Mermaid code.
 - bpmn-js for BPMN visual editing.
@@ -350,18 +346,18 @@ React --> Tailwind
 
 **Diagram sources**
 - [index.html](file://index.html#L8-L45)
-- [js/components/MonacoWrapper.js](file://js/components/MonacoWrapper.js#L100-L148)
-- [js/editors/bpmn/BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L26-L38)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L34-L49)
+- [js/components/editors/MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [js/components/editors/BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 **Section sources**
 - [index.html](file://index.html#L8-L45)
 - [js/utils.js](file://js/utils.js#L116-L146)
 
 ## Performance Considerations
-- Debounce Mermaid parsing to reduce re-renders during rapid typing.
+- Debounce Mermaid parsing (300 ms) to reduce re-renders during rapid typing.
 - Revoke object URLs for previews to prevent memory leaks.
-- Lazy-load external libraries (bpmn-js, Mermaid AST) to minimize initial bundle size.
+- Load heavy external libraries such as Monaco and the Mermaid AST library from CDNs, outside the Vite bundle.
 - Use minimaps and folding judiciously to balance usability and performance.
 - Batch Monaco editor updates and clear decorations after navigation to keep UI responsive.
 
@@ -373,7 +369,7 @@ Common issues and resolutions:
 - Unclosed brackets/parentheses: Quick fix inserts the missing delimiter; hover explains correct syntax.
 - Unknown diagram type in Mermaid: Quick fix suggests adding a diagram declaration; hover explains valid diagram types.
 - XML parsing errors in BPMN: Hover explanation guides fixing unclosed tags and quoting attributes.
-- Missing Mermaid AST: The Mermaid editor shows a loading state until AST is available.
+- Missing Mermaid AST: The Mermaid visual editor shows "Loading visual editor..." until the AST library is available.
 
 **Section sources**
 - [js/error-diagnostics/fixes.js](file://js/error-diagnostics/fixes.js#L11-L110)
@@ -384,7 +380,7 @@ Common issues and resolutions:
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L133-L166)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L168-L192)
 - [js/error-diagnostics/explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
-- [js/editors/mermaid/index.js](file://js/editors/mermaid/index.js#L62-L72)
+- [js/components/editors/mermaid/MermaidVisualEditor.jsx](file://js/components/editors/mermaid/MermaidVisualEditor.jsx)
 
 ## Conclusion
 Universal Diagram Generator delivers a cohesive, web-native diagramming experience by unifying diverse diagram formats behind a single interface. Its architecture blends React, Monaco Editor, and external rendering services to offer dual-mode editing, intelligent diagnostics, and a rich template ecosystem. Whether you are a beginner seeking quick templates or an advanced user crafting complex visual models, the platform provides the tools to create, iterate, and export diagrams efficiently.

@@ -3,8 +3,8 @@
 <cite>
 **Referenced Files in This Document**
 - [index.html](file://index.html)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [config.js](file://js/config.js)
 - [explanations.js](file://js/error-diagnostics/explanations.js)
 - [fixes.js](file://js/error-diagnostics/fixes.js)
@@ -28,15 +28,15 @@ This document explains BPMN diagram support in the Universal Diagram Generator. 
 
 ## Project Structure
 The Universal Diagram Generator is a single-page application that integrates multiple diagramming technologies. BPMN support is implemented through:
-- A visual editor component using bpmn-js
+- A visual editor component using bpmn-js, imported from the npm package and bundled by Vite
 - A declarative configuration registry for diagram types
 - A Monaco Editor integration for code editing and diagnostics
-- Utilities for detection, encoding, and loading external assets
+- Utilities for model detection in `utils.js`, and a renderer adapter for type detection and Kroki encoding
 
 ```mermaid
 graph TB
 subgraph "UI Shell"
-App["App (index.html)"]
+App["App (App.jsx)"]
 Header["Header Controls"]
 Tabs["View Mode Tabs"]
 end
@@ -61,30 +61,31 @@ Monaco --> Diagnostics
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1600-L1759)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L1-L426)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L1-L106)
+- [index.html](file://index.html)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 - [config.js](file://js/config.js#L6-L116)
 - [utils.js](file://js/utils.js#L1-L177)
 
 **Section sources**
-- [index.html](file://index.html#L1600-L1759)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L6-L116)
 
 ## Core Components
-- BpmnVisualEditor: A React component that embeds bpmn-js to provide a visual BPMN editor. It loads bpmn-js CSS and script dynamically, initializes the modeler, listens for changes, and synchronizes XML back to the code editor.
-- MonacoWrapper: A React wrapper for the Monaco Editor that registers PlantUML, Mermaid, and XML (used for BPMN) languages, provides error diagnostics, quick fixes, and cursor tracking.
+- BpmnVisualEditor: A React component that embeds bpmn-js to provide a visual BPMN editor. It imports bpmn-js and its CSS from npm, creates the modeler with custom extensions (task resize, context pad, renderer, lane split and transpose handlers, and a `uni:` moddle extension for lane borders), listens for changes, and synchronizes XML back to the code editor.
+- MonacoWrapper: A React wrapper for the Monaco Editor that registers the PlantUML, Mermaid and LikeC4 languages, and attaches error diagnostics and quick fixes to Mermaid, PlantUML, XML (used for BPMN) and Structurizr. The wrapper also reports cursor position and exposes editor methods through a ref.
 - DIAGRAM_TYPES: A centralized registry that defines supported diagram types, including BPMN, with metadata such as file extensions, Monaco language, documentation links, and example content.
 - Error Diagnostics: Modules that provide human-readable explanations and automated quick fixes for common syntax errors across diagram types, including BPMN/XML.
-- Utilities: Functions for detecting diagram type from file extension, detecting specific diagram models from code, encoding source for Kroki, and loading external scripts/CSS.
+- Utilities: `utils.js` detects specific diagram models from code and holds script and stylesheet loaders. The renderer adapter (`js/services/RendererAdapter.js`) detects the diagram type from a file name and encodes source for Kroki.
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L106)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [config.js](file://js/config.js#L6-L116)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L12-L229)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L11-L296)
 - [utils.js](file://js/utils.js#L35-L85)
+- [RendererAdapter.js](file://js/services/RendererAdapter.js)
 
 ## Architecture Overview
 The application orchestrates between the code editor and the visual editor. When the user switches to the visual mode for BPMN, the BpmnVisualEditor mounts and renders the bpmn-js modeler inside a container. Changes made in the visual editor are saved to XML and propagated back to the Monaco editor. The Monaco editor provides syntax highlighting and diagnostics for XML (BPMN), powered by the error diagnostics modules.
@@ -92,7 +93,7 @@ The application orchestrates between the code editor and the visual editor. When
 ```mermaid
 sequenceDiagram
 participant User as "User"
-participant App as "App (index.html)"
+participant App as "App (App.jsx)"
 participant Tabs as "View Tabs"
 participant Monaco as "MonacoWrapper"
 participant BpmnVis as "BpmnVisualEditor"
@@ -101,105 +102,104 @@ participant Kroki as "Kroki API"
 User->>Tabs : Switch to "Design" view
 Tabs-->>App : viewMode = "visual"
 App->>BpmnVis : Mount BpmnVisualEditor
-BpmnVis->>BpmnVis : Load CSS/Script
-BpmnVis->>BpmnJS : new BpmnJS({ container })
-BpmnVis->>BpmnJS : importXML(xml)
-BpmnJS-->>BpmnVis : Ready
+BpmnVis->>BpmnJS : new BpmnModeler({ container, additionalModules })
 BpmnVis->>BpmnJS : listen commandStack.changed
-BpmnJS-->>BpmnVis : saveXML({ format : true })
+BpmnVis->>BpmnJS : importXML(xml or empty template)
+BpmnJS-->>BpmnVis : commandStack.changed
+BpmnVis->>BpmnJS : saveXML({ format : true })
 BpmnVis-->>App : onChange(xml)
 App->>Monaco : Update value via ref
 App->>Kroki : Fetch preview (optional)
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1725-L1744)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L19-L90)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L134-L141)
+- [index.html](file://index.html)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Detailed Component Analysis
 
 ### BpmnVisualEditor Component
 The visual BPMN editor integrates bpmn-js to enable drag-and-drop creation and editing of BPMN diagrams. It:
-- Dynamically loads bpmn-js CSS and script
-- Creates a modeler instance bound to a DOM container
+- Imports bpmn-js and its CSS from the npm package
+- Creates a modeler instance bound to a DOM container, with the task-resize module and custom context pad, renderer, lane split and transpose handlers
 - Listens for command stack changes to export formatted XML
-- Imports initial XML content and handles errors
+- Imports the XML content, and falls back to an empty BPMN template when the import fails
 - Cleans up on unmount
 
 ```mermaid
 flowchart TD
-Start(["Mount BpmnVisualEditor"]) --> LoadCSS["Load bpmn-js CSS"]
-LoadCSS --> LoadScript["Load bpmn-js script"]
-LoadScript --> CreateModeler["Create BpmnJS modeler"]
-CreateModeler --> Ready["Set isReady = true"]
-Ready --> ImportXML["Import initial XML (if provided)"]
-ImportXML --> ListenChanges["Listen commandStack.changed"]
+Start(["Mount BpmnVisualEditor"]) --> CreateModeler["Create BpmnModeler with custom modules"]
+CreateModeler --> ListenChanges["Listen commandStack.changed"]
+CreateModeler --> ImportXML["importXML(xml, or empty template)"]
 ListenChanges --> ExportXML["saveXML({ format: true })"]
 ExportXML --> Propagate["Call onChange(xml)"]
-Ready --> SyncExternal["Sync external XML updates"]
+Propagate --> SyncExternal["Parent passes updated xml prop"]
 SyncExternal --> ImportXML
+ImportXML --> Failed{"Import failed?"}
+Failed --> |yes| Fallback["onError(message), then import empty template"]
 ```
 
 **Diagram sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L19-L90)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L14-L106)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ### Visual Editor Integration with bpmn-js
 Key behaviors:
-- Dynamic asset loading ensures minimal startup cost and avoids bundling large libraries.
-- Keyboard binding is configured to capture global keyboard shortcuts.
+- bpmn-js and its CSS are npm imports, so Vite bundles them with the app.
+- The editor skips a re-import when the incoming XML equals the XML it last saved, which prevents an update loop.
 - Change synchronization uses the command stack to capture user actions and export XML.
-- Error handling during import and export is surfaced via the onError callback.
+- Import errors are reported through the onError callback. Export errors are written to the console.
+- The context pad adds lane actions: split a lane into two or three sub-lanes, transpose the lane grid, and delete or merge lanes.
 
 Practical implications:
 - The visual editor is ideal for rapid prototyping and collaborative design.
 - XML export enables seamless handoff to code-based workflows and validation.
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L22-L59)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ### Drag-and-Drop Interface Capabilities
 The application supports drag-and-drop file uploads:
 - The App component listens for drop and dragover events.
-- It detects the diagram type from the file extension and loads the file content into the editor.
+- It detects the diagram type from the file name and content through the renderer adapter, then loads the file content into the editor (BPMN without layout information first prompts an auto-layout).
 - The Monaco editor is language-aware based on the detected type.
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
-participant App as "App (index.html)"
-participant Utils as "detectTypeFromExtension"
+participant App as "App (App.jsx)"
+participant Utils as "rendererAdapter.detectType"
 participant Monaco as "MonacoWrapper"
 User->>App : Drag file over window
 App->>App : onDragOver preventDefault
 User->>App : Drop file
-App->>Utils : detectTypeFromExtension(filename)
+App->>Utils : detectType(filename, content)
 Utils-->>App : diagramType
 App->>App : FileReader.readAsText(file)
 App->>Monaco : setTextInput(content)
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1524-L1534)
-- [utils.js](file://js/utils.js#L35-L41)
+- [App.jsx](file://js/App.jsx)
+- [RendererAdapter.js](file://js/services/RendererAdapter.js)
 
 **Section sources**
-- [index.html](file://index.html#L1524-L1534)
-- [utils.js](file://js/utils.js#L35-L41)
+- [App.jsx](file://js/App.jsx)
+- [RendererAdapter.js](file://js/services/RendererAdapter.js)
 
 ### Element Properties Panel
 The visual editor does not include a dedicated properties panel. Instead, it relies on:
-- bpmn-js’s built-in palette and properties panel for element manipulation and inspection.
+- bpmn-js’s built-in modeler features (palette, context pad, direct label editing) plus the custom context pad entries for lanes.
 - XML export for programmatic inspection and validation.
 
 Best practice:
 - Use the visual editor for interactive design and export XML for precise control and validation.
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L34-L49)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ### Validation Features
 Validation is handled through two channels:
@@ -207,7 +207,7 @@ Validation is handled through two channels:
   - Error providers register quick fixes and hover explanations.
   - Fix suggestions are generated based on error patterns.
 - Runtime error reporting from the visual editor:
-  - Import and change export errors are caught and forwarded to the onError callback.
+  - Import errors are forwarded to the onError callback, and export errors are logged to the console.
 
 ```mermaid
 flowchart TD
@@ -219,16 +219,16 @@ VisualErr["Visual editor error"] --> Report["Report via onError"]
 ```
 
 **Diagram sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L314-L423)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L237-L271)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L332-L366)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L57-L66)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L314-L423)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 - [explanations.js](file://js/error-diagnostics/explanations.js#L12-L229)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L11-L296)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L57-L66)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ### BPMN XML Syntax and Standard Shapes
 - The configuration declares BPMN as having XML as its Monaco language and includes a comprehensive example.
@@ -241,10 +241,10 @@ Recommended XML structure highlights:
 
 **Section sources**
 - [config.js](file://js/config.js#L7-L57)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L22-L29)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ### Swimlanes and Pools
-- The visual editor uses bpmn-js, which supports collaboration (swimlanes/pools) and process flows.
+- The visual editor uses bpmn-js, which supports collaboration (swimlanes/pools) and process flows. The custom context pad adds lane splitting, transposing and merging, and the `uni:` moddle extension stores which lane borders are hidden.
 - The detection utility recognizes collaboration and process flows in BPMN content.
 
 Practical usage:
@@ -253,7 +253,7 @@ Practical usage:
 
 **Section sources**
 - [utils.js](file://js/utils.js#L78-L82)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L34-L39)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ### Best Practices for Business Process Modeling
 - Keep processes focused and bounded; use collaboration for cross-organizational flows.
@@ -282,14 +282,14 @@ Export behavior:
 - XML export occurs automatically from the visual editor when the user interacts with the modeler.
 
 **Section sources**
-- [index.html](file://index.html#L1561-L1599)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L42-L49)
+- [index.html](file://index.html)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ### Declarative Configuration System for BPMN
 The configuration system centralizes:
 - Diagram type metadata (label, extensions, Monaco language, docs link)
 - Example content for quick start
-- Visual editor availability flag
+- Visual editor availability flag (`hasVisualEditor`)
 
 This enables consistent behavior across the UI and editor integrations.
 
@@ -298,50 +298,48 @@ This enables consistent behavior across the UI and editor integrations.
 
 ### Integration with Monaco Editor for Code Editing
 Monaco integration includes:
-- Language registration for XML (used for BPMN)
-- Syntax highlighting tailored to BPMN XML
+- XML as the Monaco language for BPMN (Monaco's built-in XML support; the wrapper registers only the PlantUML, Mermaid and LikeC4 languages itself)
 - Error providers for quick fixes and hover explanations
 - Cursor tracking and editor methods exposed via ref
 
 **Section sources**
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L13-L169)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L314-L423)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
 
 ## Dependency Analysis
 The BPMN feature depends on:
-- bpmn-js runtime and CSS
+- bpmn-js and bpmn-js-task-resize (npm packages, bundled by Vite)
 - Monaco Editor for code editing and diagnostics
 - Error diagnostics modules for explanations and quick fixes
-- Utilities for type detection and encoding
+- Utilities and the renderer adapter for type detection and encoding
 
 ```mermaid
 graph TB
-BpmnVis["BpmnVisualEditor.js"] --> BpmnJS["bpmn-js (loaded dynamically)"]
-BpmnVis --> Utils["utils.js"]
-Monaco["MonacoWrapper.js"] --> Explanations["explanations.js"]
+BpmnVis["BpmnVisualEditor.jsx"] --> BpmnJS["bpmn-js (npm)"]
+BpmnVis --> Custom["bpmn/ custom handlers and renderer"]
+Monaco["MonacoWrapper.jsx"] --> Explanations["explanations.js"]
 Monaco --> Fixes["fixes.js"]
-App["index.html"] --> BpmnVis
+App["App.jsx"] --> BpmnVis
 App --> Monaco
 App --> Config["config.js"]
 App --> Utils
 ```
 
 **Diagram sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L22-L29)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L314-L423)
-- [index.html](file://index.html#L1600-L1759)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L6-L116)
 - [utils.js](file://js/utils.js#L116-L146)
 
 **Section sources**
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L22-L29)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L314-L423)
-- [index.html](file://index.html#L1600-L1759)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [index.html](file://index.html)
 - [config.js](file://js/config.js#L6-L116)
 - [utils.js](file://js/utils.js#L116-L146)
 
 ## Performance Considerations
-- Asset loading is deferred until the visual editor is mounted, reducing initial load time.
+- The visual editor mounts only in visual mode, and the modeler is created when the editor mounts.
 - XML export is triggered on command stack changes; debouncing can be considered if performance becomes a concern.
 - Large BPMN diagrams may benefit from incremental rendering and careful use of lanes to keep the visual manageable.
 
@@ -351,7 +349,7 @@ App --> Utils
 Common BPMN issues and resolutions:
 - XML parsing errors: Use the error diagnostics to identify unclosed tags or invalid attributes; apply quick fixes or correct the XML manually.
 - Import failures: Ensure the XML is well-formed and includes required namespaces; check for missing closing tags.
-- Visual editor not loading: Confirm that the dynamic script and CSS are loaded successfully; check browser console for errors.
+- Visual editor not loading: Check the browser console for errors from the bpmn-js import or from the custom modules.
 
 Diagnostic workflow:
 - Monaco highlights errors and offers quick fixes.
@@ -361,11 +359,11 @@ Diagnostic workflow:
 **Section sources**
 - [explanations.js](file://js/error-diagnostics/explanations.js#L168-L192)
 - [fixes.js](file://js/error-diagnostics/fixes.js#L240-L278)
-- [MonacoWrapper.js](file://js/components/MonacoWrapper.js#L314-L423)
-- [BpmnVisualEditor.js](file://js/editors/bpmn/BpmnVisualEditor.js#L57-L66)
+- [MonacoWrapper.jsx](file://js/components/editors/MonacoWrapper.jsx)
+- [BpmnVisualEditor.jsx](file://js/components/editors/BpmnVisualEditor.jsx)
 
 ## Conclusion
-The Universal Diagram Generator provides robust BPMN support through a visual editor powered by bpmn-js and a code editor integrated with Monaco. The declarative configuration system, dynamic asset loading, and integrated diagnostics deliver a smooth authoring experience. By combining the visual editor for interactive design with the code editor for validation and export, teams can efficiently model and iterate on business processes.
+The Universal Diagram Generator provides robust BPMN support through a visual editor powered by bpmn-js and a code editor integrated with Monaco. The declarative configuration system, a bundled bpmn-js modeler with custom lane tools, and integrated diagnostics deliver a smooth authoring experience. By combining the visual editor for interactive design with the code editor for validation and export, teams can efficiently model and iterate on business processes.
 
 [No sources needed since this section summarizes without analyzing specific files]
 

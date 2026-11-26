@@ -47,7 +47,7 @@ This document explains the integration and API functionality for the Kroki Unive
 
 ## Project Structure
 The application is a single-page web app that:
-- Loads libraries via CDNs (React, Monaco Editor, Mermaid AST, Dagre, Pako)
+- Loads some libraries via CDNs in `index.html` (Monaco Editor, Mermaid AST, Dagre, Pako, SheetJS); React, bpmn-js and the other npm packages are bundled by Vite
 - Defines diagram types and templates in configuration modules
 - Implements utility functions for encoding and resource loading
 - Renders diagrams by calling the Kroki API and displaying SVG/PNG outputs
@@ -57,9 +57,9 @@ The application is a single-page web app that:
 
 ```mermaid
 graph TB
-A["index.html<br/>Main SPA"] --> B["js/config.js<br/>Diagram types, templates"]
+A["index.html<br/>Vite shell for the SPA"] --> B["js/config.js<br/>Diagram types, templates"]
 A --> C["js/utils.js<br/>Encoding, loaders, helpers"]
-A --> D["External Libraries<br/>CDN: React, Monaco, Mermaid AST, Pako, Dagre"]
+A --> D["External Libraries<br/>CDN: Monaco, Mermaid AST, Pako, Dagre"]
 A --> E["Kroki API<br/>https://kroki.io/{type}/{format}/{payload}"]
 A --> F["Update System<br/>CDN Version Checking"]
 A --> G["Testing Framework<br/>Iframe-based Validation"]
@@ -71,16 +71,16 @@ H --> L["HTML Generation<br/>Updated URLs & History"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1-L60)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L116)
 - [js/utils.js](file://js/utils.js#L1-L28)
-- [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [js/cdn-version-checker.js](file://js/cdn-version-checker.js)
 - [js/update-manager.js](file://js/update-manager.js#L1-L343)
 - [js/update-tester.js](file://js/update-tester.js#L1-L505)
-- [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
+- [js/html-rewriter.js](file://js/html-rewriter.js)
 
 **Section sources**
-- [index.html](file://index.html#L1-L60)
+- [index.html](file://index.html)
 - [js/config.js](file://js/config.js#L1-L116)
 - [js/utils.js](file://js/utils.js#L1-L28)
 
@@ -99,7 +99,7 @@ Key implementation references:
 - Encoding and compression: [encodeKroki](file://js/utils.js#L14-L28)
 - Diagram types and templates: [DIAGRAM_TYPES](file://js/config.js#L6-L116)
 - External loader helpers: [loadScript](file://js/utils.js#L116-L146), [loadCSS](file://js/utils.js#L152-L158)
-- Error parsing and Monaco providers: [parseErrorInfo](file://index.html#L826-L877), [registerErrorProviders](file://index.html#L974-L1049)
+- Error parsing and Monaco providers: [parseErrorInfo](file://index.html), [registerErrorProviders](file://index.html)
 - **NEW**: Version checking: [checkLibraryVersion](file://js/cdn-version-checker.js#L141-L182)
 - **NEW**: Update management: [updateManager](file://js/update-manager.js#L23-L335)
 - **NEW**: Testing framework: [testLibraryUpdates](file://js/update-tester.js#L398-L444)
@@ -109,8 +109,8 @@ Key implementation references:
 - [js/utils.js](file://js/utils.js#L14-L28)
 - [js/config.js](file://js/config.js#L6-L116)
 - [js/utils.js](file://js/utils.js#L116-L158)
-- [index.html](file://index.html#L826-L877)
-- [index.html](file://index.html#L974-L1049)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L141-L182)
 - [js/update-manager.js](file://js/update-manager.js#L23-L335)
 - [js/update-tester.js](file://js/update-tester.js#L398-L444)
@@ -118,7 +118,7 @@ Key implementation references:
 
 ## Architecture Overview
 The runtime integrates external services and libraries as follows:
-- Libraries are loaded from CDNs; Monaco Editor and Mermaid AST are essential for editing and preview
+- Libraries are loaded from CDNs or bundled by Vite; Monaco Editor is essential for editing, and the Mermaid AST library feeds the Mermaid visual editor
 - Diagram source code is encoded using zlib compression and base64 URL-safe encoding
 - Rendering requests are sent to the Kroki API endpoint; GET is used when URL length is acceptable, otherwise POST is used
 - Errors are parsed and surfaced to the UI with Monaco markers and explanations
@@ -161,7 +161,7 @@ UI-->>U : "Download updated file"
 
 **Diagram sources**
 - [js/utils.js](file://js/utils.js#L14-L28)
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L141-L182)
 - [js/update-manager.js](file://js/update-manager.js#L63-L98)
 - [js/update-tester.js](file://js/update-tester.js#L398-L444)
@@ -169,7 +169,7 @@ UI-->>U : "Download updated file"
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L14-L28)
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L141-L182)
 - [js/update-manager.js](file://js/update-manager.js#L63-L98)
 - [js/update-tester.js](file://js/update-tester.js#L398-L444)
@@ -196,11 +196,11 @@ Render --> Display["Display SVG/PNG"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L14-L28)
 
 **Section sources**
-- [index.html](file://index.html#L1444-L1522)
+- [index.html](file://index.html)
 - [js/utils.js](file://js/utils.js#L14-L28)
 
 ### URL Encoding and Compression (Pako + Base64 + URL-Safe)
@@ -230,7 +230,7 @@ F --> G["URL-safe payload"]
 - CDN loading: libraries are included via CDN links in the HTML head
 - Version management: libraries are pinned to specific versions (e.g., React 18, Monaco 0.44.0, Pako 2.1.0)
 - Conflict resolution: temporary removal of AMD define during script load to avoid conflicts
-- Lazy loading: scripts and CSS are injected dynamically when needed (e.g., BPMN visual editor)
+- Lazy loading: `loadScript` and `loadCSS` in `js/utils.js` can inject scripts and CSS dynamically; the BPMN visual editor does not use them, because it imports bpmn-js from npm
 - **NEW**: Automated version tracking: central registry with CDN-specific URL patterns and version parsing
 - **NEW**: Update coordination: synchronized version updates across related libraries (e.g., React + ReactDOM)
 
@@ -255,14 +255,14 @@ CHK-->>DOM : "Update recommendations"
 **Diagram sources**
 - [js/utils.js](file://js/utils.js#L116-L146)
 - [js/utils.js](file://js/utils.js#L152-L158)
-- [index.html](file://index.html#L1190-L1272)
+- [index.html](file://index.html)
 - [js/library-registry.js](file://js/library-registry.js#L15-L228)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L141-L182)
 
 **Section sources**
 - [js/utils.js](file://js/utils.js#L116-L146)
 - [js/utils.js](file://js/utils.js#L152-L158)
-- [index.html](file://index.html#L1190-L1272)
+- [index.html](file://index.html)
 - [js/library-registry.js](file://js/library-registry.js#L15-L228)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L141-L182)
 
@@ -423,13 +423,13 @@ D2 --> E2["Offer Alternative Actions"]
 ```
 
 **Diagram sources**
-- [index.html](file://index.html#L826-L877)
-- [index.html](file://index.html#L974-L1049)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 - [js/update-manager.js](file://js/update-manager.js#L93-L97)
 
 **Section sources**
-- [index.html](file://index.html#L826-L877)
-- [index.html](file://index.html#L974-L1049)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 - [js/update-manager.js](file://js/update-manager.js#L93-L97)
 
 ### Service Integration Points, Error Propagation, and Fallbacks
@@ -449,7 +449,7 @@ D2 --> E2["Offer Alternative Actions"]
   - **NEW**: Version checking failures fall back to cached results or manual updates
 
 **Section sources**
-- [index.html](file://index.html#L1473-L1518)
+- [index.html](file://index.html)
 - [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L22-L41)
 - [js/update-manager.js](file://js/update-manager.js#L93-L97)
 
@@ -465,7 +465,7 @@ D2 --> E2["Offer Alternative Actions"]
   - Reference: [loadScript](file://js/utils.js#L116-L146), [loadCSS](file://js/utils.js#L152-L158)
 - Template gallery:
   - Add new templates to the appropriate template arrays
-  - Reference: [PLANTUML_TEMPLATES](file://js/config.js#L194-L565), [MERMAID_TEMPLATES](file://index.html#L203-L371)
+  - Reference: [PLANTUML_TEMPLATES](file://js/config.js#L194-L565), [MERMAID_TEMPLATES](file://index.html)
 - **NEW**: Library update integration:
   - Add new libraries to the registry with proper CDN configuration
   - Reference: [LIBRARY_REGISTRY](file://js/library-registry.js#L15-L228)
@@ -503,7 +503,7 @@ The application integrates Syntext Smith, an AI assistant that helps users creat
 - [js/utils.js](file://js/utils.js#L14-L28)
 - [js/utils.js](file://js/utils.js#L116-L158)
 - [js/config.js](file://js/config.js#L194-L565)
-- [index.html](file://index.html#L203-L371)
+- [index.html](file://index.html)
 - [js/library-registry.js](file://js/library-registry.js#L15-L228)
 - [js/update-tester.js](file://js/update-tester.js#L398-L444)
 
@@ -545,36 +545,36 @@ UM --> HR
 **Diagram sources**
 - [js/config.js](file://js/config.js#L1-L116)
 - [js/utils.js](file://js/utils.js#L1-L28)
-- [index.html](file://index.html#L1-L60)
+- [index.html](file://index.html)
 - [js/library-registry.js](file://js/library-registry.js#L1-L409)
-- [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [js/cdn-version-checker.js](file://js/cdn-version-checker.js)
 - [js/update-manager.js](file://js/update-manager.js#L1-L343)
 - [js/update-tester.js](file://js/update-tester.js#L1-L505)
-- [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
+- [js/html-rewriter.js](file://js/html-rewriter.js)
 
 **Section sources**
 - [js/config.js](file://js/config.js#L1-L116)
 - [js/utils.js](file://js/utils.js#L1-L28)
-- [index.html](file://index.html#L1-L60)
+- [index.html](file://index.html)
 - [js/library-registry.js](file://js/library-registry.js#L1-L409)
-- [js/cdn-version-checker.js](file://js/cdn-version-checker.js#L1-L270)
+- [js/cdn-version-checker.js](file://js/cdn-version-checker.js)
 - [js/update-manager.js](file://js/update-manager.js#L1-L343)
 - [js/update-tester.js](file://js/update-tester.js#L1-L505)
-- [js/html-rewriter.js](file://js/html-rewriter.js#L1-L274)
+- [js/html-rewriter.js](file://js/html-rewriter.js)
 
 ## Performance Considerations
 - Payload size:
   - Prefer GET when payload fits under the URL length limit; otherwise use POST
-  - Reference: [preview generation](file://index.html#L1473-L1518)
+  - Reference: [preview generation](file://index.html)
 - Debouncing:
   - Debounce rendering to reduce network requests during rapid edits
-  - Reference: [Mermaid sync controller](file://js/utils.js#L1126-L1187)
+  - Reference: [Mermaid sync controller](file://js/components/editors/mermaid/utils.js)
 - Compression:
   - Use highest compression level for smaller payloads
   - Reference: [encodeKroki](file://js/utils.js#L18)
 - Lazy loading:
   - Dynamically load heavy libraries only when needed
-  - Reference: [loadScript](file://js/utils.js#L116-L146), [BPMN visual editor](file://index.html#L1190-L1272)
+  - Reference: [loadScript](file://js/utils.js#L116-L146)
 - **NEW**: Version checking optimization:
   - 5-minute cache TTL reduces API calls
   - Parallel processing of multiple library updates
@@ -590,16 +590,16 @@ UM --> HR
 Common issues and resolutions:
 - Missing @startuml/@enduml in PlantUML:
   - Use quick fixes to add delimiters automatically
-  - References: [getFixSuggestions](file://index.html#L880-L922), [ERROR_EXPLANATIONS](file://index.html#L925-L966)
+  - References: [getFixSuggestions](file://index.html), [ERROR_EXPLANATIONS](file://index.html)
 - Missing closing brackets or parentheses:
   - Apply suggested quick fixes or hover for explanations
-  - References: [parseErrorInfo](file://index.html#L826-L877), [registerErrorProviders](file://index.html#L974-L1049)
+  - References: [parseErrorInfo](file://index.html), [registerErrorProviders](file://index.html)
 - Unknown diagram type:
   - Ensure a valid diagram declaration is present
-  - Reference: [parseErrorInfo](file://index.html#L826-L877)
+  - Reference: [parseErrorInfo](file://index.html)
 - Large payload causing URL length issues:
   - The app automatically switches to POST; verify server supports POST to the rendering endpoint
-  - Reference: [preview generation](file://index.html#L1473-L1518)
+  - Reference: [preview generation](file://index.html)
 - **NEW**: Library update failures:
   - Check CDN connectivity and API availability
   - Verify that the testing framework can access required resources
@@ -610,11 +610,11 @@ Common issues and resolutions:
   - Verify that the download process completes successfully
 
 **Section sources**
-- [index.html](file://index.html#L880-L922)
-- [index.html](file://index.html#L925-L966)
-- [index.html](file://index.html#L826-L877)
-- [index.html](file://index.html#L974-L1049)
-- [index.html](file://index.html#L1473-L1518)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
+- [index.html](file://index.html)
 - [js/update-manager.js](file://js/update-manager.js#L93-L97)
 
 ## Conclusion
@@ -657,6 +657,6 @@ Adhering to the patterns documented here enables reliable custom integrations an
 - Error handling: graceful degradation when update services are unavailable
 
 **Section sources**
-- [index.html](file://index.html#L2807-L2813)
+- [index.html](file://index.html)
 - [js/update-manager.js](file://js/update-manager.js#L35-L45)
 - [js/update-manager.js](file://js/update-manager.js#L283-L315)
