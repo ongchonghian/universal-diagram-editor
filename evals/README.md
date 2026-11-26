@@ -89,4 +89,13 @@ On 26 November 2026, `gemini-3.8-flash` passed all four image cases (`results/20
 
 A second run the same day (`results/2026-11-26-loop-image-rerun-gemini-3.8-flash.json`) measured three cost cuts: only the latest render is resent, a turn allows two looks at most, and the prompt asks for one look unless the layout changes. All four cases passed again. Input tokens fell from 75,784 to 74,423, which is within the variation between single runs at temperature 0.7. The PlantUML sketch looked once instead of twice and used 9,972 input tokens instead of 19,509. The BPMN sketch still looked twice, after a layout edit, and used 42,342: most of that cost is the BPMN XML, about 5,800 characters, sent again at every step.
 
+After Phase 6, where Smith works on BPMN without its layout section, the bpmn and image groups passed 16 of 16 on `gemini-3.8-flash` (`results/2026-11-26-loop-bpmn-image-gemini-3.8-flash.json`). Both rename cases kept every shape in place (`bounds-unchanged`), and the lanes and pools cases drew every lane and pool (`bpmn-containers-drawn`). Against the earlier runs of the same cases:
+
+| Group | Input tokens | Output tokens | Seconds |
+|---|---|---|---|
+| bpmn (12 cases) | 76,986 → 51,879 | 39,021 → 16,005 | 347 → 147 |
+| image (4 cases) | 74,423 → 35,352 | 11,860 → 4,730 | 143 → 57 |
+
+The BPMN sketch fell from 42,342 input tokens to 7,182, because Smith no longer looks at BPMN or edits its layout. `bpmn-fix-missing-layout` now makes no model call: the app lays the diagram out.
+
 The headline numbers are the **pass rate** and the **first-attempt parse rate**: the share of create and edit answers that parsed before any repair. Both numbers are given overall and for each group.
