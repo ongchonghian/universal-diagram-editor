@@ -8,6 +8,7 @@ import { fixWithSmith } from '../../services/smith/index.js';
 import { DiffReviewPane, monacoLanguageOf } from './DiffReviewPane.jsx';
 import { DIAGRAM_TYPES } from '../../config.js';
 import { Button } from '../common.jsx';
+import { hasTemplates, getStarterCode, getBlankCode } from '../../notations.js';
 
 export const CodeEditorView = ({
     textInput,
@@ -37,7 +38,8 @@ export const CodeEditorView = ({
     // The Smith proposal under review, if any
     proposal = null,
     onProposalDone,
-    onApplyRetyped
+    onApplyRetyped,
+    onOpenDesign
 }) => {
     const localEditorRef = useRef(null);
     const editorRef = externalEditorRef || localEditorRef;
@@ -127,25 +129,16 @@ export const CodeEditorView = ({
         }
     };
 
-    const usesTemplates = ['mermaid', 'plantuml', 'vega', 'vegalite'].includes(diagramType);
+    const withTemplates = hasTemplates(diagramType);
+    const blankCode = getBlankCode(diagramType);
     const typeLabel = DIAGRAM_TYPES[diagramType]?.label || diagramType;
+    // A C4 model written as JSON is drawn only in Design view, so the preview explains that instead of staying blank
+    const isC4Json = diagramType === 'c4' && !!textInput?.trim() && !textInput.includes('@startuml') && !textInput.includes('!include');
 
-    // The empty editor's main button: a template gallery for text notations, a blank document for the others
-    const handleCreateNew = () => {
-        if (usesTemplates) {
-            setShowTemplates(true);
-        } else if (diagramType === 'bpmn') {
-            const defaultXml = `<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">\n  <bpmn:process id="Process_1" isExecutable="false">\n    <bpmn:startEvent id="StartEvent_1" />\n  </bpmn:process>\n  <bpmndi:BPMNDiagram id="BPMNDiagram_1">\n    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">\n      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">\n        <dc:Bounds x="412" y="240" width="36" height="36" />\n      </bpmndi:BPMNShape>\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>`;
-            setTextInput(defaultXml);
-        } else if (diagramType === 'excalidraw') {
-            const defaultData = { type: "excalidraw", version: 2, source: "https://excalidraw.com", elements: [], appState: { viewBackgroundColor: "#ffffff", gridSize: null }, files: {} };
-            setTextInput(JSON.stringify(defaultData, null, 2));
-        } else if (diagramType === 'c4') {
-            const defaultData = { nodes: [], edges: [] };
-            setTextInput(JSON.stringify(defaultData, null, 2));
-        } else {
-            setTextInput('// Start typing or selecting a template...');
-        }
+    // The empty editor's main button: the template gallery where one exists, otherwise a working example
+    const handleStart = () => {
+        if (withTemplates) setShowTemplates(true);
+        else setTextInput(getStarterCode(diagramType));
     };
 
     return (
@@ -219,15 +212,20 @@ export const CodeEditorView = ({
                             </span>
                             <h3 className="text-[15px] font-semibold text-slate-900">Start a diagram</h3>
                             <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
-                                {usesTemplates ? `Pick a ${typeLabel} template to start from, or open a file from your computer.` : `Create a blank ${typeLabel} diagram, or open a file from your computer.`}
+                                {withTemplates ? `Pick a template in ${typeLabel}, or open a file from your computer.` : `Start from a working example in ${typeLabel}, or open a file from your computer.`}
                             </p>
                             <div className="mt-5 flex flex-col gap-2">
-                                <Button variant="primary" size="lg" icon={usesTemplates ? 'fas fa-th-large' : 'fas fa-plus'} onClick={handleCreateNew}>
-                                    {usesTemplates ? 'Choose a template' : 'Create a blank diagram'}
+                                <Button variant="primary" size="lg" icon={withTemplates ? 'fas fa-th-large' : 'fas fa-play'} onClick={handleStart}>
+                                    {withTemplates ? 'Choose a template' : 'Start from an example'}
                                 </Button>
                                 <Button variant="secondary" size="lg" icon="fas fa-folder-open" onClick={() => fileInputRef.current?.click()}>
                                     Open a file
                                 </Button>
+                                {blankCode && (
+                                    <Button variant="ghost" size="md" icon="fas fa-plus" onClick={() => setTextInput(blankCode)}>
+                                        Start with a blank canvas
+                                    </Button>
+                                )}
                             </div>
                             <p className="mt-4 text-xs text-slate-400">You can also drop a file anywhere on this page.</p>
                         </div>
@@ -255,6 +253,8 @@ export const CodeEditorView = ({
                 isFixing={isFixing}
                 fixMessage={fixMessage}
                 diagramType={diagramType}
+                designOnly={isC4Json}
+                onOpenDesign={onOpenDesign}
             />
 
             <SnippetInsertionDialog 

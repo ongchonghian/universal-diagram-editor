@@ -89,14 +89,13 @@ Alice <-- Bob: another authentication Response
     },
 
     ditaa: { label: 'Ditaa', extensions: ['.ditaa', '.txt'], monacoLang: 'plaintext', docs: 'http://ditaa.sourceforge.net/', example: `\n/--+\n|  |\n+--+` },
-    blockdiag: { label: 'BlockDiag', extensions: ['.diag'], monacoLang: 'python', docs: 'http://blockdiag.com/en/' },
-    bytefield: { label: 'Bytefield', extensions: ['.bf'], monacoLang: 'clojure', docs: 'https://bytefield-svg.de/' },
-    erd: { label: 'ERD', extensions: ['.erd'], monacoLang: 'plaintext', docs: 'https://github.com/BurntSushi/erd' },
-    graphviz: { label: 'GraphViz', extensions: ['.dot', '.gv'], monacoLang: 'plaintext', docs: 'https://graphviz.org/documentation/' },
-    nomnoml: { label: 'Nomnoml', extensions: ['.nomnoml'], monacoLang: 'plaintext', docs: 'https://nomnoml.com/' },
-    pikchr: { label: 'Pikchr', extensions: ['.pikchr'], monacoLang: 'plaintext', docs: 'https://pikchr.org/home/doc/trunk/homepage.md' },
-    pikchr: { label: 'Pikchr', extensions: ['.pikchr'], monacoLang: 'plaintext', docs: 'https://pikchr.org/home/doc/trunk/homepage.md' },
-    svgbob: { label: 'Svgbob', extensions: ['.bob', '.svgbob'], monacoLang: 'plaintext', docs: 'https://ivanceras.github.io/svgbob-doc/' },
+    blockdiag: { label: 'BlockDiag', extensions: ['.diag'], monacoLang: 'python', docs: 'http://blockdiag.com/en/', example: `blockdiag {\n  "Order received" -> "Pack the order" -> "Ship the order";\n}` },
+    bytefield: { label: 'Bytefield', extensions: ['.bf'], monacoLang: 'clojure', docs: 'https://bytefield-svg.de/', example: `(draw-column-headers)\n(draw-box "Type" {:span 4})\n(draw-box "Length" {:span 4})\n(draw-box "Payload" {:span 8})` },
+    erd: { label: 'ERD', extensions: ['.erd'], monacoLang: 'plaintext', docs: 'https://github.com/BurntSushi/erd', example: `[Customer]\n*id\nname\n\n[Order]\n*id\n+customer_id\nplaced_on\n\nCustomer 1--* Order` },
+    graphviz: { label: 'GraphViz', extensions: ['.dot', '.gv'], monacoLang: 'plaintext', docs: 'https://graphviz.org/documentation/', example: `digraph G {\n  "Order received" -> "Pack the order" -> "Ship the order";\n}` },
+    nomnoml: { label: 'Nomnoml', extensions: ['.nomnoml'], monacoLang: 'plaintext', docs: 'https://nomnoml.com/', example: `[Customer|name;email] -> [Order|id;placed on]` },
+    pikchr: { label: 'Pikchr', extensions: ['.pikchr'], monacoLang: 'plaintext', docs: 'https://pikchr.org/home/doc/trunk/homepage.md', example: `box "Order received" fit\narrow\nbox "Pack the order" fit\narrow\nbox "Ship the order" fit` },
+    svgbob: { label: 'Svgbob', extensions: ['.bob', '.svgbob'], monacoLang: 'plaintext', docs: 'https://ivanceras.github.io/svgbob-doc/', example: `+------------+      +------------+\n|   Order    |----->|    Pack    |\n|  received  |      |  the order |\n+------------+      +------------+` },
     vega: { 
         label: 'Vega', 
         extensions: ['.vega', '.json'], 
@@ -130,8 +129,8 @@ Alice <-- Bob: another authentication Response
   }
 }`
     },
-    wavedrom: { label: 'Wavedrom', extensions: ['.json5', '.json'], monacoLang: 'json', docs: 'https://wavedrom.com/tutorial.html' },
-    wireviz: { label: 'Wireviz', extensions: ['.yaml', '.yml'], monacoLang: 'yaml', docs: 'https://github.com/formatc1702/WireViz' },
+    wavedrom: { label: 'Wavedrom', extensions: ['.json5', '.json'], monacoLang: 'json', docs: 'https://wavedrom.com/tutorial.html', example: `{ signal: [\n  { name: "clock", wave: "p......" },\n  { name: "data",  wave: "x.345x.", data: ["head", "body", "tail"] },\n  { name: "valid", wave: "0.1..0." }\n]}` },
+    wireviz: { label: 'Wireviz', extensions: ['.yaml', '.yml'], monacoLang: 'yaml', docs: 'https://github.com/formatc1702/WireViz', example: `connectors:\n  X1:\n    type: D-Sub\n    subtype: female\n    pinlabels: [DCD, RX, TX, DTR, GND]\n  X2:\n    type: Molex KK 254\n    subtype: female\n    pinlabels: [GND, RX, TX]\n\ncables:\n  W1:\n    gauge: 0.25 mm2\n    length: 0.2\n    color_code: DIN\n    wirecount: 3\n\nconnections:\n  -\n    - X1: [5, 2, 3]\n    - W1: [1, 2, 3]\n    - X2: [1, 3, 2]` },
     c4: {
         label: 'C4 Model',
         extensions: ['.c4', '.puml', '.json'],

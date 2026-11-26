@@ -21,7 +21,9 @@ export const PreviewPanel = ({
     onRenameRequest,
     diagramType, // Added prop
     isFixing = false,
-    fixMessage = null // The result of the last Fix attempt: { tone: 'error' | 'warning', text }
+    fixMessage = null, // The result of the last Fix attempt: { tone: 'error' | 'warning', text }
+    designOnly = false, // The code is drawn only in Design view (a C4 model written as JSON)
+    onOpenDesign
 }) => {
     const containerRef = useRef(null);
     const [selectedText, setSelectedText] = useState(null);
@@ -230,8 +232,20 @@ export const PreviewPanel = ({
                     <span className="mx-auto mb-3 w-11 h-11 rounded-xl bg-white border border-slate-200 shadow-sm text-slate-400 flex items-center justify-center" aria-hidden="true">
                         <i className="fas fa-image"></i>
                     </span>
-                    <p className="text-[13px] font-medium text-slate-600">The preview appears here</p>
-                    <p className="text-xs text-slate-400 mt-1">Type diagram code in the editor, or drop a file on this page.</p>
+                    {designOnly ? (
+                        <>
+                            <p className="text-[13px] font-medium text-slate-600">This C4 model is drawn in Design view</p>
+                            <p className="text-xs text-slate-400 mt-1">C4 models written as JSON have no preview here. Open Design view to see and edit the model.</p>
+                            {onOpenDesign && (
+                                <Button variant="secondary" size="sm" icon="fas fa-paint-brush" onClick={onOpenDesign} className="mt-3">Open Design view</Button>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-[13px] font-medium text-slate-600">The preview appears here</p>
+                            <p className="text-xs text-slate-400 mt-1">Type diagram code in the editor, or drop a file on this page.</p>
+                        </>
+                    )}
                 </div>
             </div>
         );
