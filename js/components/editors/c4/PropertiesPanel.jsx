@@ -53,7 +53,6 @@ export const PropertiesPanel = ({ selectedElement, onChange, onDetach }) => {
             <div className="space-y-4">
                 <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">Label</label>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Label</label>
                     <Input
                         value={formData.label}
                         onChange={(e) => handleChange('label', e.target.value)}
@@ -66,7 +65,6 @@ export const PropertiesPanel = ({ selectedElement, onChange, onDetach }) => {
                         {(type === 'container' || type === 'component' || type === 'database') && (
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Technology</label>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Technology</label>
                                 <Input
                                     value={formData.technology}
                                     onChange={(e) => handleChange('technology', e.target.value)}
@@ -76,7 +74,6 @@ export const PropertiesPanel = ({ selectedElement, onChange, onDetach }) => {
                         )}
                         
                         <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Description</label>
                             <label className="block text-xs font-semibold text-slate-600 mb-1">Description</label>
                             <TextArea
                                 value={formData.description}
