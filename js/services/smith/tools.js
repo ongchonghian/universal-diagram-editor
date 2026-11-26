@@ -13,8 +13,11 @@ export const DIAGRAM_TYPE_IDS = Object.keys(DIAGRAM_TYPES);
 
 /** A new draft for the editor's current code and type. */
 export function createDraft(code, type) {
-    return { code: code || '', type, baseCode: code || '', baseType: type, validation: null, suggestions: [] };
+    return { code: code || '', type, baseCode: code || '', baseType: type, validation: null, suggestions: [], looks: 0 };
 }
+
+// Renders allowed in one turn. Each look adds a model step and a picture, so the cap bounds the cost.
+export const MAX_LOOKS = 2;
 
 export const TOOL_DEFINITIONS = [
     {
@@ -57,7 +60,7 @@ export const TOOL_DEFINITIONS = [
     },
     {
         name: 'render_diagram',
-        description: 'Render the draft and look at the picture. Call once after a new diagram or a structural change (elements added, removed or moved) to check for overlapping shapes, crossing lines and labels that cannot be read. Skip after a rename or a change of text.',
+        description: 'Render the draft and look at the picture. Call once, after a new diagram or a structural change (elements added, removed or moved), to check for overlapping shapes, crossing lines and labels that cannot be read. Skip after a rename or a change of text. Call again only after you changed the layout because of what the picture showed.',
         parameters: { type: 'object', properties: {} }
     },
     {
@@ -156,6 +159,10 @@ export async function runTool(draft, call, { validate = validateDiagram, look = 
 
         case 'render_diagram': {
             if (!draft.code) return { content: 'The draft is empty, so there is no picture to render.', isError: true, step: null };
+            if (draft.looks >= MAX_LOOKS) {
+                return { content: `You have already looked ${MAX_LOOKS} times in this turn. Finish without another look.`, isError: true, step: null };
+            }
+            draft.looks++;
             const seen = await look(draft.code, draft.type);
             if (seen.error) {
                 return { content: `Could not render the draft: ${seen.error}`, isError: true, step: { action: 'look', status: 'failed', error: seen.error } };

@@ -4,7 +4,7 @@ vi.mock('../RendererAdapter.js', () => ({
     rendererAdapter: { render: vi.fn().mockResolvedValue({ svg: '<svg><rect/></svg>', error: null }) }
 }));
 
-import { runAgentLoop, proposalOf, CUT_OFF_NOTE } from './agent-loop.js';
+import { runAgentLoop, proposalOf, CUT_OFF_NOTE, OLDER_RENDER_NOTE } from './agent-loop.js';
 import { applyEdits, runTool, createDraft, numberLines } from './tools.js';
 
 const config = { provider: 'gemini', model: 'm', apiKey: 'k' };
@@ -157,6 +157,30 @@ describe('runAgentLoop', () => {
         expect(look).toHaveBeenCalledWith('flowchart TD\n A --> B', 'mermaid');
         expect(requests[2].at(-1).parts[0]).toMatchObject({ name: 'render_diagram', content: { status: 'rendered' }, images: [render] });
         expect(result.trail.at(-1)).toEqual({ action: 'look', status: 'rendered' });
+    });
+
+    it('sends only the latest render, keeps the attached picture, and stops after two looks', async () => {
+        const picture = { type: 'image', mimeType: 'image/jpeg', data: 'photo' };
+        let n = 0;
+        const look = vi.fn(async () => ({ image: { type: 'image', mimeType: 'image/png', data: `render${++n}` }, width: 10, height: 10 }));
+        const { streamTurn, requests } = fakeProvider([
+            { calls: [{ name: 'write_diagram', args: { type: 'mermaid', code: 'flowchart TD\n A --> B' } }] },
+            { calls: [{ name: 'render_diagram', args: {} }] },
+            { calls: [{ name: 'render_diagram', args: {} }] },
+            { calls: [{ name: 'render_diagram', args: {} }] },
+            { text: 'Done.' }
+        ]);
+        await runAgentLoop({ config, userTurn: 'Copy this', images: [picture], code: '', type: 'mermaid', streamTurn, validate: validDummy, look });
+
+        const images = (messages) => messages.flatMap(m => m.parts.flatMap(p => (p.type === 'image' ? [p.data] : (p.images || []).map(i => i.data))));
+        expect(images(requests[2])).toEqual(['photo', 'render1']);
+        // The second render replaces the first, whose result keeps a note in place of the picture
+        expect(images(requests[3])).toEqual(['photo', 'render2']);
+        expect(requests[3].at(-3).parts[0].content).toMatchObject({ status: 'rendered', note: OLDER_RENDER_NOTE });
+        // A third look is refused, and the second render is still the latest
+        expect(look).toHaveBeenCalledTimes(2);
+        expect(requests[4].at(-1).parts[0]).toMatchObject({ isError: true, content: expect.stringContaining('already looked 2 times') });
+        expect(images(requests[4])).toEqual(['photo', 'render2']);
     });
 
     it('returns a render failure to the model as an error result', async () => {

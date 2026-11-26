@@ -107,6 +107,7 @@ export async function runAgentLoop({
         // suggest_next_steps closes the turn. When a step holds only that call, the loop ends without
         // sending the acknowledgement back, which saves a model call.
         if (calls.every(c => c.name === 'suggest_next_steps')) break;
+        if (results.some(r => r.images)) dropOlderRenders(messages);
         messages.push({ role: 'user', parts: results });
     }
 
@@ -120,6 +121,26 @@ export async function runAgentLoop({
         steps,
         limitReached
     };
+}
+
+export const OLDER_RENDER_NOTE = 'This earlier render was removed to save space. A newer render follows.';
+
+/**
+ * Remove the pictures from earlier render_diagram results, because a newer render replaces them.
+ * Every step resends the whole conversation, so each picture kept would be paid for again on every
+ * later step. Pictures the user attached stay.
+ */
+export function dropOlderRenders(messages) {
+    for (const message of messages) {
+        if (message.role !== 'user') continue;
+        for (const part of message.parts) {
+            if (part.type !== 'tool_result' || !part.images) continue;
+            delete part.images;
+            part.content = typeof part.content === 'object' && part.content
+                ? { ...part.content, note: OLDER_RENDER_NOTE }
+                : OLDER_RENDER_NOTE;
+        }
+    }
 }
 
 /** The change for the user to review, or null when the draft is unchanged. */
