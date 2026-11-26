@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PROVIDERS, PROVIDER_IDS, listModels, normaliseBaseUrl } from '../../services/llm/index.js';
 import { rendererAdapter, normaliseKrokiUrl } from '../../services/RendererAdapter.js';
 import { KROKI_BASE_URL } from '../../config.js';
+import { Modal, ModalHeader, ModalFooter, Button, inputClass } from '../common.jsx';
 
 const OTHER = '__other__';
 
-const inputClass = 'w-full px-3 py-2 bg-white text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm';
-const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5';
+const labelClass = 'block text-xs font-medium text-slate-700 mb-1.5';
+const hintClass = 'mt-1.5 text-xs leading-relaxed text-slate-500';
+const errorClass = 'mt-1.5 text-xs leading-relaxed text-red-600';
 
 const KEY_PLACEHOLDERS = {
     gemini: 'Enter your Gemini API key',
@@ -94,26 +96,19 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
     const showModelInput = typingModel || options.length === 0;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div role="dialog" aria-modal="true" aria-labelledby="ai-settings-title" className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+        <Modal onClose={onClose} labelledBy="ai-settings-title" className="max-w-md max-h-[90vh]" closeOnBackdrop={false}>
 
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
-                    <h3 id="ai-settings-title" className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <i className="fas fa-robot text-indigo-600"></i>
-                        AI Assistant Settings
-                    </h3>
-                    <button
-                        onClick={onClose}
-                        aria-label="Close settings"
-                        className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 transition-colors"
-                    >
-                        <i className="fas fa-times"></i>
-                    </button>
-                </div>
+                <ModalHeader
+                    id="ai-settings-title"
+                    icon="fas fa-magic"
+                    title="Syntext Smith settings"
+                    subtitle="The AI model and the diagram server"
+                    onClose={onClose}
+                    closeLabel="Close settings"
+                />
 
                 {/* Body */}
-                <div className="p-6 space-y-5 overflow-y-auto">
+                <div className="px-5 py-5 space-y-5 overflow-y-auto ui-scroll">
 
                     {/* Provider */}
                     <div>
@@ -127,12 +122,12 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                             {PROVIDER_IDS.map(id => <option key={id} value={id}>{PROVIDERS[id].label}</option>)}
                         </select>
                         {providerId === 'anthropic' && (
-                            <p className="mt-1.5 text-xs text-slate-500">
+                            <p className={hintClass}>
                                 Requests go straight from this browser to Anthropic. Organisations with zero data retention cannot use browser access.
                             </p>
                         )}
                         {providerId === 'openai-compatible' && (
-                            <p className="mt-1.5 text-xs text-slate-500">
+                            <p className={hintClass}>
                                 For any server that offers OpenAI's Chat Completions API, such as OpenRouter, Ollama or LM Studio. The server must accept requests from this page.
                             </p>
                         )}
@@ -150,17 +145,17 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                                 placeholder="https://openrouter.ai/api/v1"
                                 aria-invalid={baseUrlInvalid}
                                 spellCheck={false}
-                                className={`${inputClass} font-mono ${baseUrlInvalid ? 'border-red-400' : ''}`}
+                                className={`${inputClass} font-mono text-xs ${baseUrlInvalid ? '!border-red-400 !ring-red-500/20' : ''}`}
                             />
                             {baseUrlInvalid
-                                ? <p className="mt-1.5 text-xs text-red-600">The address must start with http:// or https://</p>
-                                : <p className="mt-1.5 text-xs text-slate-500">For Ollama on this computer, use http://localhost:11434/v1</p>}
+                                ? <p className={errorClass}>The address must start with http:// or https://</p>
+                                : <p className={hintClass}>For Ollama on this computer, use http://localhost:11434/v1</p>}
                         </div>
                     )}
 
                     {/* API Key */}
                     <div>
-                        <label htmlFor="ai-api-key" className={labelClass}>API Key</label>
+                        <label htmlFor="ai-api-key" className={labelClass}>API key</label>
                         <div className="relative">
                             <input
                                 id="ai-api-key"
@@ -169,13 +164,13 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                                 value={config.apiKey || ''}
                                 onChange={(e) => setProviderField('apiKey', e.target.value)}
                                 placeholder={KEY_PLACEHOLDERS[providerId]}
-                                className={`${inputClass} pl-9 font-mono`}
+                                className={`${inputClass} pl-9 font-mono text-xs`}
                             />
-                            <i className="fas fa-key absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <i className="fas fa-key absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" aria-hidden="true"></i>
                         </div>
                         {provider.keyUrl && (
-                            <p className="mt-1.5 text-xs text-slate-500">
-                                <a href={provider.keyUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 hover:underline">
+                            <p className={hintClass}>
+                                <a href={provider.keyUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-700 font-medium hover:underline underline-offset-2">
                                     Get a {provider.label} key
                                 </a>
                             </p>
@@ -185,16 +180,16 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                     {/* Model */}
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
-                            <label htmlFor="ai-model" className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Model</label>
+                            <label htmlFor="ai-model" className="text-xs font-medium text-slate-700">Model</label>
                             {canList && (
                                 <button
                                     type="button"
                                     onClick={loadModels}
                                     disabled={modelList.status === 'loading'}
-                                    className="text-xs text-indigo-600 hover:text-indigo-800 disabled:text-slate-400 flex items-center gap-1"
+                                    className="h-6 px-1.5 -mr-1.5 rounded text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:text-slate-400 flex items-center gap-1.5 transition-colors"
                                 >
                                     <i className={`fas fa-sync-alt ${modelList.status === 'loading' ? 'animate-spin' : ''}`}></i>
-                                    {modelList.status === 'loading' ? 'Loading models' : 'Refresh list'}
+                                    {modelList.status === 'loading' ? 'Loading the models…' : 'Refresh the list'}
                                 </button>
                             )}
                         </div>
@@ -222,14 +217,14 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                                 onChange={(e) => setProviderField('model', e.target.value)}
                                 placeholder={provider.defaultModel || 'Enter the model id'}
                                 spellCheck={false}
-                                className={`${inputClass} font-mono`}
+                                className={`${inputClass} font-mono text-xs`}
                             />
                         )}
                         {modelList.status === 'error' && (
-                            <p className="mt-1.5 text-xs text-red-600">Could not load the model list: {modelList.error} You can still type a model id.</p>
+                            <p className={errorClass}>Could not load the model list: {modelList.error} You can still type a model id.</p>
                         )}
                         {!canList && (
-                            <p className="mt-1.5 text-xs text-slate-500">
+                            <p className={hintClass}>
                                 {provider.needsBaseUrl ? 'Enter the base address to load the list of models.' : 'Enter the API key to load the list of models.'}
                             </p>
                         )}
@@ -237,16 +232,16 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
 
                     {/* Remember keys */}
                     <div>
-                        <label className="flex items-start gap-2 text-sm text-slate-700 cursor-pointer">
+                        <label className="flex items-start gap-2.5 text-[13px] font-medium text-slate-800 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={!!draft.rememberKeys}
                                 onChange={(e) => setDraft(prev => ({ ...prev, rememberKeys: e.target.checked }))}
-                                className="mt-0.5 accent-indigo-600"
+                                className="mt-0.5 w-4 h-4 accent-indigo-600"
                             />
                             <span>Remember keys in this browser</span>
                         </label>
-                        <p className="mt-1.5 ml-6 text-xs text-slate-500">
+                        <p className="mt-1 ml-[26px] text-xs leading-relaxed text-slate-500">
                             Without this option, keys are kept for this browser tab only and are cleared when the tab closes.
                             Remembered keys are stored as plain text in this browser, where other scripts on this page can read them.
                         </p>
@@ -255,8 +250,8 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                     {/* Temperature */}
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
-                            <label htmlFor="ai-temperature" className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Creativity (Temperature)</label>
-                            <span className="text-xs font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{draft.temperature}</span>
+                            <label htmlFor="ai-temperature" className="text-xs font-medium text-slate-700">Creativity (temperature)</label>
+                            <span className="text-xs tabular-nums font-medium text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">{draft.temperature}</span>
                         </div>
                         <input
                             id="ai-temperature"
@@ -266,20 +261,20 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                             step="0.1"
                             value={draft.temperature}
                             onChange={(e) => setDraft(prev => ({ ...prev, temperature: e.target.value }))}
-                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-indigo-600"
                         />
-                        <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                        <div className="flex justify-between text-[11px] text-slate-400 mt-1.5">
                             <span>Precise</span>
                             <span>Balanced</span>
                             <span>Creative</span>
                         </div>
                         {providerId === 'anthropic' && (
-                            <p className="mt-1.5 text-xs text-slate-500">Current Claude models do not accept a temperature, so Smith leaves the setting out for Anthropic.</p>
+                            <p className={hintClass}>Current Claude models do not accept a temperature, so Smith leaves the setting out for Anthropic.</p>
                         )}
                     </div>
 
                     {/* Diagram server (Kroki) */}
-                    <div>
+                    <div className="pt-5 border-t border-slate-100">
                         <label htmlFor="kroki-url" className={labelClass}>Diagram server (Kroki)</label>
                         <input
                             id="kroki-url"
@@ -288,12 +283,12 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                             onChange={(e) => setKrokiUrl(e.target.value)}
                             placeholder={KROKI_BASE_URL}
                             aria-invalid={krokiUrlInvalid}
-                            className={`${inputClass} font-mono ${krokiUrlInvalid ? 'border-red-400' : ''}`}
+                            className={`${inputClass} font-mono text-xs ${krokiUrlInvalid ? '!border-red-400 !ring-red-500/20' : ''}`}
                         />
                         {krokiUrlInvalid && (
-                            <p className="mt-1.5 text-xs text-red-600">The address must start with http:// or https://</p>
+                            <p className={errorClass}>The address must start with http:// or https://</p>
                         )}
-                        <p className="mt-1.5 text-xs text-slate-500">
+                        <p className={hintClass}>
                             Every diagram type except Mermaid is sent to this server, both for the code preview and for Syntext Smith's checks.
                             Leave the field empty to use the public server at kroki.io, or enter the address of your own Kroki server to keep diagrams private.
                         </p>
@@ -301,23 +296,14 @@ export const AISettingsModal = ({ isOpen, onClose, aiService }) => {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors"
-                    >
+                <ModalFooter>
+                    <Button variant="ghost" onClick={onClose}>
                         Cancel
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={!canSave}
-                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors flex items-center gap-2"
-                    >
-                        <i className="fas fa-check"></i>
-                        Save Settings
-                    </button>
-                </div>
-            </div>
-        </div>
+                    </Button>
+                    <Button variant="primary" icon="fas fa-check" onClick={handleSave} disabled={!canSave}>
+                        Save settings
+                    </Button>
+                </ModalFooter>
+        </Modal>
     );
 };

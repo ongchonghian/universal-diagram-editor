@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Modal, ModalHeader, ModalFooter, Button, FieldLabel, inputClass } from '../common.jsx';
 
 export const SnippetInsertionDialog = ({ isOpen, onClose, onInsert, snippet, contextModel, selectedElement }) => {
     const [values, setValues] = useState({});
@@ -69,35 +70,30 @@ export const SnippetInsertionDialog = ({ isOpen, onClose, onInsert, snippet, con
 
     const hasParams = snippet.params && snippet.params.length > 0;
 
+    const positions = [
+        { mode: 'cursor', icon: 'fa-i-cursor', label: 'At the cursor' },
+        { mode: 'replace', icon: 'fa-sync-alt', label: 'Replace the selection' },
+        { mode: 'before', icon: 'fa-arrow-up', label: 'Before the selection' },
+        { mode: 'after', icon: 'fa-arrow-down', label: 'After the selection' }
+    ];
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-                        <i className={`fas ${snippet.icon} text-indigo-500`}></i>
-                        Insert {snippet.label}
-                    </h3>
-                    <button 
-                        onClick={onClose}
-                        className="text-slate-400 hover:text-slate-600 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200"
-                    >
-                        <i className="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <form onSubmit={handleSubmit} className="p-6">
+        <Modal onClose={onClose} labelledBy="snippet-title" className="max-w-md">
+            <ModalHeader id="snippet-title" icon={`fas ${snippet.icon}`} title={`Insert ${snippet.label}`} subtitle={hasParams ? "Fill in the details, then choose where the code goes" : "Choose where the code goes"} onClose={onClose} closeLabel="Close" />
+
+            <form onSubmit={handleSubmit}>
+                <div className="px-5 py-5 space-y-5">
                     {hasParams ? (
-                        <div className="space-y-4 mb-6">
+                        <div className="space-y-4">
                            {snippet.params.map(param => (
                                 <div key={param.name}>
-                                    <label className="block text-xs font-medium text-slate-700 mb-1.5 uppercase tracking-wide">
-                                        {param.label}
-                                    </label>
+                                    <FieldLabel htmlFor={`snippet-${param.name}`}>{param.label}</FieldLabel>
                                     {param.type === 'select' ? (
                                         <select
+                                            id={`snippet-${param.name}`}
                                             value={values[param.name] || ''}
                                             onChange={(e) => handleChange(param.name, e.target.value)}
-                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            className={inputClass}
                                         >
                                             <option value="">Select...</option>
                                             {param.options.map(opt => (
@@ -106,93 +102,54 @@ export const SnippetInsertionDialog = ({ isOpen, onClose, onInsert, snippet, con
                                         </select>
                                     ) : (
                                         <input
+                                            id={`snippet-${param.name}`}
                                             type="text"
                                             value={values[param.name] || ''}
                                             onChange={(e) => handleChange(param.name, e.target.value)}
-                                            placeholder={`Enter ${param.label.toLowerCase()}...`}
-                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            placeholder={`Enter the ${param.label.toLowerCase()}`}
+                                            className={inputClass}
                                             autoFocus={param.name === snippet.params[0].name}
                                         />
                                     )}
                                 </div>
                             ))}
                         </div>
-                    ) : (
-                        <div className="mb-6 p-4 bg-indigo-50 text-indigo-700 rounded-lg text-sm">
-                            <p>Inserting <strong>{snippet.label}</strong> snippet.</p>
-                            <p className="mt-1 text-xs opacity-70">Choose where to place this code below.</p>
-                        </div>
-                    )}
-                    
-                    <div className="pt-2 border-t border-slate-100 mt-4">
-                        <label className="block text-xs font-medium text-slate-700 mb-2 uppercase tracking-wide">
-                            Insertion Position
-                        </label>
+                    ) : null}
+
+                    <fieldset className={hasParams ? 'pt-4 border-t border-slate-100' : ''}>
+                        <legend className="block text-xs font-medium text-slate-700 mb-2">Where to insert</legend>
                         <div className="grid grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setInsertionMode('cursor')}
-                                className={`py-2 px-3 rounded text-xs font-medium border transition-colors ${
-                                    insertionMode === 'cursor' 
-                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
-                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                }`}
-                            >
-                                <i className="fas fa-i-cursor mr-1.5"></i> At Cursor
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setInsertionMode('replace')}
-                                className={`py-2 px-3 rounded text-xs font-medium border transition-colors ${
-                                    insertionMode === 'replace' 
-                                    ? 'bg-amber-50 border-amber-200 text-amber-700' 
-                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                }`}
-                            >
-                                <i className="fas fa-sync-alt mr-1.5"></i> Replace Selection
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setInsertionMode('before')}
-                                className={`py-2 px-3 rounded text-xs font-medium border transition-colors ${
-                                    insertionMode === 'before' 
-                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
-                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                }`}
-                            >
-                                <i className="fas fa-arrow-up mr-1.5"></i> Before Selection
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setInsertionMode('after')}
-                                className={`py-2 px-3 rounded text-xs font-medium border transition-colors ${
-                                    insertionMode === 'after' 
-                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
-                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                }`}
-                            >
-                                <i className="fas fa-arrow-down mr-1.5"></i> After Selection
-                            </button>
+                            {positions.map(({ mode, icon, label }) => {
+                                const selected = insertionMode === mode;
+                                return (
+                                    <button
+                                        key={mode}
+                                        type="button"
+                                        onClick={() => setInsertionMode(mode)}
+                                        aria-pressed={selected}
+                                        className={`h-9 px-3 rounded-md text-xs font-medium border inline-flex items-center gap-2 transition-colors ${
+                                            selected
+                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-800'
+                                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <i className={`fas ${icon} text-[11px] ${selected ? 'text-indigo-600' : 'text-slate-400'}`} aria-hidden="true"></i> {label}
+                                    </button>
+                                );
+                            })}
                         </div>
-                    </div>
-                 
-                    <div className="flex justify-end gap-3 mt-6">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200 transition-colors"
-                        >
-                            Insert Code
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                    </fieldset>
+                </div>
+
+                <ModalFooter>
+                    <Button variant="ghost" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button variant="primary" type="submit" icon="fas fa-plus">
+                        Insert
+                    </Button>
+                </ModalFooter>
+            </form>
+        </Modal>
     );
 };

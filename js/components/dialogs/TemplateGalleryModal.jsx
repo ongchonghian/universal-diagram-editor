@@ -9,8 +9,10 @@ import {
 
     C4_VISUAL_TEMPLATES,
     C4_PLANTUML_TEMPLATES,
-    GRAPHVIZ_TEMPLATES
+    GRAPHVIZ_TEMPLATES,
+    DIAGRAM_TYPES
 } from '../../config.js';
+import { Modal, ModalHeader, inputClass } from '../common.jsx';
 
 export const TemplateGalleryModal = ({ isOpen, onClose, onSelect, diagramType }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -61,60 +63,62 @@ export const TemplateGalleryModal = ({ isOpen, onClose, onSelect, diagramType })
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}></div>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col relative z-50">
-                <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-                    <h2 className="text-lg font-bold text-slate-800">Diagram Templates</h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-                        <i className="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <div className="p-4 border-b border-slate-200 bg-slate-50">
-                    <div className="relative">
-                        <i className="fas fa-search absolute left-3 top-3 text-slate-400"></i>
-                        <input
-                            type="text"
-                            placeholder="Search templates..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            autoFocus
-                        />
-                    </div>
-                </div>
+    const TYPE_TAGS = { 'c4-visual': 'C4 visual', 'c4-plantuml': 'C4 PlantUML' };
+    // A type tag helps only when the gallery mixes kinds of template
+    const mixedTypes = new Set(templates.map(t => t.type)).size > 1;
+    const notation = DIAGRAM_TYPES[diagramType]?.label || diagramType;
 
-                <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {templates.map((template) => (
-                            <div 
-                                key={template.id}
-                                onClick={() => { onSelect(template.code); onClose(); }}
-                                className="bg-white border border-slate-200 rounded-lg p-4 cursor-pointer hover:border-indigo-400 hover:shadow-md transition-all group h-full flex flex-col"
-                            >
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                        <i className={`fas ${template.icon}`}></i>
-                                    </div>
-                                    <span className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">
-                                        {template.type}
-                                    </span>
-                                </div>
-                                <h3 className="font-semibold text-slate-800 mb-1">{template.label}</h3>
-                                <p className="text-xs text-slate-500 flex-1">{template.description}</p>
-                            </div>
-                        ))}
-                        {templates.length === 0 && (
-                            <div className="col-span-full py-12 text-center text-slate-500">
-                                <i className="fas fa-search text-3xl mb-3 opacity-30"></i>
-                                <p>No templates found matching "{searchTerm}"</p>
-                            </div>
-                        )}
-                    </div>
+    return (
+        <Modal onClose={onClose} labelledBy="templates-title" className="max-w-4xl max-h-[85vh]">
+            <ModalHeader id="templates-title" icon="fas fa-th-large" title="Templates" subtitle={`Start from a ${notation} example. The template replaces the code in the editor.`} onClose={onClose} closeLabel="Close templates" />
+
+            <div className="px-5 py-3 border-b border-slate-100">
+                <div className="relative">
+                    <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400" aria-hidden="true"></i>
+                    <input
+                        type="text"
+                        placeholder="Search templates"
+                        aria-label="Search templates"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className={`${inputClass} pl-8`}
+                        autoFocus
+                    />
                 </div>
             </div>
-        </div>
+
+            <div className="flex-1 overflow-y-auto ui-scroll p-5 bg-slate-50/70">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {templates.map((template) => (
+                        <button
+                            type="button"
+                            key={`${template.type}-${template.id}`}
+                            onClick={() => { onSelect(template.code); onClose(); }}
+                            className="text-left bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all group h-full flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        >
+                            <div className="flex items-start justify-between mb-3">
+                                <span className="w-8 h-8 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center text-sm group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors" aria-hidden="true">
+                                    <i className={`fas ${template.icon}`}></i>
+                                </span>
+                                {mixedTypes && (
+                                    <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 h-5 inline-flex items-center rounded">
+                                        {TYPE_TAGS[template.type] || template.type}
+                                    </span>
+                                )}
+                            </div>
+                            <h3 className="text-[13px] font-semibold text-slate-900">{template.label}</h3>
+                            <p className="mt-0.5 text-xs leading-relaxed text-slate-500 flex-1">{template.description}</p>
+                        </button>
+                    ))}
+                    {templates.length === 0 && (
+                        <div className="col-span-full py-12 text-center">
+                            <i className="fas fa-search text-2xl text-slate-300 mb-3" aria-hidden="true"></i>
+                            <p className="text-[13px] font-medium text-slate-700">No template matches "{searchTerm}"</p>
+                            <p className="mt-1 text-xs text-slate-500">The search looks in template names and descriptions.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </Modal>
     );
 };
