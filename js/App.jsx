@@ -15,14 +15,19 @@ import { CodeEditorView } from './components/editors/CodeEditorView.jsx';
 import { TemplateGalleryModal } from './components/dialogs/TemplateGalleryModal.jsx';
 import { BpmnAutoLayoutDialog } from './components/dialogs/BpmnAutoLayoutDialog.jsx';
 import { UpdatePanel } from './components/UpdatePanel.jsx';
-import { BpmnVisualEditor } from './components/editors/BpmnVisualEditor.jsx';
-import { MermaidVisualEditor } from './components/editors/mermaid/MermaidVisualEditor.jsx';
-import { ExcalidrawVisualEditor } from './components/editors/ExcalidrawVisualEditor.jsx';
-import { LikeC4VisualEditor } from './components/editors/LikeC4VisualEditor.jsx';
-import { VegaVisualEditor } from './components/editors/VegaVisualEditor.jsx';
+import { LazyPanel, lazyNamed } from './components/LazyPanel.jsx';
 import { AICopilot } from './components/AICopilot.jsx';
 import { NotationSwitchDialog } from './components/dialogs/NotationSwitchDialog.jsx';
 import { NOTATION_GROUPS, getStarterCode, isUntouchedStarter, fileAcceptList, hasTemplates } from './notations.js';
+
+// The visual editors bring in large libraries (bpmn-js, Excalidraw, React Flow, Graphic Walker).
+// Each editor downloads the first time someone opens Design view for its diagram type,
+// so the code view and preview start without them.
+const BpmnVisualEditor = lazyNamed(() => import('./components/editors/BpmnVisualEditor.jsx'), 'BpmnVisualEditor');
+const MermaidVisualEditor = lazyNamed(() => import('./components/editors/mermaid/MermaidVisualEditor.jsx'), 'MermaidVisualEditor');
+const ExcalidrawVisualEditor = lazyNamed(() => import('./components/editors/ExcalidrawVisualEditor.jsx'), 'ExcalidrawVisualEditor');
+const LikeC4VisualEditor = lazyNamed(() => import('./components/editors/LikeC4VisualEditor.jsx'), 'LikeC4VisualEditor');
+const VegaVisualEditor = lazyNamed(() => import('./components/editors/VegaVisualEditor.jsx'), 'VegaVisualEditor');
 
 // MAIN APP COMPONENT
 const App = () => {
@@ -326,6 +331,7 @@ const App = () => {
 
                     {/* Visual View */}
                     <div className={`flex-1 w-full h-full transition-opacity duration-300 ${viewMode === 'visual' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none absolute inset-0'}`}>
+                        <LazyPanel name="design editor" resetKey={diagramType}>
                         {diagramType === 'bpmn' && viewMode === 'visual' && (
                             <BpmnVisualEditor xml={textInput} onChange={handleVisualChange} onError={setPreviewError} readOnly={readOnly} />
                         )}
@@ -365,11 +371,12 @@ const App = () => {
                             <VegaVisualEditor 
                                 code={textInput}
                                 diagramType={diagramType}
-                                onChange={handleVisualChange} 
-                                onError={setPreviewError} 
+                                onChange={handleVisualChange}
+                                onError={setPreviewError}
                                 readOnly={readOnly}
                             />
                         )}
+                        </LazyPanel>
                     </div>
                 </div>
 
