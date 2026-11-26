@@ -1,6 +1,7 @@
 
 import { KROKI_BASE_URL, DIAGRAM_TYPES } from '../config.js';
 import { parseError } from '../error-diagnostics/index.js';
+import { lineInCode, cleanErrorMessage } from '../notations.js';
 import pako from 'pako';
 import mermaid from 'mermaid';
 
@@ -124,7 +125,7 @@ class RendererAdapter {
                         message: errorInfo.message, 
                         info: errorInfo 
                     },
-                    errorLine: errorInfo.line
+                    errorLine: lineInCode(errorInfo.line, content)
                 };
             }
         }
@@ -162,14 +163,17 @@ class RendererAdapter {
             const svg = await response.text();
             return { svg, url, error: null };
         } catch (err) {
-            const errorInfo = parseError(err.message, type, content) || this.parseErrorInfoFallback(err.message);
-            const line = errorInfo?.line || this.extractErrorLine(err.message);
-            
+            // Read the cause without the server's stack trace, whose own line numbers are not the user's
+            const message = cleanErrorMessage(err.message) || err.message;
+            const errorInfo = parseError(message, type, content) || this.parseErrorInfoFallback(message);
+            const line = lineInCode(errorInfo?.line || this.extractErrorLine(message), content);
+            if (errorInfo) errorInfo.line = line;
+
             return { 
                 svg: null, 
                 url, 
                 error: { 
-                    message: err.message, 
+                    message, 
                     info: errorInfo 
                 },
                 errorLine: line
@@ -215,11 +219,10 @@ class RendererAdapter {
      * Helper to detect file type from content/filename
      * (Logic moved/copied from utils.js)
      */
-    detectType(filename, content) {
-        // Reuse the logic from utils.js but we can implement it here to be self-contained
-        // For now, to ensure consistency, I'll basically implement what we saw in utils.js
+    detectType(filename, content, fallback = 'bpmn') {
+        // An unknown extension keeps the notation the user already chose (`fallback`)
         const ext = '.' + filename.split('.').pop().toLowerCase();
-        let extType = 'bpmn'; // Default fallback
+        let extType = fallback;
         for (const [key, config] of Object.entries(DIAGRAM_TYPES)) {
             if (config.extensions && config.extensions.includes(ext)) {
                 extType = key;

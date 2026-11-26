@@ -21,6 +21,8 @@ import { ExcalidrawVisualEditor } from './components/editors/ExcalidrawVisualEdi
 import { LikeC4VisualEditor } from './components/editors/LikeC4VisualEditor.jsx';
 import { VegaVisualEditor } from './components/editors/VegaVisualEditor.jsx';
 import { AICopilot } from './components/AICopilot.jsx';
+import { NotationSwitchDialog } from './components/dialogs/NotationSwitchDialog.jsx';
+import { NOTATION_GROUPS, getStarterCode, isUntouchedStarter, fileAcceptList, hasTemplates } from './notations.js';
 
 // MAIN APP COMPONENT
 const App = () => {
@@ -38,8 +40,31 @@ const App = () => {
         mermaidAstLoaded,
         mermaidSyncRef,
         isVisualSupported,
+        designSupport,
         handleDownloadSource
     } = useDiagramState();
+
+    // A notation the user picked while the editor held code in another notation; the switch waits for their choice
+    const [pendingNotation, setPendingNotation] = useState(null);
+    const handleNotationChange = useCallback((next) => {
+        if (next === diagramType) return;
+        if (isUntouchedStarter(diagramType, textInput)) {
+            // The code is empty or an unchanged example, so the switch can start the new notation afresh
+            setDiagramType(next);
+            setTextInput('');
+            setViewMode('code');
+        } else {
+            setPendingNotation(next);
+        }
+    }, [diagramType, textInput, setDiagramType, setTextInput, setViewMode]);
+    const finishNotationSwitch = useCallback((startNew) => {
+        const next = pendingNotation;
+        setPendingNotation(null);
+        if (!next) return;
+        setDiagramType(next);
+        if (startNew) setTextInput(getStarterCode(next));
+        setViewMode('code');
+    }, [pendingNotation, setDiagramType, setTextInput, setViewMode]);
 
     const editorRef = useRef(null);
     // The Smith proposal open for review in the code pane
@@ -94,7 +119,7 @@ const App = () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             const content = event.target.result;
-            const detectedType = rendererAdapter.detectType(file.name, content);
+            const detectedType = rendererAdapter.detectType(file.name, content, diagramType);
             setDiagramType(detectedType);
             
             // Check for BPMN without DI
@@ -105,7 +130,7 @@ const App = () => {
             }
         };
         reader.readAsText(file);
-    }, [promptAutoLayout, setDiagramType, setTextInput]);
+    }, [promptAutoLayout, setDiagramType, setTextInput, diagramType]);
 
     // Handle file open via button
     const handleFileOpen = useCallback((e) => {
@@ -115,7 +140,7 @@ const App = () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             const content = event.target.result;
-            const detectedType = rendererAdapter.detectType(file.name, content);
+            const detectedType = rendererAdapter.detectType(file.name, content, diagramType);
             setDiagramType(detectedType);
             
             // Check for BPMN without DI
@@ -127,7 +152,7 @@ const App = () => {
         };
         reader.readAsText(file);
         e.target.value = ''; // Reset for same file selection
-    }, [promptAutoLayout, setDiagramType, setTextInput]);
+    }, [promptAutoLayout, setDiagramType, setTextInput, diagramType]);
 
     // Handle visual editor changes
     const handleVisualChange = useCallback((newXml) => {
@@ -155,36 +180,46 @@ const App = () => {
                     <ToolbarDivider className="hidden min-[1360px]:block" />
                     <select
                         value={diagramType}
-                        onChange={(e) => { setDiagramType(e.target.value); setViewMode('code'); }}
+                        onChange={(e) => handleNotationChange(e.target.value)}
                         aria-label="Diagram notation"
+                        title="Diagram notation: the language the code is written in"
                         className="h-8 pl-2.5 pr-8 text-[13px] font-medium text-slate-800 bg-white border border-slate-200 rounded-md shadow-sm hover:border-slate-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
                     >
-                        {Object.entries(DIAGRAM_TYPES).map(([key, config]) => (
-                            <option key={key} value={key}>{config.label}</option>
+                        {NOTATION_GROUPS.map(group => (
+                            <optgroup key={group.label} label={group.label}>
+                                {group.types.filter(key => DIAGRAM_TYPES[key]).map(key => (
+                                    <option key={key} value={key}>{DIAGRAM_TYPES[key].label}</option>
+                                ))}
+                            </optgroup>
                         ))}
                     </select>
                     {detectedModel && <StatusBadge type="info" text={detectedModel} className="hidden lg:inline-flex max-w-[11rem] truncate" />}
                 </div>
 
                 <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar">
-                    {isVisualSupported && (
-                        <div className="flex items-center bg-slate-100 rounded-md p-0.5 ml-2 shrink-0" role="group" aria-label="Editor view">
-                            {[
-                                { mode: 'code', icon: 'fas fa-code', label: 'Code' },
-                                { mode: 'visual', icon: 'fas fa-paint-brush', label: 'Design' }
-                            ].map(({ mode, icon, label }) => (
+                    {/* Always shown, so the header keeps its place; Design is dimmed, with the reason, when it cannot edit this diagram */}
+                    <div className="flex items-center bg-slate-100 rounded-md p-0.5 ml-2 shrink-0" role="group" aria-label="Editor view">
+                        {[
+                            { mode: 'code', icon: 'fas fa-code', label: 'Code' },
+                            { mode: 'visual', icon: 'fas fa-paint-brush', label: 'Design' }
+                        ].map(({ mode, icon, label }) => {
+                            const unavailable = mode === 'visual' && !isVisualSupported;
+                            const active = viewMode === mode;
+                            return (
                                 <button
                                     key={mode}
                                     type="button"
-                                    onClick={() => setViewMode(mode)}
-                                    aria-pressed={viewMode === mode}
-                                    className={`h-7 px-2.5 inline-flex items-center gap-1.5 text-xs font-medium rounded transition-colors ${viewMode === mode ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800'}`}
+                                    onClick={() => { if (!unavailable) setViewMode(mode); }}
+                                    aria-pressed={active}
+                                    aria-disabled={unavailable || undefined}
+                                    title={unavailable ? designSupport.reason : undefined}
+                                    className={`h-7 px-2.5 inline-flex items-center gap-1.5 text-xs font-medium rounded transition-colors ${active ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5' : unavailable ? 'text-slate-400 cursor-not-allowed' : 'text-slate-500 hover:text-slate-800'}`}
                                 >
-                                    <i className={`${icon} text-[11px] ${viewMode === mode ? 'text-indigo-600' : ''}`} aria-hidden="true"></i> {label}
+                                    <i className={`${icon} text-[11px] ${active ? 'text-indigo-600' : ''}`} aria-hidden="true"></i> {label}
                                 </button>
-                            ))}
-                        </div>
-                    )}
+                            );
+                        })}
+                    </div>
 
                     <span className="flex-1 min-w-2" aria-hidden="true"></span>
 
@@ -193,7 +228,7 @@ const App = () => {
                         type="file"
                         ref={fileInputRef}
                         onChange={handleFileOpen}
-                        accept=".bpmn,.xml,.mmd,.mermaid,.puml,.plantuml,.wsd,.dot,.gv,.json,.yaml,.yml"
+                        accept={fileAcceptList()}
                         className="hidden"
                     />
                     <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-folder-open" onClick={() => fileInputRef.current?.click()}>Open</Button>
@@ -214,7 +249,7 @@ const App = () => {
                     >
                         {readOnly ? "Locked" : "Unlocked"}
                     </Button>
-                    {['mermaid', 'plantuml', 'bpmn', 'excalidraw', 'vega', 'vegalite', 'c4', 'graphviz'].includes(diagramType) && (
+                    {hasTemplates(diagramType) && (
                         <Button variant="ghost" size="sm" collapse="xl" icon="fas fa-th-large" onClick={() => setShowTemplates(true)}>
                             Templates
                         </Button>
@@ -283,6 +318,7 @@ const App = () => {
                             proposal={pendingProposal}
                             onProposalDone={() => setPendingProposal(null)}
                             onApplyRetyped={handleAiCodeApply}
+                            onOpenDesign={isVisualSupported ? () => setViewMode('visual') : undefined}
                         />
                     </div>
 
@@ -356,6 +392,15 @@ const App = () => {
             {/* Template Modal */}
             <TemplateGalleryModal isOpen={showTemplates} onClose={() => setShowTemplates(false)} onSelect={setTextInput} diagramType={diagramType} />
             
+            {/* Notation switch: start a new diagram, or keep the code */}
+            <NotationSwitchDialog
+                from={diagramType}
+                to={pendingNotation}
+                onStartNew={() => finishNotationSwitch(true)}
+                onKeepCode={() => finishNotationSwitch(false)}
+                onCancel={() => setPendingNotation(null)}
+            />
+
             {/* BPMN Auto-Layout Dialog */}
             <BpmnAutoLayoutDialog 
                 isOpen={showAutoLayoutDialog} 
