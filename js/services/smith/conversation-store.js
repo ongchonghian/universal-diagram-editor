@@ -2,7 +2,9 @@
  * Conversation storage for the Smith chat panel, in localStorage under universal_diagram_ai_conversations.
  *
  * Stored message shape:
- *   { role: 'user', content }
+ *   { role: 'user', content, pictures? }   pictures: the names of attached pictures. The pictures
+ *                                          themselves stay in memory for the session only, because
+ *                                          they would soon fill localStorage.
  *   { role: 'assistant', content, proposal?, trail?, suggestions?, limitReached?, isError?, isStopped? }
  *
  * Replies saved before the tool loop held a "[SUGGESTIONS]: [...]" line and fenced code. On load the
@@ -45,6 +47,13 @@ function writeAll(conversations) {
     }
 }
 
+/** The message as stored: attached pictures become a list of their names. */
+export function storedMessage(message) {
+    if (!message?.images?.length) return message;
+    const { images, ...rest } = message;
+    return { ...rest, pictures: images.map(image => image.name || 'picture') };
+}
+
 const titleFrom = (text) => text.slice(0, 30) + (text.length > 30 ? '...' : '');
 
 export const conversationStore = {
@@ -75,7 +84,7 @@ export const conversationStore = {
     setMessages(id, messages) {
         const all = readAll();
         if (!all[id]) return;
-        all[id].messages = messages;
+        all[id].messages = messages.map(storedMessage);
         all[id].lastModified = Date.now();
         writeAll(all);
     },
@@ -84,7 +93,7 @@ export const conversationStore = {
         const all = readAll();
         const conversation = all[id];
         if (!conversation) return;
-        conversation.messages.push(message);
+        conversation.messages.push(storedMessage(message));
         if (message.role === 'user' && conversation.title === 'New Conversation') conversation.title = titleFrom(message.content);
         conversation.lastModified = Date.now();
         writeAll(all);

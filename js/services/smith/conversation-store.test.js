@@ -20,6 +20,13 @@ describe('conversation store', () => {
         expect(convo.messages[1].suggestions).toEqual(['Add lanes']);
     });
 
+    it('stores the names of attached pictures, never the pictures', () => {
+        const id = conversationStore.create();
+        conversationStore.append(id, { role: 'user', content: 'Copy this', images: [{ type: 'image', mimeType: 'image/png', data: 'AAAA', name: 'board.png' }] });
+        expect(conversationStore.get(id).messages[0]).toEqual({ role: 'user', content: 'Copy this', pictures: ['board.png'] });
+        expect(localStorage.getItem('universal_diagram_ai_conversations')).not.toContain('AAAA');
+    });
+
     it('ignores unreadable stored conversations', () => {
         localStorage.setItem('universal_diagram_ai_conversations', '{broken');
         expect(conversationStore.getAll()).toEqual({});
@@ -34,5 +41,10 @@ describe('historyOf', () => {
             { role: 'assistant', content: 'part', isStopped: true },
             { role: 'assistant', content: 'b', proposal: { code: 'x' } }
         ])).toEqual([{ role: 'user', content: 'a' }, { role: 'assistant', content: 'b' }]);
+    });
+
+    it('notes pictures from earlier turns instead of sending them again', () => {
+        expect(historyOf([{ role: 'user', content: 'Copy this', pictures: ['a.png', 'b.png'] }])[0].content)
+            .toBe('Copy this\n\n(The user attached 2 pictures to this message.)');
     });
 });

@@ -141,6 +141,31 @@ describe('runAgentLoop', () => {
         await expect(runAgentLoop({ config, userTurn: 'x', code: '', type: 'mermaid', streamTurn: cutTwice.streamTurn })).rejects.toMatchObject({ code: 'MAX_TOKENS' });
     });
 
+    it('sends attached pictures before the text, and the rendered picture with the tool result', async () => {
+        const picture = { type: 'image', mimeType: 'image/jpeg', data: 'photo', name: 'whiteboard.jpg', width: 10, height: 10 };
+        const render = { type: 'image', mimeType: 'image/png', data: 'render' };
+        const look = vi.fn(async () => ({ image: render, width: 800, height: 600 }));
+        const { streamTurn, requests } = fakeProvider([
+            { calls: [{ name: 'write_diagram', args: { type: 'mermaid', code: 'flowchart TD\n A --> B' } }] },
+            { calls: [{ name: 'render_diagram', args: {} }] },
+            { text: 'Copied the sketch.' }
+        ]);
+        const result = await runAgentLoop({ config, userTurn: 'Turn this into a flowchart', images: [picture], code: '', type: 'mermaid', streamTurn, validate: validDummy, look });
+
+        // Only the picture's type and data go to the model
+        expect(requests[0][0].parts).toEqual([{ type: 'image', mimeType: 'image/jpeg', data: 'photo' }, { type: 'text', text: 'Turn this into a flowchart' }]);
+        expect(look).toHaveBeenCalledWith('flowchart TD\n A --> B', 'mermaid');
+        expect(requests[2].at(-1).parts[0]).toMatchObject({ name: 'render_diagram', content: { status: 'rendered' }, images: [render] });
+        expect(result.trail.at(-1)).toEqual({ action: 'look', status: 'rendered' });
+    });
+
+    it('returns a render failure to the model as an error result', async () => {
+        const draft = createDraft('flowchart TD\n A --> B', 'mermaid');
+        const failed = await runTool(draft, { name: 'render_diagram', args: {} }, { look: async () => ({ error: 'Kroki is down' }) });
+        expect(failed).toMatchObject({ isError: true, step: { action: 'look', status: 'failed', error: 'Kroki is down' } });
+        expect((await runTool(createDraft('', 'mermaid'), { name: 'render_diagram', args: {} })).isError).toBe(true);
+    });
+
     it('throws when the provider declines, and when the signal aborts', async () => {
         const blocked = fakeProvider([{ text: '', stopReason: 'blocked' }]);
         await expect(runAgentLoop({ config, userTurn: 'x', code: '', type: 'mermaid', streamTurn: blocked.streamTurn })).rejects.toMatchObject({ code: 'BLOCKED' });

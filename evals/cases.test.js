@@ -9,7 +9,7 @@ vi.mock('../js/services/RendererAdapter.js', () => ({
     rendererAdapter: { render: vi.fn().mockResolvedValue({ svg: '<svg><rect/></svg>', error: null }) }
 }));
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DIAGRAM_TYPES } from '../js/config.js';
 import { validateDiagram } from '../js/services/diagram-tools/validate.js';
@@ -21,8 +21,8 @@ const cases = readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => JSO
 const LOCAL_TYPES = ['mermaid', 'bpmn', 'vegalite', 'vega'];
 
 describe('evaluation cases', () => {
-    it('hold 60 cases with unique ids', () => {
-        expect(cases).toHaveLength(60);
+    it('hold 64 cases with unique ids', () => {
+        expect(cases).toHaveLength(64);
         expect(new Set(cases.map(c => c.id)).size).toBe(cases.length);
     });
 
@@ -30,8 +30,15 @@ describe('evaluation cases', () => {
         const count = (g) => cases.filter(c => c.group === g).length;
         expect({
             mermaid: count('mermaid'), plantuml: count('plantuml'), c4: count('c4'), bpmn: count('bpmn'),
-            vega: count('vega'), graphviz: count('graphviz'), kroki: count('kroki'), 'type-choice': count('type-choice')
-        }).toEqual({ mermaid: 14, plantuml: 8, c4: 4, bpmn: 12, vega: 6, graphviz: 4, kroki: 10, 'type-choice': 2 });
+            vega: count('vega'), graphviz: count('graphviz'), kroki: count('kroki'), 'type-choice': count('type-choice'), image: count('image')
+        }).toEqual({ mermaid: 14, plantuml: 8, c4: 4, bpmn: 12, vega: 6, graphviz: 4, kroki: 10, 'type-choice': 2, image: 4 });
+    });
+
+    it('find the picture of every image case', () => {
+        for (const c of cases.filter(c => c.image)) {
+            expect(existsSync(join(process.cwd(), 'evals', 'fixtures', c.image)), c.image).toBe(true);
+        }
+        expect(cases.filter(c => c.group === 'image').every(c => c.image)).toBe(true);
     });
 
     it.each(cases.map(c => [c.id, c]))('%s is well formed', (_id, c) => {

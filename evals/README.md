@@ -22,7 +22,7 @@ The unit tests make no model calls and no network calls. They cover the shared v
 3. Choose the path, the provider, the model and, if needed, a filter. Press **Run**.
 4. When the run finishes, press **Download report** and save the file in `evals/results/`.
 
-Cases run one at a time, with a pause between cases, so that the token count per case is exact and free-tier rate limits hold. A full run of 60 cases takes several minutes.
+Cases run one at a time, with a pause between cases, so that the token count per case is exact and free-tier rate limits hold. A full run of 64 cases takes several minutes.
 
 PlantUML, C4, Graphviz and the other Kroki types are sent to the diagram server set in the app's settings. The default is the public kroki.io service. The cases hold invented content only.
 
@@ -38,7 +38,7 @@ Those reports were scored before the `no-removals` check was corrected. With the
 
 ## Cases
 
-`cases/` holds one JSON file per diagram group: 60 cases in all.
+`cases/` holds one JSON file per diagram group: 64 cases in all.
 
 | Group | Cases |
 |---|---|
@@ -50,12 +50,15 @@ Those reports were scored before the `no-removals` check was corrected. With the
 | graphviz | 4 |
 | kroki | 10 |
 | type-choice | 2 |
+| image | 4 |
 
 Each case has a `task`:
 
 - `create` sends the prompt with an empty editor.
 - `edit` sends the prompt with `startCode` in the editor.
 - `fix` sends `startCode` and its real validation error to the path's repair.
+
+An `image` case also names a picture in `fixtures/`, which goes to the model with the prompt, as a picture the user attached would. The four pictures imitate a whiteboard photo, two paper sketches and a screenshot marked up in red pen. `fixtures/make-fixtures.py` draws them with invented labels; run `python3 evals/fixtures/make-fixtures.py` on macOS to draw them again. The model must support image input for these cases to pass.
 
 `editorType` sets the editor's diagram type when the type differs from the expected output. `type: null` lets the reply choose the notation.
 
@@ -77,6 +80,8 @@ A case passes when every check passes. A check that cannot run (for example, the
 
 ## Report
 
-The report records the provider (`gemini`, `anthropic` or `openai-compatible`), model, temperature, path, a fingerprint of the system prompts (`promptVersion`), and whether the public Kroki server was used. For each case, the report records the outcome, every check, the first-attempt validation result, repair attempts, tokens, seconds and the output code.
+The report records the provider (`gemini`, `anthropic` or `openai-compatible`), model, temperature, path, a fingerprint of the system prompts (`promptVersion`), and whether the public Kroki server was used. For each case, the report records the outcome, every check, the first-attempt validation result, repair attempts, how often Smith looked at the render (`looks`), tokens, seconds and the output code. Looking at the render does not count as a repair attempt.
+
+Since Phase 5 (26 November 2026), Smith can call `render_diagram` to look at its draft. Each look adds a model step and an image to the conversation, so compare the tokens per case with the Phase 4 reports to check the cost of looking.
 
 The headline numbers are the **pass rate** and the **first-attempt parse rate**: the share of create and edit answers that parsed before any repair. Both numbers are given overall and for each group.

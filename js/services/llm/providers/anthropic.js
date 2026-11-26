@@ -29,6 +29,8 @@ function headers(config, { beta } = {}) {
     };
 }
 
+const imageBlock = (part) => ({ type: 'image', source: { type: 'base64', media_type: part.mimeType, data: part.data } });
+
 function toMessages(messages) {
     return messages.map(message => {
         if (message.role === 'assistant' && message.raw?.provider === ID) {
@@ -37,12 +39,14 @@ function toMessages(messages) {
         const content = message.parts.map(part => {
             switch (part.type) {
                 case 'text': return { type: 'text', text: part.text };
-                case 'image': return { type: 'image', source: { type: 'base64', media_type: part.mimeType, data: part.data } };
+                case 'image': return imageBlock(part);
                 case 'tool_call': return { type: 'tool_use', id: part.id, name: part.name, input: part.args || {} };
                 case 'tool_result': return {
                     type: 'tool_result',
                     tool_use_id: part.id,
-                    content: resultText(part.content),
+                    content: part.images?.length
+                        ? [{ type: 'text', text: resultText(part.content) }, ...part.images.map(imageBlock)]
+                        : resultText(part.content),
                     ...(part.isError ? { is_error: true } : {})
                 };
                 default: throw new Error(`Unknown message part type "${part.type}".`);

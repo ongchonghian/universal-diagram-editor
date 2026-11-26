@@ -7,6 +7,7 @@
  */
 import { DIAGRAM_TYPES } from '../../config.js';
 import { validateDiagram } from '../diagram-tools/validate.js';
+import { lookAtDiagram } from '../diagram-tools/look.js';
 
 export const DIAGRAM_TYPE_IDS = Object.keys(DIAGRAM_TYPES);
 
@@ -53,6 +54,11 @@ export const TOOL_DEFINITIONS = [
             },
             required: ['type', 'code']
         }
+    },
+    {
+        name: 'render_diagram',
+        description: 'Render the draft and look at the picture. Call once after a new diagram or a structural change (elements added, removed or moved) to check for overlapping shapes, crossing lines and labels that cannot be read. Skip after a rename or a change of text.',
+        parameters: { type: 'object', properties: {} }
     },
     {
         name: 'suggest_next_steps',
@@ -114,10 +120,12 @@ const verdict = (validation) => ({
 
 /**
  * Run one tool call against the draft.
- * @returns {Promise<{ content: object|string, isError: boolean, step: object|null }>}
- *   step is the entry for the validation trail, or null for tools that do not change the draft
+ * @param {object} deps  replaceable for tests: validate(code, type), look(code, type)
+ * @returns {Promise<{ content: object|string, isError: boolean, step: object|null, images?: object[] }>}
+ *   step is the entry for the validation trail, or null for tools that leave no entry.
+ *   images are image parts for the model to see, sent with the tool result.
  */
-export async function runTool(draft, call, { validate = validateDiagram } = {}) {
+export async function runTool(draft, call, { validate = validateDiagram, look = lookAtDiagram } = {}) {
     if (call.invalidArgs !== undefined) {
         return { content: 'The tool input was cut off or was not valid JSON. Send a smaller edit, or split the change into several edit_diagram calls.', isError: true, step: null };
     }
@@ -144,6 +152,20 @@ export async function runTool(draft, call, { validate = validateDiagram } = {}) 
             draft.code = stripFence(args.code);
             draft.validation = await validate(draft.code, draft.type);
             return { content: verdict(draft.validation), isError: false, step: { action: 'write', type: draft.type, status: draft.validation.status, error: draft.validation.error } };
+        }
+
+        case 'render_diagram': {
+            if (!draft.code) return { content: 'The draft is empty, so there is no picture to render.', isError: true, step: null };
+            const seen = await look(draft.code, draft.type);
+            if (seen.error) {
+                return { content: `Could not render the draft: ${seen.error}`, isError: true, step: { action: 'look', status: 'failed', error: seen.error } };
+            }
+            return {
+                content: { status: 'rendered', width: seen.width, height: seen.height, note: 'The rendered picture follows this result.' },
+                isError: false,
+                images: [seen.image],
+                step: { action: 'look', status: 'rendered' }
+            };
         }
 
         case 'suggest_next_steps': {

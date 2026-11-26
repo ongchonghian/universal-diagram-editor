@@ -4,17 +4,50 @@ import { askSmith } from '../services/smith/index.js';
 import { conversationStore } from '../services/smith/conversation-store.js';
 import { aiService } from '../services/ai-service.js';
 import { AISettingsModal } from './dialogs/AISettingsModal.jsx';
+import { imageFileToPart, ACCEPTED_IMAGE_TYPES } from '../services/diagram-tools/rasterise.js';
+
+// Pictures attached to one message, at most
+const MAX_PICTURES = 4;
+const DEFAULT_PICTURE_REQUEST = 'Turn this picture into a diagram.';
+const imageSrc = (image) => `data:${image.mimeType};base64,${image.data}`;
 
 const typeName = (type) => DIAGRAM_TYPES[type]?.name || type;
 
 /** One entry of the validation trail, in words. */
 function describeStep(step) {
+    if (step.action === 'look') {
+        return step.status === 'rendered'
+            ? { icon: 'fa-eye', tone: 'text-indigo-600', text: 'Looked at the render' }
+            : { icon: 'fa-eye-slash', tone: 'text-slate-500', text: 'Could not render the draft to look at' };
+    }
     const action = step.action === 'write' ? `Wrote ${typeName(step.type)}` : 'Edited';
     if (step.status === 'rejected') return { icon: 'fa-undo', tone: 'text-slate-500', text: `${action}: the edit did not match the draft` };
     if (step.status === 'valid') return { icon: 'fa-check', tone: 'text-emerald-600', text: `${action}: parsed` };
     if (step.status === 'unverified') return { icon: 'fa-question', tone: 'text-amber-600', text: `${action}: could not check` };
     return { icon: 'fa-times', tone: 'text-red-600', text: `${action}: parse error` };
 }
+
+/** The pictures on a user message: thumbnails while the session lasts, names after a reload. */
+const MessagePictures = ({ msg }) => {
+    if (msg.images?.length) {
+        return (
+            <div className="mb-2 flex flex-wrap gap-1.5 justify-end">
+                {msg.images.map((image, i) => (
+                    <img key={i} src={imageSrc(image)} alt={image.name || 'Attached picture'} className="h-16 max-w-[8rem] object-cover rounded border border-indigo-300 bg-white" />
+                ))}
+            </div>
+        );
+    }
+    if (msg.pictures?.length) {
+        return (
+            <p className="mb-1 text-[11px] text-indigo-100">
+                <i className="fas fa-image mr-1"></i>
+                {msg.pictures.length === 1 ? '1 picture attached' : `${msg.pictures.length} pictures attached`} (pictures are kept only until the page reloads)
+            </p>
+        );
+    }
+    return null;
+};
 
 const ValidationTrail = ({ trail }) => (
     <ul className="mt-2 space-y-0.5 text-[11px]" aria-label="What Smith checked">
@@ -92,6 +125,11 @@ export const AICopilot = ({
     const [currentConversationId, setCurrentConversationId] = useState(null);
     const [conversations, setConversations] = useState({});
     const [isInputExpanded, setIsInputExpanded] = useState(false);
+    // Pictures waiting to go with the next message, as image parts with a name
+    const [attachments, setAttachments] = useState([]);
+    const [attachError, setAttachError] = useState('');
+    const [isDragging, setIsDragging] = useState(false);
+    const fileInputRef = useRef(null);
 
     const messagesEndRef = useRef(null);
     const messageRefs = useRef({});
@@ -162,7 +200,7 @@ export const AICopilot = ({
      * Run Smith for a request and return the assistant message to store.
      * @param {Array} earlier  the chat messages before this request
      */
-    const runReply = async (request, earlier, isStillOpen) => {
+    const runReply = async (request, earlier, isStillOpen, images = []) => {
         const controller = new AbortController();
         abortRef.current = controller;
         setStreamingText('');
@@ -171,6 +209,7 @@ export const AICopilot = ({
         try {
             const result = await askSmith({
                 request,
+                images,
                 messages: earlier,
                 code: contextCode,
                 type: diagramType,
@@ -206,22 +245,76 @@ export const AICopilot = ({
         }
     };
 
+    /** Turn picked, pasted or dropped files into attachments. Files that are not pictures are refused with a message. */
+    const addFiles = async (fileList) => {
+        const files = Array.from(fileList || []);
+        if (!files.length) return;
+        setAttachError('');
+        const room = MAX_PICTURES - attachments.length;
+        if (room <= 0) {
+            setAttachError(`A message can carry ${MAX_PICTURES} pictures at most.`);
+            return;
+        }
+        const added = [];
+        const problems = [];
+        for (const file of files.slice(0, room)) {
+            try {
+                added.push(await imageFileToPart(file));
+            } catch (e) {
+                problems.push(e.message);
+            }
+        }
+        if (files.length > room) problems.push(`Only the first ${room} ${room === 1 ? 'picture was' : 'pictures were'} added; a message can carry ${MAX_PICTURES} at most.`);
+        if (added.length) setAttachments(prev => [...prev, ...added]);
+        if (problems.length) setAttachError(problems.join(' '));
+    };
+
+    const handlePaste = (e) => {
+        const images = Array.from(e.clipboardData?.files || []).filter(f => f.type.startsWith('image/'));
+        if (!images.length) return;
+        e.preventDefault();
+        addFiles(images);
+    };
+
+    const handleDragOver = (e) => {
+        if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return;
+        // The app opens files dropped anywhere else; a file dropped on the chat is an attachment only
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDrop = (e) => {
+        if (!e.dataTransfer?.files?.length) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        addFiles(e.dataTransfer.files);
+    };
+
     const handleSend = async (textOverride = null) => {
-        const textToSend = typeof textOverride === 'string' ? textOverride : input;
+        const typed = typeof textOverride === 'string' ? textOverride : input;
+        // Suggestion chips send text only; the attached pictures wait for the next typed message
+        const images = typeof textOverride === 'string' ? [] : attachments;
+        const textToSend = typed.trim() ? typed : images.length ? DEFAULT_PICTURE_REQUEST : '';
         if (isTyping || !textToSend.trim() || !currentConversationId) return;
 
         const conversationId = currentConversationId;
         const isStillOpen = () => currentConversationRef.current === conversationId;
-        const userMessage = { role: 'user', content: textToSend };
+        const userMessage = { role: 'user', content: textToSend, ...(images.length ? { images } : {}) };
         const earlier = messages;
 
         setMessages(prev => [...prev, userMessage]);
+        if (images.length) {
+            setAttachments([]);
+            setAttachError('');
+        }
         setInput('');
         setIsTyping(true);
         conversationStore.append(conversationId, userMessage);
         refreshList();
 
-        const reply = await runReply(textToSend, earlier, isStillOpen);
+        const reply = await runReply(textToSend, earlier, isStillOpen, images);
         if (isStillOpen()) setMessages(prev => [...prev, reply]);
         conversationStore.append(conversationId, reply);
         setIsTyping(false);
@@ -237,10 +330,12 @@ export const AICopilot = ({
         const lastUser = convo ? convo.messages.map(m => m.role).lastIndexOf('user') : -1;
         if (lastUser === -1) return;
 
-        const kept = convo.messages.slice(0, lastUser + 1);
+        // The pictures live only in the panel's memory, so they come from the shown messages, not the store
+        const images = messages[lastUser]?.role === 'user' ? (messages[lastUser].images || []) : [];
+        const kept = [...convo.messages.slice(0, lastUser), { ...convo.messages[lastUser], ...(images.length ? { images } : {}) }];
         setMessages(kept);
         setIsTyping(true);
-        const reply = await runReply(convo.messages[lastUser].content, convo.messages.slice(0, lastUser), isStillOpen);
+        const reply = await runReply(convo.messages[lastUser].content, convo.messages.slice(0, lastUser), isStillOpen, images);
         if (isStillOpen()) setMessages([...kept, reply]);
         conversationStore.setMessages(conversationId, [...kept, reply]);
         setIsTyping(false);
@@ -289,11 +384,21 @@ export const AICopilot = ({
     );
 
     return (
-        <div className={
-            isSidebar
-            ? "w-full h-full flex flex-col bg-white overflow-hidden relative"
-            : "fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-40 flex flex-col border-l border-slate-200 transform transition-transform duration-300 ease-in-out"
-        }>
+        <div
+            className={
+                isSidebar
+                ? "w-full h-full flex flex-col bg-white overflow-hidden relative"
+                : "fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-40 flex flex-col border-l border-slate-200 transform transition-transform duration-300 ease-in-out"
+            }
+            onDragOver={handleDragOver}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setIsDragging(false); }}
+            onDrop={handleDrop}
+        >
+            {isDragging && (
+                <div className="absolute inset-0 z-50 m-2 rounded-xl border-2 border-dashed border-indigo-400 bg-indigo-50/90 flex items-center justify-center pointer-events-none">
+                    <p className="text-sm font-medium text-indigo-700"><i className="fas fa-image mr-2"></i>Drop a picture to attach the picture to your message</p>
+                </div>
+            )}
 
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200 shrink-0 z-10">
@@ -396,6 +501,7 @@ export const AICopilot = ({
                                             : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
                                 }`}
                             >
+                                {msg.role === 'user' && <MessagePictures msg={msg} />}
                                 {msg.content}
                                 {msg.trail?.length > 0 && <ValidationTrail trail={msg.trail} />}
                                 {msg.limitReached && (
@@ -478,6 +584,24 @@ export const AICopilot = ({
 
             {/* Input */}
             <div className="p-4 bg-white border-t border-slate-200 shrink-0">
+                {attachments.length > 0 && (
+                    <ul className="mb-2 flex flex-wrap gap-2" aria-label="Attached pictures">
+                        {attachments.map((image, i) => (
+                            <li key={i} className="relative">
+                                <img src={imageSrc(image)} alt={image.name} title={image.name} className="h-14 w-14 object-cover rounded border border-slate-300" />
+                                <button
+                                    onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}
+                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] flex items-center justify-center hover:bg-red-600"
+                                    aria-label={`Remove ${image.name}`}
+                                    title="Remove"
+                                >
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+                {attachError && <p className="mb-2 pr-20 text-xs text-red-600" role="alert">{attachError}</p>}
                 <div className="relative">
                     <button
                         onClick={() => setIsInputExpanded(!isInputExpanded)}
@@ -491,10 +615,28 @@ export const AICopilot = ({
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Describe a diagram or ask for help..."
-                        className={`w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm ${isInputExpanded ? 'h-64 resize-y' : 'resize-none max-h-32 min-h-[50px]'}`}
+                        onPaste={handlePaste}
+                        placeholder={attachments.length ? 'Say what to do with the picture' : 'Describe a diagram or ask for help...'}
+                        className={`w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm ${isInputExpanded ? 'h-64 resize-y' : 'resize-none max-h-32 min-h-[50px]'}`}
                         rows={isInputExpanded ? 10 : 1}
                         style={{ height: isInputExpanded ? undefined : 'auto' }}
+                    />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isTyping || attachments.length >= MAX_PICTURES}
+                        title="Attach a picture (or paste or drop one)"
+                        aria-label="Attach a picture"
+                        className="absolute left-2 bottom-2 w-7 h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 disabled:opacity-40"
+                    >
+                        <i className="fas fa-paperclip"></i>
+                    </button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                        multiple
+                        className="hidden"
+                        onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
                     />
                     {isTyping ? (
                         <button
@@ -508,7 +650,7 @@ export const AICopilot = ({
                     ) : (
                         <button
                             onClick={() => handleSend()}
-                            disabled={!input.trim()}
+                            disabled={!input.trim() && !attachments.length}
                             title="Send"
                             aria-label="Send"
                             className="absolute right-2 bottom-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-all shadow-sm w-8 h-8 flex items-center justify-center"

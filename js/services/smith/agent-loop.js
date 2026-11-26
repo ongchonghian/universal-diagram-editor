@@ -15,23 +15,26 @@ export const CUT_OFF_NOTE = 'Your last reply reached the length limit before the
  *   system       system prompt
  *   history      earlier turns as [{ role, content }] text messages
  *   userTurn     this turn's user text
+ *   images       image parts the user attached to this turn ({ type: 'image', mimeType, data })
  *   code, type   the editor's current diagram
  *   temperature
  *   tools        tool definitions (defaults to every Smith tool)
  *   signal       AbortSignal
  *   onEvent      called with { type: 'text', text } (the reply so far) and { type: 'step', step } (a trail entry)
- *   streamTurn, validate   replaceable for tests
+ *   streamTurn, validate, look   replaceable for tests
  * @returns {Promise<object>} { text, draft, trail, proposal, suggestions, usage, steps, limitReached }
  */
 export async function runAgentLoop({
-    config, system, history = [], userTurn, code, type, temperature,
+    config, system, history = [], userTurn, images = [], code, type, temperature,
     tools = TOOL_DEFINITIONS, signal, onEvent,
-    streamTurn = defaultStreamTurn, validate, maxSteps = MAX_STEPS
+    streamTurn = defaultStreamTurn, validate, look, maxSteps = MAX_STEPS
 }) {
+    const toolDeps = { ...(validate ? { validate } : {}), ...(look ? { look } : {}) };
     const draft = createDraft(code, type);
     const messages = [
         ...history.map(m => textMessage(m.role === 'assistant' ? 'assistant' : 'user', m.content)),
-        textMessage('user', userTurn)
+        // Pictures go before the text, which is the order the providers recommend
+        { role: 'user', parts: [...images.map(({ mimeType, data }) => ({ type: 'image', mimeType, data })), { type: 'text', text: userTurn }] }
     ];
     const trail = [];
     const usage = { inputTokens: 0, outputTokens: 0, calls: 0 };
@@ -90,8 +93,11 @@ export async function runAgentLoop({
         const results = [];
         for (const call of calls) {
             signal?.throwIfAborted();
-            const result = await runTool(draft, call, validate ? { validate } : undefined);
-            results.push({ type: 'tool_result', id: call.id, name: call.name, content: result.content, isError: result.isError });
+            const result = await runTool(draft, call, toolDeps);
+            results.push({
+                type: 'tool_result', id: call.id, name: call.name, content: result.content, isError: result.isError,
+                ...(result.images?.length ? { images: result.images } : {})
+            });
             if (result.step) {
                 trail.push(result.step);
                 onEvent?.({ type: 'step', step: result.step });

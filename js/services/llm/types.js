@@ -8,7 +8,11 @@
  *   { type: 'text', text }
  *   { type: 'image', mimeType, data }              data is base64 without a data: prefix
  *   { type: 'tool_call', id, name, args }
- *   { type: 'tool_result', id, name, content, isError? }   content is a string or a JSON value
+ *   { type: 'tool_result', id, name, content, isError?, images? }
+ *       content is a string or a JSON value; images is a list of image parts that belong to the result
+ *       (render_diagram sends the rendered picture this way). Anthropic carries the images inside the
+ *       tool result. Gemini and the OpenAI-compatible endpoint receive them as image parts right after
+ *       the tool results, in the same user turn.
  *
  * `raw` holds the provider's own copy of an assistant message. An adapter sends `raw` back unchanged
  * when the message returns to the same provider, which keeps Gemini thought signatures and Claude

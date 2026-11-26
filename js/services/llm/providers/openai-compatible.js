@@ -55,7 +55,11 @@ function toMessages(system, messages) {
         for (const part of message.parts.filter(p => p.type === 'tool_result')) {
             out.push({ role: 'tool', tool_call_id: part.id, content: (part.isError ? 'Error: ' : '') + resultText(part.content) });
         }
-        const rest = message.parts.filter(p => p.type === 'text' || p.type === 'image');
+        // Tool messages hold text only, so pictures from tool results follow in the user message
+        const resultImages = message.parts.flatMap(p => (p.type === 'tool_result' && p.images?.length
+            ? [{ type: 'text', text: `Picture from ${p.name}:` }, ...p.images]
+            : []));
+        const rest = [...resultImages, ...message.parts.filter(p => p.type === 'text' || p.type === 'image')];
         if (!rest.length) continue;
         const hasImage = rest.some(p => p.type === 'image');
         out.push({

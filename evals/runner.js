@@ -20,13 +20,28 @@ import { KROKI_BASE_URL } from '../js/config.js';
 import { runChecks, outcomeOf } from './checks.js';
 
 const caseModules = import.meta.glob('./cases/*.json', { eager: true, import: 'default' });
+// Pictures for the image cases, as addresses the page can fetch
+const fixtureUrls = import.meta.glob('./fixtures/*', { eager: true, query: '?url', import: 'default' });
 
 /** Every case, in file order (one file per diagram group). */
 export function loadCases() {
     return Object.keys(caseModules).sort().flatMap(path => caseModules[path]);
 }
 
-export const GROUPS = ['mermaid', 'plantuml', 'c4', 'bpmn', 'vega', 'graphviz', 'kroki', 'type-choice'];
+export const GROUPS = ['mermaid', 'plantuml', 'c4', 'bpmn', 'vega', 'graphviz', 'kroki', 'type-choice', 'image'];
+
+const MIME_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
+
+/** A case's picture (evals/fixtures/<name>) as an image part. */
+export async function loadFixtureImage(name) {
+    const url = fixtureUrls[`./fixtures/${name}`];
+    if (!url) throw new Error(`The picture evals/fixtures/${name} is missing.`);
+    const blob = await (await fetch(url)).blob();
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return { type: 'image', mimeType: MIME_TYPES[name.split('.').pop().toLowerCase()] || blob.type, data: btoa(binary), name };
+}
 
 /** The editor type a case runs under. */
 export const editorTypeOf = (caseDef) => caseDef.editorType || caseDef.type;
@@ -51,16 +66,22 @@ const PATHS = {
         const code = caseDef.startCode || '';
         const result = caseDef.task === 'fix'
             ? await fixWithSmith({ code, type: editorType, error: (await validateDiagram(code, editorType, { requireLayout: editorType === 'bpmn' })).error })
-            : await askSmith({ request: caseDef.prompt, code, type: editorType });
-        // Only drafts the parser saw count; a rejected edit left the draft unchanged
-        const checked = result.trail.filter(s => s.status !== 'rejected');
-        const notes = [result.limitReached ? 'Reached the step limit.' : '', `${result.steps} model steps.`].filter(Boolean).join(' ');
+            : await askSmith({ request: caseDef.prompt, images: caseDef.image ? [await loadFixtureImage(caseDef.image)] : [], code, type: editorType });
+        // Only drafts the parser saw count; a rejected edit left the draft unchanged, and a look is not a check
+        const checked = result.trail.filter(s => (s.action === 'edit' || s.action === 'write') && s.status !== 'rejected');
+        const looks = result.trail.filter(s => s.action === 'look').length;
+        const notes = [
+            result.limitReached ? 'Reached the step limit.' : '',
+            `${result.steps} model steps.`,
+            looks ? `Looked at the render ${looks === 1 ? 'once' : `${looks} times`}.` : ''
+        ].filter(Boolean).join(' ');
         if (!result.proposal) return { code: null, type: null, firstStatus: null, repairAttempts: 0, note: `The loop made no change. ${notes}` };
         return {
             code: result.proposal.code,
             type: result.proposal.type,
             firstStatus: caseDef.task === 'fix' ? null : (checked[0]?.status ?? null),
             repairAttempts: Math.max(0, checked.length - 1),
+            looks,
             note: notes
         };
     }
@@ -81,6 +102,7 @@ export async function runCase(caseDef, pathName) {
         record.outputType = output.type;
         record.firstStatus = output.firstStatus;
         record.repairAttempts = output.repairAttempts;
+        record.looks = output.looks ?? 0;
         record.note = output.note;
         if (!output.code) {
             record.outcome = 'fail';

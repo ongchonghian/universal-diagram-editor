@@ -38,6 +38,12 @@ function toContents(messages) {
                 default: throw new Error(`Unknown message part type "${part.type}".`);
             }
         });
+        // Pictures that belong to tool results follow the function responses in the same turn
+        for (const part of message.parts) {
+            for (const image of (part.type === 'tool_result' && part.images) || []) {
+                parts.push({ inlineData: { mimeType: image.mimeType, data: image.data } });
+            }
+        }
         return { role, parts };
     });
 }
